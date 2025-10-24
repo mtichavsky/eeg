@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "thesis"
+version = "0.1.0"
+description = ""
+authors = ["Milan Tichavský <milantichavsky@seznam.cz>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.13"
+numpy = "*"
+torch = "*"
+torchvision = "*"
+scipy = "*"
+scikit-learn = "*"
+pandas = "*"
+matplotlib = "*"
+mne = "*"
+mne-icalabel = "*"
+librosa = "*"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "*"
+ipykernel = "*"
+jupyter = "*"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+lint.select = ["I", "E", "F"]
+fix = true
