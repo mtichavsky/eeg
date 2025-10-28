@@ -1,7 +1,17 @@
+import re
+import warnings
+from functools import lru_cache
+from pathlib import Path
+from typing import Callable, Literal, Optional
+
+import mne
+import numpy as np
+import torch
 from mne.preprocessing import ICA
 from mne_icalabel import label_components
-from pathlib import Path
-import mne
+from torch.utils.data import DataLoader, Dataset
+
+warnings.filterwarnings("ignore")
 
 CANE_DIR = Path("../CANE/")
 MDD_DIR = Path("/home/milan/Documents/diplomka/MDD/")
@@ -11,45 +21,392 @@ SFREQ = 1000 / 4
 CHUNK_SAMPLES = int(SEGMENT_LENGTH * SFREQ)
 
 
-def get_preprocessed_chunks():
-    raw = mne.io.read_raw_edf(MDD_DIR / "MDD S1 EC.edf", preload=True)
-    raw = raw.filter(l_freq=1, h_freq=70, method="iir")
-    raw = raw.notch_filter(freqs=50)
+class MDDDataset(Dataset):
+    """
+    PyTorch Dataset for MDD EEG data.
 
-    # TODO not sure about Cz; Add T7, T8 - ma to nejake ackove, chceckni ten clanek
-    raw = raw.pick(["EEG Fp1-LE", "EEG Fp2-LE", "EEG C3-LE", "EEG C4-LE", "EEG O2-LE", "EEG Cz-LE"])
-    mapping = {
-        "EEG Fp1-LE": "Fp1",
-        "EEG Fp2-LE": "Fp2",
-        "EEG C3-LE": "C3",
-        "EEG C4-LE": "C4",
-        "EEG O2-LE": "O2",
-        "EEG Cz-LE": "Cz",
-    }
-    raw = raw.rename_channels(mapping)
+    Usage:
+        # Create dataset
+        dataset = MDDDataset(
+            data_dir=MDD_DIR,
+            condition="EC",  # or "EO", "TASK", or None for all
+            preload=False,   # Set True to preprocess all files at init
+        )
 
-    filt_raw = raw.set_eeg_reference("average")
-    ica = ICA(
-        max_iter="auto",
-        method="infomax",
-        random_state=97,  # seed?
-        fit_params=dict(extended=True),
+        # Use with DataLoader for batching
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+        for batch in dataloader:
+            inputs = batch['eeg']      # Shape: (batch_size, channels, samples)
+            labels = batch['label']    # Shape: (batch_size,)
+            # ... your training code
+    """
+
+    def __init__(
+        self,
+        data_dir: Path = MDD_DIR,
+        condition: Optional[Literal["EC", "EO", "TASK"]] = None,
+        subjects: Optional[list[str]] = None,
+        labels: Optional[list[str]] = None,
+        preload: bool = False,
+        cache_size: int = 60,
+        transform: Optional[Callable] = None,
+    ):
+        """
+        Initialize the MDD EEG dataset.
+
+        :param Path data_dir: Path to directory containing .edf files.
+        :param Optional[Literal["EC", "EO", "TASK"]] condition: Filter by condition ("EC", "EO", "TASK") or None for all
+               conditions.
+        :param Optional[list[str]] subjects: List of subject IDs to include (e.g., ["H S1", "MDD S1"]). None = all.
+        :param Optional[list[str]] labels: List of labels to include (e.g., ["H", "MDD"]). None = all.
+        :param bool preload: If True, preprocess all files at initialization (slower init, faster training).
+        :param int cache_size: Number of preprocessed files to cache in memory.
+        :param Optional[Callable] transform: Optional transform function to apply to EEG data.
+        """
+        self.data_dir = Path(data_dir)
+        self.condition = condition
+        self.transform = transform
+        self.preload = preload
+        self.files = self._discover_files(condition, subjects, labels)
+
+        # TODO: this part is not fully clear to me - are we saving it to preprocessed_data or what
+        # TODO: I don't think those chunks are handled properly
+        # Build index mapping from chunk index to (file_idx, chunk_idx_in_file)
+        self.chunk_index = []
+        self.file_chunk_counts = {}  # Cache chunk counts per file
+
+        if preload:
+            print("Preprocessing all files...")
+            self.preprocessed_data = {}
+            for file_idx, file_info in enumerate(self.files):
+                chunks = self.preprocess_file_uncached(file_info["path"])
+                self.preprocessed_data[file_idx] = chunks
+                self.file_chunk_counts[file_idx] = len(chunks)
+                # Chunk index exists for O(1) access time through __getitem__
+                for chunk_idx in range(len(chunks)):
+                    self.chunk_index.append((file_idx, chunk_idx))
+            print(f"Loaded {len(self.chunk_index)} chunks from {len(self.files)} files")
+        else:
+            # Get chunk counts from file metadata (fast, no preprocessing)
+            print("Building index from file metadata (fast)...")
+            for file_idx, file_info in enumerate(self.files):
+                # Quick scan: read file header to get duration
+                n_chunks = self._get_chunk_count_fast(file_info["path"])
+                self.file_chunk_counts[file_idx] = n_chunks
+                for chunk_idx in range(n_chunks):
+                    self.chunk_index.append((file_idx, chunk_idx))
+            print(
+                f"Indexed {len(self.chunk_index)} chunks from {len(self.files)} files (no preprocessing yet)"
+            )
+
+            # Cache preprocessed files with LRU
+            self._preprocess_file_cached = lru_cache(maxsize=cache_size)(
+                self.preprocess_file_uncached
+            )
+
+    @staticmethod
+    def _get_chunk_count_fast(file_path: Path):
+        """
+        Quickly estimate chunk count from file metadata without full preprocessing.
+
+        :param Path file_path: Path to the EDF file.
+        :return: Number of chunks in the file.
+        :rtype: int
+        """
+        # Read just the header to get duration
+        raw = mne.io.read_raw_edf(file_path, preload=False, verbose=False)
+        duration = raw.n_times / raw.info["sfreq"]  # duration in seconds
+        n_chunks = int(duration / SEGMENT_LENGTH)  # number of 10-second chunks
+        return n_chunks
+
+    def _discover_files(self, condition, subjects, labels):
+        """
+        Discover all .edf files matching the criteria.
+
+        :param Optional[Literal["EC", "EO", "TASK"]] condition: Condition filter ("EC", "EO", "TASK") or None.
+        :param Optional[list[str]] subjects: List of subject IDs to include or None for all.
+        :param Optional[list[str]] labels: List of labels to include ("H", "MDD") or None for all.
+        :return: List of dictionaries containing file metadata.
+        :rtype: list[dict]
+        """
+        files = []
+        pattern = re.compile(r"(H|MDD) S(\d+) (EC|EO|TASK)\.edf")
+
+        for file_path in sorted(self.data_dir.glob("*.edf")):
+            match = pattern.match(file_path.name)
+            if not match:
+                continue
+
+            label, subject_num, cond = match.groups()
+            subject_id = f"{label} S{subject_num}"
+
+            # Filtering
+            if condition and cond != condition:
+                continue
+
+            if subjects and subject_id not in subjects:
+                continue
+
+            if labels and label not in labels:
+                continue
+
+            files.append(
+                {
+                    "path": file_path,
+                    "label": label,
+                    "subject": subject_id,
+                    "condition": cond,
+                    "label_int": 0 if label == "H" else 1,  # H=0 (healthy), MDD=1
+                }
+            )
+        return files
+
+    @staticmethod
+    def preprocess_file_uncached(file_path: Path):
+        """
+        Preprocess a single EDF file and return chunks.
+
+        Applies the full preprocessing pipeline: filtering, ICA, artifact removal, and chunking.
+
+        :param Path file_path: Path to the EDF file to preprocess.
+        :return: List of numpy arrays, each representing a chunk of shape (channels, samples).
+        :rtype: list[np.ndarray]
+        """
+        raw = mne.io.read_raw_edf(file_path, preload=True, verbose=False)
+        raw = raw.filter(l_freq=1, h_freq=70, method="iir", verbose=False)
+        raw = raw.notch_filter(freqs=50, verbose=False)
+
+        raw = raw.pick(
+            ["EEG Fp1-LE", "EEG Fp2-LE", "EEG C3-LE", "EEG C4-LE", "EEG O2-LE", "EEG Cz-LE"]
+        )
+        mapping = {
+            "EEG Fp1-LE": "Fp1",
+            "EEG Fp2-LE": "Fp2",
+            "EEG C3-LE": "C3",
+            "EEG C4-LE": "C4",
+            "EEG O2-LE": "O2",
+            "EEG Cz-LE": "Cz",
+        }
+        raw = raw.rename_channels(mapping)
+
+        filt_raw = raw.set_eeg_reference("average")
+        ica = ICA(
+            max_iter="auto",
+            method="infomax",
+            random_state=97,
+            fit_params=dict(extended=True),
+        )
+        ica.fit(filt_raw, verbose=False)
+
+        montage = mne.channels.make_standard_montage("standard_1020")
+        filt_raw = filt_raw.set_montage(montage, match_case=False, verbose=False)
+        ic_labels = label_components(filt_raw, ica, method="iclabel")
+
+        labels = ic_labels["labels"]
+        exclude_idx = [idx for idx, label in enumerate(labels) if label not in ["brain", "other"]]
+
+        preprocessed = filt_raw.copy()
+        ica.apply(preprocessed, exclude=exclude_idx, verbose=False)
+
+        data = preprocessed.get_data()
+        n_samples = data.shape[1]
+        chunks = []
+        for i in range(0, n_samples - CHUNK_SAMPLES + 1, CHUNK_SAMPLES):
+            chunk = data[:, i : i + CHUNK_SAMPLES]
+            chunks.append(chunk)
+
+        return chunks
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, idx):
+        """
+        Get all chunks from a single file.
+
+        :param int idx: Index of the file to retrieve.
+        :return: Dictionary containing 'eeg' (tensor of shape (num_chunks, channels, samples)),
+                 'label' (integer: 0=Healthy, 1=MDD), 'subject' (subject ID string),
+                 and 'condition' (condition string: EC/EO/TASK).
+        :rtype: dict
+        """
+        file_info = self.files[idx]
+
+        # Get all chunks for this file
+        if self.preload:
+            chunks = self.preprocessed_data[idx]
+        else:
+            chunks = self._preprocess_file_cached(file_info["path"])
+
+        # Convert list of numpy arrays to single tensor: (num_chunks, channels, samples)
+        eeg_tensor = torch.stack([torch.from_numpy(chunk).float() for chunk in chunks])
+
+        # Apply transform if provided
+        if self.transform:
+            eeg_tensor = self.transform(eeg_tensor)
+
+        return {
+            "eeg": eeg_tensor,
+            "label": file_info["label_int"],
+            "subject": file_info["subject"],
+            "condition": file_info["condition"],
+        }
+
+    def get_subjects(self):
+        """
+        Get a list of unique subjects in the dataset.
+
+        :return: Sorted list of unique subject IDs.
+        :rtype: list[str]
+        """
+        return sorted(list(set(f["subject"] for f in self.files)))
+
+    # TODO
+    def get_statistics(self):
+        """
+        Get dataset statistics.
+
+        :return: Dictionary containing total files, total chunks, healthy/MDD file counts,
+                 conditions breakdown, and number of unique subjects.
+        :rtype: dict
+        """
+        healthy_count = sum(1 for f in self.files if f["label"] == "H")
+        mdd_count = sum(1 for f in self.files if f["label"] == "MDD")
+
+        conditions = {}
+        for f in self.files:
+            conditions[f["condition"]] = conditions.get(f["condition"], 0) + 1
+
+        return {
+            "total_files": len(self.files),
+            "total_chunks": len(self.chunk_index),
+            "healthy_files": healthy_count,
+            "mdd_files": mdd_count,
+            "conditions": conditions,
+            "subjects": len(self.get_subjects()),
+        }
+
+
+def create_cross_validation_splits(
+    data_dir: Path = MDD_DIR,
+    n_folds: int = 5,
+    condition: Optional[Literal["EC", "EO", "TASK"]] = None,
+    batch_size: int = 32,
+    num_workers: int = 0,
+    random_seed: int = 42,
+):
+    """
+    Create K-fold cross-validation splits at the subject level.
+
+    Yields train/validation DataLoaders for each fold with stratified subject-level splitting
+    to prevent data leakage.
+
+    Example:
+        for fold, (train_loader, val_loader, _, _) in enumerate(create_cross_validation_splits(n_folds=5)):
+            print(f"Training fold {fold + 1}/5")
+            for batch in train_loader:
+                # ... training code
+
+    :param Path data_dir: Path to data directory.
+    :param int n_folds: Number of folds for cross-validation.
+    :param Optional[Literal["EC", "EO", "TASK"]] condition: Filter by condition.
+    :param int batch_size: Batch size for DataLoaders.
+    :param int num_workers: Number of worker processes for data loading.
+    :param int random_seed: Random seed for reproducibility.
+    :yield: Tuple of (train_loader, val_loader, train_dataset, val_dataset) for each fold.
+    """
+    # Get all subjects and split by class
+    temp_dataset = MDDDataset(data_dir=data_dir, condition=condition, preload=False)
+    all_subjects = temp_dataset.get_subjects()
+
+    # TODO this logic is not ideal, I'd rather it work with the `labels` field then filenames
+    healthy_subjects = [s for s in all_subjects if s.startswith("H ")]
+    mdd_subjects = [s for s in all_subjects if s.startswith("MDD ")]
+
+    # Shuffle subjects
+    rng = np.random.RandomState(random_seed)
+    rng.shuffle(healthy_subjects)
+    rng.shuffle(mdd_subjects)
+
+    # Create folds for each class separately (stratified)
+    healthy_folds = np.array_split(healthy_subjects, n_folds)
+    mdd_folds = np.array_split(mdd_subjects, n_folds)
+
+    # Yield each fold
+    for fold_idx in range(n_folds):
+        # Validation subjects for this fold
+        eval_subjects = list(healthy_folds[fold_idx]) + list(mdd_folds[fold_idx])
+
+        # Training subjects (all other folds)
+        train_subjects = []
+        for i in range(n_folds):
+            if i != fold_idx:
+                train_subjects.extend(healthy_folds[i])
+                train_subjects.extend(mdd_folds[i])
+
+        train_dataset = MDDDataset(
+            data_dir=data_dir,
+            condition=condition,
+            subjects=train_subjects,
+            preload=False,
+        )
+        eval_dataset = MDDDataset(
+            data_dir=data_dir,
+            condition=condition,
+            subjects=eval_subjects,
+            preload=False,
+        )
+
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+        )
+        eval_loader = DataLoader(
+            eval_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+        )
+
+        print(f"\nFold {fold_idx + 1}/{n_folds}:")
+        print(f"  Train: {train_dataset.get_statistics()}")
+        print(f"  Val: {eval_dataset.get_statistics()}")
+
+        yield train_loader, eval_loader, train_dataset, eval_dataset
+
+
+# TODO: probably delete this part
+if __name__ == "__main__":
+    # Example usage
+    print("=== Example 1: Simple iteration ===")
+    dataset = MDDDataset(condition="EC", preload=False)
+    print(f"Dataset size: {len(dataset)} chunks")
+    print(f"Statistics: {dataset.get_statistics()}")
+
+    # Get a single sample
+    sample = dataset[0]
+    print(f"Sample keys: {sample.keys()}")
+    print(f"EEG shape: {sample['eeg'].shape}")
+    print(
+        f"Label: {sample['label']} (subject: {sample['subject']}, condition: {sample['condition']})"
     )
-    ica.fit(filt_raw)
 
-    montage = mne.channels.make_standard_montage("standard_1020")
-    # 2. Apply montage (MNE will keep only those channels that exist in raw)
-    filt_raw = filt_raw.set_montage(montage, match_case=False)
-    ic_labels = label_components(filt_raw, ica, method="iclabel")
+    print("\n=== Example 2: Cross-validation (recommended) ===")
+    cv_splits = create_cross_validation_splits(
+        condition="EC",
+        n_folds=5,
+        batch_size=16,
+    )
 
-    labels = ic_labels["labels"]
-    print(labels)
-    exclude_idx = [idx for idx, label in enumerate(labels) if label not in ["brain", "other"]]
-    print(f"Excluding these ICA components: {exclude_idx}")
-    # ica.apply() changes the Raw object in-place, so let's make a copy first:
-    preprocessed = filt_raw.copy()
-    ica.apply(preprocessed, exclude=exclude_idx)
+    for fold_idx, (train_loader, val_loader, _, _) in enumerate(cv_splits):
+        print(f"\nProcessing fold {fold_idx + 1}")
+        # Get first batch from this fold
+        for batch in train_loader:
+            print(f"  Train batch - EEG: {batch['eeg'].shape}, Labels: {batch['label']}")
+            break
 
-    df = preprocessed.to_data_frame()
-    chunks = [df.iloc[i : i + CHUNK_SAMPLES] for i in range(0, len(df), CHUNK_SAMPLES)]
-    return chunks
+        if fold_idx == 0:  # Only show first fold in example
+            break

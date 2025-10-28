@@ -1,4 +1,5 @@
 import logging
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,7 +8,15 @@ logger = logging.getLogger(__name__)
 
 
 class CNN_LSTM_DepCap(nn.Module):
-    def __init__(self, input_shape, in_channels=1, rnn_type="LSTM", rnn_hidden=100, dropout=0.2, num_classes=2):
+    def __init__(
+        self,
+        input_shape,
+        in_channels=1,
+        rnn_type="LSTM",
+        rnn_hidden=100,
+        dropout=0.2,
+        num_classes=2,
+    ):
         """
         Initialize the CNN-LSTM model for depression detection from spectrograms.
 
@@ -45,22 +54,16 @@ class CNN_LSTM_DepCap(nn.Module):
         # Initialize RNN with correct input size
         self.rnn_type = rnn_type.upper()
         if self.rnn_type == "LSTM":
-            self.rnn = nn.LSTM(
-                input_size=rnn_input_size,
-                hidden_size=rnn_hidden,
-                batch_first=True
-            )
+            self.rnn = nn.LSTM(input_size=rnn_input_size, hidden_size=rnn_hidden, batch_first=True)
         elif self.rnn_type == "GRU":
-            self.rnn = nn.GRU(
-                input_size=rnn_input_size,
-                hidden_size=rnn_hidden,
-                batch_first=True
-            )
+            self.rnn = nn.GRU(input_size=rnn_input_size, hidden_size=rnn_hidden, batch_first=True)
         else:
             raise ValueError("rnn_type must be 'LSTM' or 'GRU'")
 
-        logger.info(f"Initialized {self.rnn_type} with input_size={rnn_input_size}, "
-                   f"hidden_size={rnn_hidden}, batch_first=True")
+        logger.info(
+            f"Initialized {self.rnn_type} with input_size={rnn_input_size}, "
+            f"hidden_size={rnn_hidden}, batch_first=True"
+        )
 
         # Classifier head
         self.dropout = nn.Dropout(dropout)
