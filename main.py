@@ -1,108 +1,21 @@
-import os
 import logging
-from typing import Optional, List, Tuple
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+import torch.nn.functional as F
+from scipy.signal import stft
+from scipy.stats import zscore
 from sklearn.metrics import confusion_matrix
 
-from thesis.dataset import get_preprocessed_chunks, SFREQ
+from thesis.dataset import SFREQ, MDDDataset, create_cross_validation_splits
 from thesis.model import CNN_LSTM_DepCap
-import pandas as pd
-from scipy.stats import zscore
-import numpy as np
-from scipy.signal import stft
-
-import torch.nn.functional as F
 
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
 LOG_LEVEL = "INFO"
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
-
-# -------------------------
-# Dataset
-# -------------------------
-class SpectrogramDataset(Dataset):
-    """
-    Dataset that can either:
-      - load precomputed spectrogram numpy arrays (as .npy) with labels, or
-      - compute spectrograms from raw_eeg segments (numpy arrays).
-    Expected data structure for precomputed:
-      root/
-        images/
-          sample_000.npy  # shape (C,H,W) or (H,W)
-        labels.csv  # lines: filename,label (0/1)
-    Or you can pass `raw_segments` and `labels` lists to this class.
-    """
-
-    def __init__(
-        self,
-        root: Optional[str] = None,
-        csv_labels: Optional[str] = None,
-        raw_segments: Optional[List[np.ndarray]] = None,
-        raw_labels: Optional[List[int]] = None,
-        transform=None,
-        fs: int = 256,
-        nperseg: int = 256,
-        noverlap: Optional[int] = None,
-        to_rgb: bool = False,
-        target_size=(254, 342),
-    ):
-        super().__init__()
-        self.transform = transform
-        self.fs = fs
-        self.nperseg = nperseg
-        self.noverlap = noverlap
-        self.to_rgb = to_rgb
-        self.target_size = target_size
-
-        if root is not None and csv_labels is not None:
-            import pandas as pd
-
-            df = pd.read_csv(csv_labels, header=None)
-            # df: filename,label
-            self.files = [os.path.join(root, str(fn)) for fn in df[0].astype(str).tolist()]
-            self.labels = df[1].astype(int).tolist()
-            self.mode = "precomp"
-        elif raw_segments is not None and raw_labels is not None:
-            assert len(raw_segments) == len(raw_labels)
-            self.raw_segments = raw_segments
-            self.labels = raw_labels
-            self.mode = "raw"
-        else:
-            raise ValueError("Provide either (root + csv_labels) or (raw_segments + raw_labels)")
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        label = int(self.labels[idx])
-        if self.mode == "precomp":
-            arr = np.load(self.files[idx])
-            # ensure shape (C,H,W)
-            if arr.ndim == 2:
-                arr = arr[None, ...]
-        else:
-            seg = self.raw_segments[idx]
-            arr = eeg_to_spectrogram(
-                seg,
-                fs=self.fs,
-                nperseg=self.nperseg,
-                noverlap=self.noverlap,
-                to_rgb=self.to_rgb,
-                target_size=self.target_size,
-            )
-        # to tensor
-        x = torch.from_numpy(arr).float()
-        if self.transform:
-            x = self.transform(x)
-        return x, label
-
-
-# -------------------------
-# Model
-# -------------------------
 
 
 # -------------------------
@@ -180,6 +93,37 @@ def eval_epoch(model, dataloader, criterion, device):
     return metrics
 
 
+def one_forward_pass():
+    logger.info("Loading preprocessed chunks...")
+    chunks = MDDDataset.preprocess_file_uncached(Path("no_file_specified"))  # TODO provide file
+    logger.info(f"Loaded {len(chunks)} chunks")
+    processed_count = 0
+    skipped_count = 0
+    for idx, chunk in enumerate(chunks):
+        norm = pd.DataFrame(zscore(chunk, axis=0))  # hope this is correct axis
+        channel = chunk["Fp1"]
+
+        if len(channel) < 256:  # Otherwise the STFT might not work
+            logger.debug(
+                f"Skipping chunk {idx} due to insufficient length ({len(channel)} < 256 samples)"
+            )
+            skipped_count += 1
+            continue
+
+        f, t, Zxx = stft(channel, fs=SFREQ, nperseg=256, noverlap=192, window="hamming")
+        Zxx_mag = np.log1p(np.abs(Zxx))
+        x = torch.tensor(Zxx_mag, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        y = model.forward(x)
+
+        probabilities = F.softmax(y, dim=1)
+        logger.info(f"Chunk {idx}: Probabilities: {probabilities.detach().numpy()}")
+        processed_count += 1
+
+    logger.info(
+        f"Processing complete: {processed_count} chunks processed, {skipped_count} chunks skipped"
+    )
+
+
 if __name__ == "__main__":
     # Hyperparams
     BATCH = 128
@@ -216,44 +160,48 @@ if __name__ == "__main__":
     # train_loader = DataLoader(train_ds, batch_size=BATCH, shuffle=True, num_workers=2, pin_memory=True)
     # val_loader = DataLoader(val_ds, batch_size=BATCH, shuffle=False, num_workers=2, pin_memory=True)
 
-    MDD_CHUNK_SHAPE=(129, 41)
+    MDD_CHUNK_SHAPE = (129, 41)
     # model
     logger.info(f"Creating CNN_LSTM_DepCap model with input_shape={MDD_CHUNK_SHAPE}")
     model = CNN_LSTM_DepCap(
-        input_shape=MDD_CHUNK_SHAPE, in_channels=1, rnn_type="LSTM", rnn_hidden=100, dropout=0.2, num_classes=2
+        input_shape=MDD_CHUNK_SHAPE,
+        in_channels=1,
+        rnn_type="LSTM",
+        rnn_hidden=100,
+        dropout=0.2,
+        num_classes=2,
     )
     model = model.to(DEVICE)
     logger.info(f"Model moved to device: {DEVICE}")
 
-    logger.info("Loading preprocessed chunks...")
-    chunks = get_preprocessed_chunks()
-    logger.info(f"Loaded {len(chunks)} chunks")
+    # one_forward_pass()
 
-    processed_count = 0
-    skipped_count = 0
+    # criterion = nn.CrossEntropyLoss()
+    # optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
-    for idx, chunk in enumerate(chunks):
-        norm = pd.DataFrame(zscore(chunk, axis=0))  # hope this is correct axis
-        channel = chunk["Fp1"]
+    # For cross-validation (recommended for your use case)
+    for fold, (train_loader, val_loader, _, _) in enumerate(
+        # TODO: add option to preload data?
+        # TODO: does it make sense with the data loader
+        create_cross_validation_splits(
+            condition="EC",  # or "EO", "TASK", or None for all
+            n_folds=10,
+            batch_size=1,
+        )
+    ):
+        print(f"Training fold {fold + 1}/10")
 
-        if len(channel) < 256: # Otherwise the STFT might not work
-            logger.debug(f"Skipping chunk {idx} due to insufficient length ({len(channel)} < 256 samples)")
-            skipped_count += 1
-            continue
+        for batch in train_loader:
+            eeg = batch["eeg"]  # Shape: (batch_size, chunks, channels, 2500)
+            labels = batch["label"]  # Shape: (batch_size,) - 0=Healthy, 1=MDD
+            subjects = batch["subject"]
+            conditions = batch["condition"]
 
-        f, t, Zxx = stft(channel, fs=SFREQ, nperseg=256, noverlap=192, window='hamming')
-        Zxx_mag = np.log1p(np.abs(Zxx))
-        x = torch.tensor(Zxx_mag, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-        y = model.forward(x)
+            # Your training code here
+            loss = model(eeg, labels)
+            # ...
 
-        probabilities = F.softmax(y, dim=1)
-        logger.info(f"Chunk {idx}: Probabilities: {probabilities.detach().numpy()}")
-        processed_count += 1
-
-    logger.info(f"Processing complete: {processed_count} chunks processed, {skipped_count} chunks skipped")
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+        # validate
 
     # best_val_acc = 0.0
     # for epoch in range(1, EPOCHS+1):
