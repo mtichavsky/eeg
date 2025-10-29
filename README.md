@@ -43,3 +43,6 @@ name so I can check their exact method?
 
 
 => made second conv 5x5
+
+
+Short-Time Fourier Transform (STFT) -> spectogram
