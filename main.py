@@ -1,3 +1,4 @@
+import argparse
 import logging
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from sklearn.metrics import confusion_matrix
 from torch.utils.data import DataLoader, Subset
 
 from thesis.dataset import MDDDataset, SpectrogramDataset, collate_variable_length_eeg
+from thesis.early_stopping import EarlyStopping
 from thesis.model import CNN_LSTM_DepCap
 
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -16,69 +18,18 @@ logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 
-class EarlyStopping:
-    """
-    Early stopping to stop training when validation metric stops improving.
-
-    :param int patience: Number of epochs with no improvement after which training stops.
-    :param float min_delta: Minimum change to qualify as an improvement (default: 0.0).
-    :param bool maximize: Whether to maximize the metric (True) or minimize it (False).
-    """
-
-    def __init__(self, patience: int = 10, min_delta: float = 0.0, maximize: bool = True):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.maximize = maximize
-        self.counter = 0
-        self.best_score = None
-        self.early_stop = False
-        self.best_epoch = 0
-
-    def __call__(self, score: float, epoch: int) -> bool:
-        """
-        Check if training should stop.
-
-        :param float score: Current validation metric score.
-        :param int epoch: Current epoch number.
-        :return: True if training should stop, False otherwise.
-        :rtype: bool
-        """
-        if self.best_score is None:
-            self.best_score = score
-            self.best_epoch = epoch
-            return False
-
-        if self.maximize:
-            improved = score > self.best_score + self.min_delta
-        else:
-            improved = score < self.best_score - self.min_delta
-
-        if improved:
-            self.best_score = score
-            self.best_epoch = epoch
-            self.counter = 0
-        else:
-            self.counter += 1
-            if self.counter >= self.patience:
-                self.early_stop = True
-                logger.info(
-                    f"Early stopping triggered. Best score: {self.best_score:.4f} "
-                    f"at epoch {self.best_epoch}"
-                )
-                return True
-
-        return False
-
-
-# -------------------------
-# Metrics
-# -------------------------
 def classification_metrics(y_true: np.ndarray, y_pred: np.ndarray):
     """
-    y_true, y_pred : 1d arrays of ints (0/1). Returns dict with accuracy, precision, recall (sensitivity), specificity
+    Compute classification metrics from true and predicted labels.
+
+    :param np.ndarray y_true: True labels (0/1).
+    :param np.ndarray y_pred: Predicted labels (0/1).
+    :return: Dictionary with accuracy, precision, recall, specificity, and confusion matrix values.
+    :rtype: dict
     """
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
     acc = (tp + tn) / (tp + tn + fp + fn)
+    # TODO idk what the following mean
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0  # sensitivity
     specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
@@ -94,6 +45,55 @@ def classification_metrics(y_true: np.ndarray, y_pred: np.ndarray):
     }
 
 
+def aggregate_subject_predictions(
+    chunk_preds: np.ndarray, chunk_labels: np.ndarray, subjects: list[str]
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Aggregate chunk-level predictions to subject-level using majority voting.
+
+    For each subject, collects all chunk predictions and computes the most frequent
+    prediction (mode) as the final subject-level prediction. This is useful for
+    EEG analysis where multiple temporal chunks come from the same subject.
+
+    :param np.ndarray chunk_preds: Predictions for each chunk (0/1).
+    :param np.ndarray chunk_labels: Ground truth labels for each chunk (0/1).
+    :param list[str] subjects: Subject ID for each chunk (e.g., "H S1", "MDD S2").
+    :return: Tuple of (subject_predictions, subject_labels) where each array contains
+             one value per unique subject.
+    :rtype: tuple[np.ndarray, np.ndarray]
+
+    Example:
+        >>> chunk_preds = np.array([0, 1, 1, 0, 0])
+        >>> chunk_labels = np.array([0, 0, 0, 1, 1])
+        >>> subjects = ["H S1", "H S1", "H S1", "MDD S2", "MDD S2"]
+        >>> subj_preds, subj_labels = aggregate_subject_predictions(chunk_preds, chunk_labels, subjects)
+        >>> subj_preds  # H S1 gets 1 (majority), MDD S2 gets 0 (majority)
+        array([1, 0])
+        >>> subj_labels  # H S1 is 0, MDD S2 is 1
+        array([0, 1])
+    """
+    subject_preds_dict = {}
+    subject_labels_dict = {}
+
+    # Group predictions by subject
+    for pred, label, subject in zip(chunk_preds, chunk_labels, subjects):
+        if subject not in subject_preds_dict:
+            subject_preds_dict[subject] = []
+            subject_labels_dict[subject] = label  # All chunks from same subject have same label
+        subject_preds_dict[subject].append(pred)
+
+    # Compute majority vote for each subject
+    subject_preds = []
+    subject_labels = []
+    for subject in subject_preds_dict:
+        chunk_preds_for_subject = subject_preds_dict[subject]
+        majority_pred = np.bincount(chunk_preds_for_subject).argmax()
+        subject_preds.append(majority_pred)
+        subject_labels.append(subject_labels_dict[subject])
+
+    return np.array(subject_preds), np.array(subject_labels)
+
+
 # -------------------------
 # Training loop
 # -------------------------
@@ -102,7 +102,9 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
     running_loss = 0.0
     all_preds = []
     all_labels = []
-    for xb, yb in dataloader:
+    for batch in dataloader:
+        # Unpack batch: SpectrogramDataset returns (spectrogram, label, subject)
+        xb, yb, _ = batch  # Ignore subjects during training
         xb = xb.to(device)
         yb = yb.to(device)
         optimizer.zero_grad()
@@ -112,10 +114,10 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
         optimizer.step()
         running_loss += float(loss.item()) * xb.size(0)
         preds = logits.argmax(dim=1).detach().cpu().numpy()
-        all_preds.append(preds)
-        all_labels.append(yb.detach().cpu().numpy())
-    all_preds = np.concatenate(all_preds)
-    all_labels = np.concatenate(all_labels)
+        all_preds.extend(preds)
+        all_labels.extend(yb.detach().cpu().numpy())
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
     metrics = classification_metrics(all_labels, all_preds)
     avg_loss = running_loss / len(dataloader.dataset)
     metrics["loss"] = avg_loss
@@ -123,26 +125,54 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
 
 
 def eval_epoch(model, dataloader, criterion, device):
+    """
+    Evaluate model for one epoch, computing both chunk-level and subject-level metrics.
+
+    :param nn.Module model: Model to evaluate.
+    :param DataLoader dataloader: Validation data loader (expects Subset of SpectrogramDataset).
+    :param nn.Module criterion: Loss function.
+    :param torch.device device: Device to evaluate on.
+    :return: Dictionary containing chunk-level and subject-level metrics.
+    :rtype: dict
+    """
     model.eval()
     running_loss = 0.0
     all_preds = []
     all_labels = []
+    all_subjects = []
+
     with torch.no_grad():
-        for xb, yb in dataloader:
+        for batch in dataloader:
+            # Unpack batch: SpectrogramDataset returns (spectrogram, label, subject)
+            xb, yb, subjects = batch
             xb = xb.to(device)
             yb = yb.to(device)
+
             logits = model(xb)
             loss = criterion(logits, yb)
             running_loss += float(loss.item()) * xb.size(0)
             preds = logits.argmax(dim=1).detach().cpu().numpy()
-            all_preds.append(preds)
-            all_labels.append(yb.detach().cpu().numpy())
-    all_preds = np.concatenate(all_preds)
-    all_labels = np.concatenate(all_labels)
-    metrics = classification_metrics(all_labels, all_preds)
+
+            all_preds.extend(preds)
+            all_labels.extend(yb.detach().cpu().numpy())
+            all_subjects.extend(subjects)  # subjects is a list of strings from the batch
+
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
+
+    # Chunk-level metrics
+    chunk_metrics = classification_metrics(all_labels, all_preds)
     avg_loss = running_loss / len(dataloader.dataset)
-    metrics["loss"] = avg_loss
-    return metrics
+
+    # Subject-level metrics (majority voting)
+    subject_preds, subject_labels = aggregate_subject_predictions(all_preds, all_labels, all_subjects)
+    subject_metrics = classification_metrics(subject_labels, subject_preds)
+
+    return {
+        "chunk": chunk_metrics,
+        "subject": subject_metrics,
+        "loss": avg_loss,
+    }
 
 
 def train_one_fold(
@@ -160,7 +190,7 @@ def train_one_fold(
     checkpoint_dir: Path = Path("checkpoints"),
 ) -> dict:
     """
-    Train model for one fold with comprehensive logging, checkpointing, and early stopping.
+    Train model for one-fold with comprehensive logging, checkpointing, and early stopping.
 
     :param int fold: Current fold number (for logging and checkpointing).
     :param nn.Module model: Model to train.
@@ -215,23 +245,43 @@ def train_one_fold(
         if epoch % val_every == 0 or epoch == num_epochs:
             val_metrics = eval_epoch(model, val_loader, criterion, device)
 
+            # Extract chunk and subject metrics
+            chunk_metrics = val_metrics["chunk"]
+            subject_metrics = val_metrics["subject"]
+
             logger.info(
                 f"Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-                f"Val Loss: {val_metrics['loss']:.4f} | "
-                f"Val Acc: {val_metrics['accuracy']:.4f} | "
-                f"Prec: {val_metrics['precision']:.4f} | "
-                f"Recall: {val_metrics['recall']:.4f} | "
-                f"Spec: {val_metrics['specificity']:.4f} | "
-                f"Confusion: TP={val_metrics['tp']}, TN={val_metrics['tn']}, "
-                f"FP={val_metrics['fp']}, FN={val_metrics['fn']}"
+                f"Val Loss: {val_metrics['loss']:.4f}"
+            )
+            logger.info(
+                f"  Chunk-level  -> Acc: {chunk_metrics['accuracy']:.4f} | "
+                f"Prec: {chunk_metrics['precision']:.4f} | "
+                f"Recall: {chunk_metrics['recall']:.4f} | "
+                f"Spec: {chunk_metrics['specificity']:.4f} | "
+                f"Confusion: TP={chunk_metrics['tp']}, TN={chunk_metrics['tn']}, "
+                f"FP={chunk_metrics['fp']}, FN={chunk_metrics['fn']}"
+            )
+            logger.info(
+                f"  Subject-level -> Acc: {subject_metrics['accuracy']:.4f} | "
+                f"Prec: {subject_metrics['precision']:.4f} | "
+                f"Recall: {subject_metrics['recall']:.4f} | "
+                f"Spec: {subject_metrics['specificity']:.4f} | "
+                f"Confusion: TP={subject_metrics['tp']}, TN={subject_metrics['tn']}, "
+                f"FP={subject_metrics['fp']}, FN={subject_metrics['fn']}"
             )
 
             fold_history["val_loss"].append(val_metrics["loss"])
-            fold_history["val_acc"].append(val_metrics["accuracy"])
+            fold_history["val_acc"].append(
+                subject_metrics["accuracy"]
+            )  # Use subject-level for tracking
 
-            # Save best model
-            if val_metrics["accuracy"] > best_val_acc:
-                best_val_acc = val_metrics["accuracy"]
+            # Combined metric: chunk accuracy weighted by subject accuracy
+            # This handles small validation sets better (e.g., 6 subjects in 10-fold CV)
+            combined_metric = chunk_metrics["accuracy"] * subject_metrics["accuracy"]
+
+            # Save best model (based on combined metric)
+            if combined_metric > best_val_acc:
+                best_val_acc = combined_metric
                 best_epoch = epoch
                 best_model_path = checkpoint_dir / f"fold_{fold + 1}_best.pth"
                 torch.save(
@@ -244,10 +294,14 @@ def train_one_fold(
                     },
                     best_model_path,
                 )
-                logger.info(f"✓ Saved best model: {best_model_path} (acc={best_val_acc:.4f})")
+                logger.info(
+                    f"✓ Saved best model: {best_model_path} "
+                    f"(combined={combined_metric:.4f}, chunk={chunk_metrics['accuracy']:.4f}, "
+                    f"subject={subject_metrics['accuracy']:.4f})"
+                )
 
-            # Early stopping check
-            if early_stopping(val_metrics["accuracy"], epoch):
+            # Early stopping check (based on combined metric)
+            if early_stopping(combined_metric, epoch):
                 logger.info(f"Early stopping triggered at epoch {epoch}")
                 break
 
@@ -289,6 +343,7 @@ def train_cross_validation(
     patience: int = 15,
     checkpoint_dir: Path = Path("checkpoints"),
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    skip_ica: bool = False,
 ) -> dict:
     """
     Train model using 10-fold cross-validation with comprehensive logging and checkpointing.
@@ -303,6 +358,7 @@ def train_cross_validation(
     :param int patience: Early stopping patience.
     :param Path checkpoint_dir: Directory to save checkpoints.
     :param torch.device device: Device to train on.
+    :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
     :return: Dictionary with cross-validation results.
     :rtype: dict
     """
@@ -310,6 +366,7 @@ def train_cross_validation(
     logger.info(f"Starting {n_folds}-Fold Cross-Validation Training")
     logger.info(f"Condition: {condition}, Batch Size: {batch_size}, LR: {learning_rate}")
     logger.info(f"Device: {device}")
+    logger.info(f"Skip ICA: {skip_ica}")
     logger.info(f"{'=' * 80}\n")
 
     cv_results = {
@@ -318,8 +375,11 @@ def train_cross_validation(
         "fold_final_epoch": [],
     }
 
-    logger.info("Step 1: Loading full dataset and converting to spectrograms (one-time preprocessing)...")
-    full_mdd_dataset = MDDDataset(condition=condition, preload=False)
+    logger.info(
+        "Step 1: Loading full dataset and converting to spectrograms (one-time preprocessing)..."
+    )
+    # TODO: this is weird cause in a way I'm preloading the shit
+    full_mdd_dataset = MDDDataset(condition=condition, preload=False, skip_ica=skip_ica)
     all_subjects = full_mdd_dataset.get_subjects()
 
     logger.info(f"Found {len(all_subjects)} subjects: {all_subjects}")
@@ -336,7 +396,9 @@ def train_cross_validation(
 
     # Verify spectrogram shape
     spec_shape = full_spec_dataset[0][0].shape[1:]  # (H, W) without channel dim
-    assert spec_shape == torch.Size([129, 41]), f"Expected (129, 41), got {spec_shape}"
+    assert spec_shape == torch.Size([129, 41]), (
+        f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
+    )
     logger.info(f"Spectrogram shape: {spec_shape}")
 
     logger.info(f"Step 2: Creating {n_folds}-fold cross-validation splits...")
@@ -369,8 +431,12 @@ def train_cross_validation(
                 train_subjects.extend(healthy_folds[i])
                 train_subjects.extend(mdd_folds[i])
 
-        logger.info(f"Train subjects ({len(train_subjects)}): {train_subjects}")
-        logger.info(f"Val subjects ({len(val_subjects)}): {val_subjects}")
+        # Convert numpy strings to regular strings for cleaner logging
+        train_subjects_clean = [str(s) for s in train_subjects]
+        val_subjects_clean = [str(s) for s in val_subjects]
+
+        logger.info(f"Train subjects ({len(train_subjects)}): {train_subjects_clean}")
+        logger.info(f"Val subjects ({len(val_subjects)}): {val_subjects_clean}")
 
         # Get indices for train/val based on subjects
         train_indices = full_spec_dataset.get_indices_for_subjects(train_subjects)
@@ -444,56 +510,102 @@ def train_cross_validation(
     return cv_results
 
 
-if __name__ == "__main__":
-    # -------------------------
-    # Hyperparameters
-    # -------------------------
-    CONDITION = "EC"  # "EC", "EO", "TASK", or None for all conditions
-    N_FOLDS = 10
-    BATCH_SIZE = 32
-    LR = 1e-4
-    EPOCHS = 50
-    VAL_EVERY = 2  # Validate every N epochs
-    SAVE_EVERY = 10  # Save checkpoint every N epochs
-    PATIENCE = 15  # Early stopping patience
-    CHECKPOINT_DIR = Path("checkpoints")
-    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def get_arg_parser():
+    parser = argparse.ArgumentParser(
+        description="EEG Classification Training",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Train subcommand
+    train_parser = subparsers.add_parser("train", help="Train the model using cross-validation")
+    train_parser.add_argument(
+        "--condition",
+        type=str,
+        default="EC",
+        choices=["EC", "EO", "TASK"],
+        help="EEG condition to use",
+    )
+    train_parser.add_argument(
+        "--n-folds", type=int, default=10, help="Number of cross-validation folds"
+    )
+    train_parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
+    train_parser.add_argument(
+        "--epochs", type=int, default=50, help="Maximum number of epochs per fold"
+    )
+    train_parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
+    train_parser.add_argument("--val-every", type=int, default=2, help="Validate every N epochs")
+    train_parser.add_argument(
+        "--save-every", type=int, default=10, help="Save checkpoint every N epochs"
+    )
+    train_parser.add_argument("--patience", type=int, default=15, help="Early stopping patience")
+    train_parser.add_argument(
+        "--checkpoint-dir",
+        type=str,
+        default="checkpoints",
+        help="Directory to save checkpoints",
+    )
+    train_parser.add_argument(
+        "--skip-ica",
+        action="store_true",
+        help="Skip ICA artifact removal (faster but less clean data)",
+    )
+    train_parser.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        choices=["auto", "cuda", "cpu"],
+        help="Device to train on",
+    )
+    return parser
+
+
+def train(args):
+    if args.device == "auto":
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(args.device)
+
+    checkpoint_dir = Path(args.checkpoint_dir)
 
     logger.info("Starting MDD EEG Classification Training")
     logger.info("Hyperparameters:")
-    logger.info(f"  Condition: {CONDITION}")
-    logger.info(f"  N-Fold CV: {N_FOLDS}")
-    logger.info(f"  Batch Size: {BATCH_SIZE}")
-    logger.info(f"  Learning Rate: {LR}")
-    logger.info(f"  Max Epochs: {EPOCHS}")
-    logger.info(f"  Validation Every: {VAL_EVERY} epochs")
-    logger.info(f"  Save Checkpoint Every: {SAVE_EVERY} epochs")
-    logger.info(f"  Early Stopping Patience: {PATIENCE} epochs")
-    logger.info(f"  Device: {DEVICE}")
-    logger.info(f"  Checkpoint Directory: {CHECKPOINT_DIR}")
+    logger.info(f"  Condition: {args.condition}")
+    logger.info(f"  N-Fold CV: {args.n_folds}")
+    logger.info(f"  Batch Size: {args.batch_size}")
+    logger.info(f"  Learning Rate: {args.lr}")
+    logger.info(f"  Max Epochs: {args.epochs}")
+    logger.info(f"  Validation Every: {args.val_every} epochs")
+    logger.info(f"  Save Checkpoint Every: {args.save_every} epochs")
+    logger.info(f"  Early Stopping Patience: {args.patience} epochs")
+    logger.info(f"  Skip ICA: {args.skip_ica}")
+    logger.info(f"  Device: {device}")
+    logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
 
-    # Run 10-fold cross-validation training
+    # Run cross-validation training
     results = train_cross_validation(
-        condition=CONDITION,
-        n_folds=N_FOLDS,
-        batch_size=BATCH_SIZE,
-        num_epochs=EPOCHS,
-        learning_rate=LR,
-        val_every=VAL_EVERY,
-        save_every=SAVE_EVERY,
-        patience=PATIENCE,
-        checkpoint_dir=CHECKPOINT_DIR,
-        device=DEVICE,
+        condition=args.condition,
+        n_folds=args.n_folds,
+        batch_size=args.batch_size,
+        num_epochs=args.epochs,
+        learning_rate=args.lr,
+        val_every=args.val_every,
+        save_every=args.save_every,
+        patience=args.patience,
+        checkpoint_dir=checkpoint_dir,
+        device=device,
+        skip_ica=args.skip_ica,
     )
 
     # Save final results to file
-    results_file = CHECKPOINT_DIR / "cv_results.txt"
+    results_file = checkpoint_dir / "cv_results.txt"
     with open(results_file, "w") as f:
-        f.write(f"{N_FOLDS}-Fold Cross-Validation Results\n")
+        f.write(f"{args.n_folds}-Fold Cross-Validation Results\n")
         f.write(f"{'=' * 80}\n\n")
-        f.write(f"Condition: {CONDITION}\n")
-        f.write(f"Batch Size: {BATCH_SIZE}\n")
-        f.write(f"Learning Rate: {LR}\n\n")
+        f.write(f"Condition: {args.condition}\n")
+        f.write(f"Batch Size: {args.batch_size}\n")
+        f.write(f"Learning Rate: {args.lr}\n")
+        f.write(f"Skip ICA: {args.skip_ica}\n\n")
         f.write("Per-fold best validation accuracy:\n")
         for i, acc in enumerate(results["fold_best_acc"]):
             f.write(
@@ -508,3 +620,17 @@ if __name__ == "__main__":
 
     logger.info(f"\nResults saved to {results_file}")
     logger.info("Training completed!")
+
+
+def main():
+    parser = get_arg_parser()
+    args = parser.parse_args()
+
+    if args.command == "train":
+        train(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

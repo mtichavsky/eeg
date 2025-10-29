@@ -2,8 +2,8 @@
 .PHONY: venv lock format typecheck
 
 format:
-	ruff format .
-	ruff check --fix .
+	poetry run ruff format .
+	poetry run ruff check --fix .
 
 typecheck:
 	poetry run mypy thesis/ *.py

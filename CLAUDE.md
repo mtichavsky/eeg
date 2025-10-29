@@ -37,21 +37,18 @@ make venv
 ```
 
 ### Code Formatting
-```bash
-# Format Python files (uses ruff)
-poetry run ruff format *.py
 
-# Or use Makefile
+```bash
 make format
 ```
 
 ### Running Training
 ```bash
 # Main training script with cross-validation
-poetry run python main.py
+poetry run python main.py train 
 
-# Example training with 10-fold CV
-poetry run python train_cv_example.py
+# Faster, debug run, skipping the ICA
+poetry run python main.py train --skip-ica
 ```
 
 ### Interactive Development

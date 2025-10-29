@@ -56,6 +56,7 @@ class MDDDataset(Dataset):
         preload: bool = False,
         cache_size: int = 60,
         transform: Optional[Callable] = None,
+        skip_ica: bool = False,
     ):
         """
         Initialize the MDD EEG dataset.
@@ -68,11 +69,13 @@ class MDDDataset(Dataset):
         :param bool preload: If True, preprocess all files at initialization (slower init, faster training).
         :param int cache_size: Number of preprocessed files to cache in memory.
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
+        :param bool skip_ica: If True, skip ICA artifact removal (faster but less clean data).
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
         self.preload = preload
+        self.skip_ica = skip_ica
         self.files = self._discover_files(condition, subjects, labels)
 
         # TODO: this part is not fully clear to me - are we saving it to preprocessed_data or what
@@ -167,12 +170,11 @@ class MDDDataset(Dataset):
             )
         return files
 
-    @staticmethod
-    def preprocess_file_uncached(file_path: Path):
+    def preprocess_file_uncached(self, file_path: Path):
         """
         Preprocess a single EDF file and return chunks.
 
-        Applies the full preprocessing pipeline: filtering, ICA, artifact removal, and chunking.
+        Applies the full preprocessing pipeline: filtering, optional ICA, artifact removal, and chunking.
 
         :param Path file_path: Path to the EDF file to preprocess.
         :return: List of numpy arrays, each representing a chunk of shape (channels, samples).
@@ -196,23 +198,30 @@ class MDDDataset(Dataset):
         raw = raw.rename_channels(mapping)
 
         filt_raw = raw.set_eeg_reference("average", verbose=False)
-        ica = ICA(
-            max_iter="auto",
-            method="infomax",
-            random_state=97,
-            fit_params=dict(extended=True),
-        )
-        ica.fit(filt_raw, verbose=False)
 
-        montage = mne.channels.make_standard_montage("standard_1020")
-        filt_raw = filt_raw.set_montage(montage, match_case=False, verbose=False)
-        ic_labels = label_components(filt_raw, ica, method="iclabel")
+        # Apply ICA if not skipped
+        if not self.skip_ica:
+            ica = ICA(
+                max_iter="auto",
+                method="infomax",
+                random_state=97,
+                fit_params=dict(extended=True),
+            )
+            ica.fit(filt_raw, verbose=False)
 
-        labels = ic_labels["labels"]
-        exclude_idx = [idx for idx, label in enumerate(labels) if label not in ["brain", "other"]]
+            montage = mne.channels.make_standard_montage("standard_1020")
+            filt_raw = filt_raw.set_montage(montage, match_case=False, verbose=False)
+            ic_labels = label_components(filt_raw, ica, method="iclabel")
 
-        preprocessed = filt_raw.copy()
-        ica.apply(preprocessed, exclude=exclude_idx, verbose=False)
+            labels = ic_labels["labels"]
+            exclude_idx = [
+                idx for idx, label in enumerate(labels) if label not in ["brain", "other"]
+            ]
+
+            preprocessed = filt_raw.copy()
+            ica.apply(preprocessed, exclude=exclude_idx, verbose=False)
+        else:
+            preprocessed = filt_raw
 
         data = preprocessed.get_data()
         n_samples = data.shape[1]
@@ -315,10 +324,10 @@ def collate_variable_length_eeg(batch):
     labels = torch.tensor([item["label"] for item in batch], dtype=torch.long)
     subjects = [item["subject"] for item in batch]
     conditions = [item["condition"] for item in batch]
-    
+
     return {
         "eeg": eeg_trimmed,  # Shape: (batch_size, min_chunks, channels, samples)
-        "label": labels,     # Shape: (batch_size,)
+        "label": labels,  # Shape: (batch_size,)
         "subject": subjects,
         "condition": conditions,
     }
@@ -528,15 +537,15 @@ class SpectrogramDataset(Dataset):
     def __len__(self) -> int:
         return len(self.spectrograms)
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int, str]:
         """
-        Get a single spectrogram-label pair.
+        Get a single spectrogram-label-subject tuple.
 
         :param int idx: Index of the sample.
-        :return: Tuple of (spectrogram, label).
-        :rtype: tuple[torch.Tensor, int]
+        :return: Tuple of (spectrogram, label, subject).
+        :rtype: tuple[torch.Tensor, int, str]
         """
-        return self.spectrograms[idx], self.labels[idx]
+        return self.spectrograms[idx], self.labels[idx], self.subjects[idx]
 
     def get_indices_for_subjects(self, subject_list: list[str]) -> list[int]:
         """
