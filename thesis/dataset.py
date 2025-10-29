@@ -274,7 +274,7 @@ class MDDDataset(Dataset):
         healthy_count = sum(1 for f in self.files if f["label"] == "H")
         mdd_count = sum(1 for f in self.files if f["label"] == "MDD")
 
-        conditions = {}
+        conditions: dict[str, int] = {}
         for f in self.files:
             conditions[f["condition"]] = conditions.get(f["condition"], 0) + 1
 
@@ -339,7 +339,7 @@ def create_cross_validation_splits(
         eval_subjects = list(healthy_folds[fold_idx]) + list(mdd_folds[fold_idx])
 
         # Training subjects (all other folds)
-        train_subjects = []
+        train_subjects: list[str] = []
         for i in range(n_folds):
             if i != fold_idx:
                 train_subjects.extend(healthy_folds[i])

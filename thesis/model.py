@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -53,6 +54,7 @@ class CNN_LSTM_DepCap(nn.Module):
 
         # Initialize RNN with correct input size
         self.rnn_type = rnn_type.upper()
+        self.rnn: Union[nn.LSTM, nn.GRU]
         if self.rnn_type == "LSTM":
             self.rnn = nn.LSTM(input_size=rnn_input_size, hidden_size=rnn_hidden, batch_first=True)
         elif self.rnn_type == "GRU":
