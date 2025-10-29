@@ -23,6 +23,8 @@ librosa = "*"
 ruff = "*"
 ipykernel = "*"
 jupyter = "*"
+mypy = "*"
+pandas-stubs = "*"
 
 
 [build-system]
@@ -33,3 +35,26 @@ build-backend = "poetry.core.masonry.api"
 line-length = 100
 lint.select = ["I", "E", "F"]
 fix = true
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+strict_equality = true
+
+# Allow untyped calls for third-party libraries without stubs
+[[tool.mypy.overrides]]
+module = [
+    "mne.*",
+    "mne_icalabel.*",
+    "scipy.*",
+    "sklearn.*",
+    "matplotlib.*",
+    "librosa.*",
+]

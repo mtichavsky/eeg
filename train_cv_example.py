@@ -35,7 +35,7 @@ def train_with_cross_validation(
         dict: Results for each fold
     """
     # Storage for results
-    fold_results = {
+    fold_results: dict[str, list[float]] = {
         "val_accuracy": [],
         "val_loss": [],
         "best_epoch": [],
