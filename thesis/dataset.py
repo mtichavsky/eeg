@@ -23,10 +23,6 @@ SEGMENT_LENGTH = 10
 SFREQ = 1000 / 4
 CHUNK_SAMPLES = int(SEGMENT_LENGTH * SFREQ)
 
-# TODO fix logging
-LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
-LOG_LEVEL = "INFO"
-logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 
@@ -199,7 +195,7 @@ class MDDDataset(Dataset):
         }
         raw = raw.rename_channels(mapping)
 
-        filt_raw = raw.set_eeg_reference("average")
+        filt_raw = raw.set_eeg_reference("average", verbose=False)
         ica = ICA(
             max_iter="auto",
             method="infomax",
@@ -481,9 +477,10 @@ class SpectrogramDataset(Dataset):
         self.noverlap = noverlap
         self.window = window
 
-        # Cache all spectrograms and labels from the raw loader
+        # Cache all spectrograms, labels, and subject metadata from the raw loader
         self.spectrograms = []
         self.labels = []
+        self.subjects = []  # Track which subject each spectrogram came from
         self._convert_to_spectrograms()
 
     def _convert_to_spectrograms(self) -> None:
@@ -492,6 +489,7 @@ class SpectrogramDataset(Dataset):
         for batch in self.raw_loader:
             eeg = batch["eeg"]  # Shape: (batch_size, num_chunks, channels, samples)
             labels = batch["label"]  # Shape: (batch_size,)
+            subjects = batch["subject"]  # List of subject IDs
 
             batch_size, num_chunks = eeg.shape[0], eeg.shape[1]
             for i in range(batch_size):
@@ -523,6 +521,7 @@ class SpectrogramDataset(Dataset):
 
                     self.spectrograms.append(spec_tensor)
                     self.labels.append(labels[i].item())
+                    self.subjects.append(subjects[i])  # Track subject for this chunk
 
         logger.info(f"Created {len(self.spectrograms)} spectrograms")
 
@@ -538,3 +537,15 @@ class SpectrogramDataset(Dataset):
         :rtype: tuple[torch.Tensor, int]
         """
         return self.spectrograms[idx], self.labels[idx]
+
+    def get_indices_for_subjects(self, subject_list: list[str]) -> list[int]:
+        """
+        Get indices of all spectrograms belonging to specific subjects.
+
+        :param list[str] subject_list: List of subject IDs (e.g., ["H S1", "MDD S2"]).
+        :return: List of indices for samples belonging to those subjects.
+        :rtype: list[int]
+        """
+        subject_set = set(subject_list)
+        indices = [i for i, subj in enumerate(self.subjects) if subj in subject_set]
+        return indices
