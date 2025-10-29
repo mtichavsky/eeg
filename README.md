@@ -46,3 +46,50 @@ name so I can check their exact method?
 
 
 Short-Time Fourier Transform (STFT) -> spectogram
+
+
+## TODO:
+
+Current Architecture Issues:
+- SpectrogramDataset is both a dataset and a preprocessing pipeline
+- It's tightly coupled to the DataLoader pattern
+- Hard to reuse for different models with different preprocessing needs
+
+Better Architecture (for future):
+
+I'd recommend a transform function approach (like PyTorch's torchvision):
+
+# Preprocessing pipelines as composable transforms
+def to_spectrogram(eeg_chunk, nperseg=256, noverlap=192):
+"""Transform raw EEG to spectrogram"""
+# ... STFT logic
+return spec_tensor
+
+def to_wavelet(eeg_chunk, wavelet='db4', levels=5):
+"""Transform raw EEG to wavelet decomposition"""
+# ... wavelet logic
+return wavelet_tensor
+
+# Usage
+dataset = MDDDataset(
+condition="EC",
+transform=to_spectrogram  # or to_wavelet, or None for raw
+)
+
+Why this is better:
+- Each model defines its own transform function
+- MDDDataset stays generic (just loads raw EEG)
+- Easy to A/B test different preprocessing approaches
+- Composable: transform=lambda x: to_spectrogram(normalize(x))
+
+For your MVP right now:
+
+Let's stick with option #3 to fix the immediate performance issue. You can refactor to transforms later when you add more models. The quick
+fix won't prevent you from doing this refactor later.
+
+Implementation plan:
+1. Create one SpectrogramDataset from ALL data (before CV loop)
+2. Use torch.utils.data.Subset with fold indices to create train/val splits
+3. Spectrograms computed once, reused across all folds
+
+Should I proceed with implementing option #3 now?

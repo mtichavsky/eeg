@@ -5,9 +5,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import confusion_matrix
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
-from thesis.dataset import SpectrogramDataset, create_cross_validation_splits
+from thesis.dataset import MDDDataset, SpectrogramDataset, collate_variable_length_eeg
 from thesis.model import CNN_LSTM_DepCap
 
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -318,37 +318,78 @@ def train_cross_validation(
         "fold_final_epoch": [],
     }
 
-    # Create cross-validation splits
-    cv_splits = create_cross_validation_splits(
-        condition=condition, n_folds=n_folds, batch_size=batch_size, random_seed=42
+    logger.info("Step 1: Loading full dataset and converting to spectrograms (one-time preprocessing)...")
+    full_mdd_dataset = MDDDataset(condition=condition, preload=False)
+    all_subjects = full_mdd_dataset.get_subjects()
+
+    logger.info(f"Found {len(all_subjects)} subjects: {all_subjects}")
+    full_loader = DataLoader(
+        full_mdd_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=collate_variable_length_eeg,
     )
 
-    for fold, (train_raw_loader, val_raw_loader, train_dataset, val_dataset) in enumerate(
-        cv_splits
-    ):
+    full_spec_dataset = SpectrogramDataset(full_loader)
+    logger.info(f"Spectrograms created: {len(full_spec_dataset)} samples")
+
+    # Verify spectrogram shape
+    spec_shape = full_spec_dataset[0][0].shape[1:]  # (H, W) without channel dim
+    assert spec_shape == torch.Size([129, 41]), f"Expected (129, 41), got {spec_shape}"
+    logger.info(f"Spectrogram shape: {spec_shape}")
+
+    logger.info(f"Step 2: Creating {n_folds}-fold cross-validation splits...")
+
+    # Split subjects by class (stratified)
+    healthy_subjects = [s for s in all_subjects if s.startswith("H ")]
+    mdd_subjects = [s for s in all_subjects if s.startswith("MDD ")]
+
+    logger.info(f"Healthy subjects: {len(healthy_subjects)}, MDD subjects: {len(mdd_subjects)}")
+
+    # Shuffle subjects
+    rng = np.random.RandomState(42)
+    rng.shuffle(healthy_subjects)
+    rng.shuffle(mdd_subjects)
+
+    # Create folds for each class separately (stratified)
+    healthy_folds = np.array_split(healthy_subjects, n_folds)
+    mdd_folds = np.array_split(mdd_subjects, n_folds)
+
+    for fold in range(n_folds):
         logger.info(f"\n{'=' * 80}")
         logger.info(f"FOLD {fold + 1}/{n_folds}")
         logger.info(f"{'=' * 80}")
-        logger.info(f"Training samples: {len(train_dataset)}")
-        logger.info(f"Validation samples: {len(val_dataset)}")
 
-        # Convert raw EEG to spectrograms
-        logger.info("Creating spectrogram datasets...")
-        train_spec_dataset = SpectrogramDataset(train_raw_loader)
-        val_spec_dataset = SpectrogramDataset(val_raw_loader)
+        # Determine train/val subjects for this fold
+        val_subjects = list(healthy_folds[fold]) + list(mdd_folds[fold])
+        train_subjects = []
+        for i in range(n_folds):
+            if i != fold:
+                train_subjects.extend(healthy_folds[i])
+                train_subjects.extend(mdd_folds[i])
 
-        # Create dataloaders for spectrograms
+        logger.info(f"Train subjects ({len(train_subjects)}): {train_subjects}")
+        logger.info(f"Val subjects ({len(val_subjects)}): {val_subjects}")
+
+        # Get indices for train/val based on subjects
+        train_indices = full_spec_dataset.get_indices_for_subjects(train_subjects)
+        val_indices = full_spec_dataset.get_indices_for_subjects(val_subjects)
+
+        logger.info(f"Training samples: {len(train_indices)}")
+        logger.info(f"Validation samples: {len(val_indices)}")
+
+        # Create Subset datasets (reusing precomputed spectrograms!)
+        train_spec_dataset = Subset(full_spec_dataset, train_indices)
+        val_spec_dataset = Subset(full_spec_dataset, val_indices)
+
+        # Create DataLoaders
         train_loader = DataLoader(
             train_spec_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True
         )
         val_loader = DataLoader(
             val_spec_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True
         )
-
-        # TODO will this work?   MDD_CHUNK_SHAPE=(129, 41)
-        # Get spectrogram shape from first sample
-        spec_shape = train_spec_dataset[0][0].shape[1:]  # (H, W) without channel dim
-        logger.info(f"Spectrogram shape: {spec_shape}")
 
         # Initialize model for this fold
         model = CNN_LSTM_DepCap(
