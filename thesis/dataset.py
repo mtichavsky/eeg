@@ -1,3 +1,4 @@
+import logging
 import re
 import warnings
 from functools import lru_cache
@@ -9,6 +10,8 @@ import numpy as np
 import torch
 from mne.preprocessing import ICA
 from mne_icalabel import label_components
+from scipy.signal import stft
+from scipy.stats import zscore
 from torch.utils.data import DataLoader, Dataset
 
 warnings.filterwarnings("ignore")
@@ -19,6 +22,12 @@ MDD_DIR = Path("/home/milan/Documents/diplomka/MDD/")
 SEGMENT_LENGTH = 10
 SFREQ = 1000 / 4
 CHUNK_SAMPLES = int(SEGMENT_LENGTH * SFREQ)
+
+# TODO fix logging
+LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
+LOG_LEVEL = "INFO"
+logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
+logger = logging.getLogger(__name__)
 
 
 class MDDDataset(Dataset):
@@ -214,6 +223,7 @@ class MDDDataset(Dataset):
         chunks = []
         for i in range(0, n_samples - CHUNK_SAMPLES + 1, CHUNK_SAMPLES):
             chunk = data[:, i : i + CHUNK_SAMPLES]
+            chunk = zscore(chunk, axis=1)
             chunks.append(chunk)
 
         return chunks
@@ -288,6 +298,36 @@ class MDDDataset(Dataset):
         }
 
 
+def collate_variable_length_eeg(batch):
+    """
+    Custom collate function to handle variable-length EEG tensors.
+
+    Trims all tensors in the batch to the minimum number of chunks.
+
+    :param list batch: List of dictionaries from MDDDataset.__getitem__()
+    :return: Batched dictionary with trimmed tensors.
+    :rtype: dict
+    """
+    # Find the minimum number of chunks in this batch
+    min_chunks = min(item["eeg"].size(0) for item in batch)
+    logger.info(f"Trimming batch chunks to {min_chunks} chunks.")
+
+    # Trim all EEG tensors to min_chunks
+    eeg_trimmed = torch.stack([item["eeg"][:min_chunks] for item in batch])
+
+    # Stack other fields
+    labels = torch.tensor([item["label"] for item in batch], dtype=torch.long)
+    subjects = [item["subject"] for item in batch]
+    conditions = [item["condition"] for item in batch]
+    
+    return {
+        "eeg": eeg_trimmed,  # Shape: (batch_size, min_chunks, channels, samples)
+        "label": labels,     # Shape: (batch_size,)
+        "subject": subjects,
+        "condition": conditions,
+    }
+
+
 def create_cross_validation_splits(
     data_dir: Path = MDD_DIR,
     n_folds: int = 5,
@@ -295,6 +335,7 @@ def create_cross_validation_splits(
     batch_size: int = 32,
     num_workers: int = 0,
     random_seed: int = 42,
+    preload=False,
 ):
     """
     Create K-fold cross-validation splits at the subject level.
@@ -314,6 +355,7 @@ def create_cross_validation_splits(
     :param int batch_size: Batch size for DataLoaders.
     :param int num_workers: Number of worker processes for data loading.
     :param int random_seed: Random seed for reproducibility.
+    :param preload: ...
     :yield: Tuple of (train_loader, val_loader, train_dataset, val_dataset) for each fold.
     """
     # Get all subjects and split by class
@@ -349,13 +391,13 @@ def create_cross_validation_splits(
             data_dir=data_dir,
             condition=condition,
             subjects=train_subjects,
-            preload=False,
+            preload=preload,
         )
         eval_dataset = MDDDataset(
             data_dir=data_dir,
             condition=condition,
             subjects=eval_subjects,
-            preload=False,
+            preload=preload,
         )
 
         train_loader = DataLoader(
@@ -363,12 +405,14 @@ def create_cross_validation_splits(
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            collate_fn=collate_variable_length_eeg,
         )
         eval_loader = DataLoader(
             eval_dataset,
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            collate_fn=collate_variable_length_eeg,
         )
 
         print(f"\nFold {fold_idx + 1}/{n_folds}:")
@@ -410,3 +454,87 @@ if __name__ == "__main__":
 
         if fold_idx == 0:  # Only show first fold in example
             break
+
+
+class SpectrogramDataset(Dataset):
+    """
+    Wrapper dataset that converts raw EEG data to spectrograms on-the-fly.
+
+    :param DataLoader raw_loader: DataLoader providing batches with 'eeg' and 'label' keys.
+    :param int fs: Sampling frequency for STFT (default: SFREQ from dataset).
+    :param int nperseg: Length of each segment for STFT (default: 256).
+    :param int noverlap: Number of points to overlap between segments (default: 192).
+    :param str window: Window function for STFT (default: "hamming").
+    """
+
+    def __init__(
+        self,
+        raw_loader: DataLoader,
+        fs: int = SFREQ,
+        nperseg: int = 256,
+        noverlap: int = 192,
+        window: str = "hamming",
+    ):
+        self.raw_loader = raw_loader
+        self.fs = fs
+        self.nperseg = nperseg
+        self.noverlap = noverlap
+        self.window = window
+
+        # Cache all spectrograms and labels from the raw loader
+        self.spectrograms = []
+        self.labels = []
+        self._convert_to_spectrograms()
+
+    def _convert_to_spectrograms(self) -> None:
+        """Convert all EEG data from raw loader to spectrograms."""
+        logger.info("Converting EEG data to spectrograms...")
+        for batch in self.raw_loader:
+            eeg = batch["eeg"]  # Shape: (batch_size, num_chunks, channels, samples)
+            labels = batch["label"]  # Shape: (batch_size,)
+
+            batch_size, num_chunks = eeg.shape[0], eeg.shape[1]
+            for i in range(batch_size):
+                for chunk_idx in range(num_chunks):
+                    # TODO: Take the first channel (Fp1) for now - can be modified for multi-channel
+                    channel_data = eeg[i, chunk_idx, 0, :].numpy()
+
+                    # Skip if too short for STFT
+                    if len(channel_data) < self.nperseg:
+                        logger.warning(
+                            f"Skipping sample due to insufficient length: {len(channel_data)}"
+                        )
+                        continue
+
+                    # Compute STFT
+                    f, t, Zxx = stft(
+                        channel_data,
+                        fs=self.fs,
+                        nperseg=self.nperseg,
+                        noverlap=self.noverlap,
+                        window=self.window,
+                    )
+
+                    # Log magnitude spectrogram
+                    Zxx_mag = np.log1p(np.abs(Zxx))
+
+                    # Convert to tensor: (1, H, W) for single-channel spectrogram
+                    spec_tensor = torch.tensor(Zxx_mag, dtype=torch.float32).unsqueeze(0)
+
+                    self.spectrograms.append(spec_tensor)
+                    self.labels.append(labels[i].item())
+
+        logger.info(f"Created {len(self.spectrograms)} spectrograms")
+
+    def __len__(self) -> int:
+        return len(self.spectrograms)
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:
+        """
+        Get a single spectrogram-label pair.
+
+        :param int idx: Index of the sample.
+        :return: Tuple of (spectrogram, label).
+        :rtype: tuple[torch.Tensor, int]
+        """
+        return self.spectrograms[idx], self.labels[idx]
