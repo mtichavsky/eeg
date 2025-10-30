@@ -4,6 +4,11 @@ Recreating virtualenv thesis-MdkZeRIB-py3.13 in /home/milan/.cache/pypoetry/virt
 5 files reformatted, 1 file left unchanged
 
 
+- How did they work with multi channel? Did they use both eyes open/eyes closed?
+- Make it possible to select channels in the dataset
+- torch tensor devices
+- choose the right channel when working with one only
+
 Via Claude code:
 
 Perfect! So they're also using 10-second segments. Let me calculate the parameters:
