@@ -1,37 +1,49 @@
 Ve vlaku:
-- [ ] precist ten paper
 - [ ] precist Markov - jak resi tyto problemy
 
+```bash
 python main.py train --skip-ica --channel Fp1
 python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
+```
 
-- [ ] Pridej ten run subcommand, make sure ze to funguje tak jak ma - tohle je asi prvni vec co chci udelat
-- [ ] checkpoints - pokud ta slozka neco obsahuje, tak nespoustej trenovani
-- [ ] still missing 2 channels, find the one which is closest to the in-ear
+- [ ] checkpoints - pokud ta slozka neco obsahuje, tak nespoustej trenovani, add commit name to the directory if git is found
+- [ ] Subset, dataloadersm  10-fold logic, collate fn - review
+- [ ] Still missing 2 channels, find the one which is closest to the in-ear, or send him an email
+- [ ] foreach channel, get subject statistics as well, just because it's interesting
+- [ ] check that the chunking logic works properly via some prints, check lazy loading works properly
+- [ ] finish localizing those channels, so that I have the proper ones
+- [ ] I don't see subject statistics in cv_results
+- [ ] improve logs so that both eval and train logs have the same structure, are saved into checkpoints directory, so
+  that I can generate plots and shit from them later
+- [ ] early stopping - 2x delsi doba nez by to melo , zaroven checkni z jakych epoch jsou ty top modely, mozna to by default trenuj 100 epoch nebo neoc
+- How did they work with multi channel? Did they use both eyes open/eyes closed?
+- choose the right channel when working with one only
+
+---
+
+Channels: ['EEG Fp1-LE', 'EEG F3-LE', 'EEG C3-LE', 'EEG P3-LE', 'EEG O1-LE', 'EEG F7-LE', 'EEG T3-LE', 'EEG T5-LE',
+'EEG Fz-LE', 'EEG Fp2-LE', 'EEG F4-LE', 'EEG C4-LE', 'EEG P4-LE', 'EEG O2-LE', 'EEG F8-LE', 'EEG T4-LE', 'EEG T6-LE',
+'EEG Cz-LE', 'EEG Pz-LE', 'EEG A2-A1']
+
+from depcap
+
+34 MDD, 30 healthly, 10-20 system: Fp1, Fp2, F3, F4, F7, F8, Fz, T3, T4,
+T5, T6, P3, P4, Pz, O1, O2, C3, C4, and Cz.
+
+ale v tom co jsem stahnul je jich min nebo co
+
+---
 
 Dataset refactor:
-- ✔ dependency injection -> dataset into spectogram dataset
-- og dataset - no preload, no caching
-- nad nim budu mit udelane splity abych mohl delat 10fold
-- doufam, ze se mi podari odstranit tohle delani tech chunku, to je uplne napicu, viz logy nize
+- og dataset - no preload, no caching - double check 
 - jak budu mit ten druhy dataset, tak pro nej jenom udelam separatni tridu a tu pak jebnu stejnym zpusobem do toho 
   spectogram datasetu
-- ✔ ten preprocessing je specificky pro dataset i model, ale klidne to bake-in do toho datasetu
-- ✔ make it possible to pick one of those channels
 - ideally supporting lazy loading in that spectogram dataset
 - maybe transform the data only through transform function - to_spectogram and to_wavelet, using lambda you can combine them
 - but it still has to support lazy loading
-- maybe I don't need the second dataset abstraction
-- you can even implement it throught that lsu cache mechanism - if it's 100 file entries, it will be fine
 - they might be using 0.6 dropout
 - batch size 128 (probably individual chunks), adam, cross entropy, learning rate 0.0001
-
-
-```
-[2025-10-31 16:56:25,378 INFO dataset.collate_variable_length_eeg] Trimming batch chunks to 29 chunks.
-[2025-10-31 16:56:29,522 INFO dataset.collate_variable_length_eeg] Trimming batch chunks to 18 chunks.
-```
 
 - [ ] Combining multiple channels - vubec nevim jak to delaji
 - [ ] zaroven velikost toho jejich spektogramu je vetsi -> my second convolution is 5x5, not 15x15
@@ -75,10 +87,6 @@ Evaluation logic
 
 MDD dataset
 
-from depcap
-
-34 MDD, 30 healthly, 10-20 system: Fp1, Fp2, F3, F4, F7, F8, Fz, T3, T4,
-T5, T6, P3, P4, Pz, O1, O2, C3, C4, and Cz.
 
 Participant’s EEG was recorded for 10 minutes, comprising
 5 minutes with their Eyes Open (EO) and 5 minutes with Eyes
