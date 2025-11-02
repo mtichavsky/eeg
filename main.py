@@ -1,6 +1,8 @@
 import argparse
 import logging
+from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import torch
@@ -11,7 +13,6 @@ from torch.utils.data import DataLoader, Subset
 from thesis.dataset import (
     MDDDataset,
     SpectrogramDataset,
-    collate_variable_length_eeg,
     collate_spectrograms,
 )
 from thesis.early_stopping import EarlyStopping
@@ -22,8 +23,61 @@ LOG_LEVEL = "INFO"
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
+# TODO check this for training too
+EXPECTED_SPECTOGRAM_SHAPE = (129, 41)  # Expected spectrogram shape from training
 
-def classification_metrics(y_true: np.ndarray, y_pred: np.ndarray):
+
+class IllegalPathError(Exception):
+    pass
+
+
+def setup_logging(
+    checkpoint_dir: Path, condition: str, skip_ica: bool, channel: str | None = None
+) -> Path:
+    """
+    Configure logging to output to both console and a timestamped log file.
+
+    :param Path checkpoint_dir: Directory to save log files.
+    :param str condition: EEG condition being trained on.
+    :param bool skip_ica: Whether ICA was skipped.
+    :param str | None channel: Single channel being used (if applicable).
+    :return: Path to the log file.
+    :rtype: Path
+    """
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create timestamped log filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    channel_suffix = f"_{channel}" if channel else ""
+    ica_suffix = "_noica" if skip_ica else ""
+    log_filename = f"training_{condition}{channel_suffix}{ica_suffix}_{timestamp}.log"
+    log_path = checkpoint_dir / log_filename
+
+    # Get root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(LOG_LEVEL)
+
+    # Remove existing handlers to avoid duplicates
+    root_logger.handlers.clear()
+
+    # Console handler (stdout)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(LOG_LEVEL)
+    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    root_logger.addHandler(console_handler)
+
+    # File handler
+    file_handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
+    file_handler.setLevel(LOG_LEVEL)
+    file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    root_logger.addHandler(file_handler)
+
+    logger.info(f"Logging to console and file: {log_path}")
+
+    return log_path
+
+
+def classification_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float | int]:
     """
     Compute classification metrics from true and predicted labels.
 
@@ -71,7 +125,9 @@ def aggregate_subject_predictions(
         >>> chunk_preds = np.array([0, 1, 1, 0, 0])
         >>> chunk_labels = np.array([0, 0, 0, 1, 1])
         >>> subjects = ["H S1", "H S1", "H S1", "MDD S2", "MDD S2"]
-        >>> subj_preds, subj_labels = aggregate_subject_predictions(chunk_preds, chunk_labels, subjects)
+        >>> subj_preds, subj_labels = aggregate_subject_predictions(
+        ...     chunk_preds, chunk_labels, subjects
+        ... )
         >>> subj_preds  # H S1 gets 1 (majority), MDD S2 gets 0 (majority)
         array([1, 0])
         >>> subj_labels  # H S1 is 0, MDD S2 is 1
@@ -102,7 +158,13 @@ def aggregate_subject_predictions(
 # -------------------------
 # Training loop
 # -------------------------
-def train_epoch(model, dataloader, optimizer, criterion, device):
+def train_epoch(
+    model: nn.Module,
+    dataloader: DataLoader,
+    optimizer: torch.optim.Optimizer,
+    criterion: nn.Module,
+    device: torch.device,
+) -> dict[str, float | int]:
     """
     Train model for one epoch at chunk/spectrogram level.
 
@@ -114,7 +176,8 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
     all_preds = []
     all_labels = []
     for batch in dataloader:
-        # Unpack batch: collate_spectrograms returns (spectrograms_tensor, labels_tensor, subjects_list)
+        # Unpack batch: collate_spectrograms returns (spectrograms_tensor,
+        # labels_tensor, subjects_list)
         xb, yb, _ = batch  # Ignore subjects during training
         xb = xb.to(device)
         yb = yb.to(device)
@@ -135,7 +198,9 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
     return metrics
 
 
-def eval_epoch(model, dataloader, criterion, device):
+def eval_epoch(
+    model: nn.Module, dataloader: DataLoader, criterion: nn.Module, device: torch.device
+) -> dict[str, dict[str, float | int] | float]:
     """
     Evaluate model for one epoch, computing both chunk-level and subject-level metrics.
 
@@ -176,7 +241,9 @@ def eval_epoch(model, dataloader, criterion, device):
     avg_loss = running_loss / len(dataloader.dataset)
 
     # Subject-level metrics (majority voting)
-    subject_preds, subject_labels = aggregate_subject_predictions(all_preds, all_labels, all_subjects)
+    subject_preds, subject_labels = aggregate_subject_predictions(
+        all_preds, all_labels, all_subjects
+    )
     subject_metrics = classification_metrics(subject_labels, subject_preds)
 
     return {
@@ -235,6 +302,8 @@ def train_one_fold(
     logger.info(f"Starting training for fold {fold + 1}")
     logger.info(f"{'=' * 80}")
 
+    # TODO if it doesn't run, just raise an exception
+    epoch = 0  # Initialize epoch in case loop doesn't run
     for epoch in range(1, num_epochs + 1):
         # Train
         train_metrics = train_epoch(model, train_loader, optimizer, criterion, device)
@@ -344,7 +413,7 @@ def train_one_fold(
 
 
 def train_cross_validation(
-    condition: str = "EC",
+    condition: Literal["EC", "EO", "TASK"] = "EC",
     n_folds: int = 10,
     batch_size: int = 32,
     num_epochs: int = 50,
@@ -355,6 +424,7 @@ def train_cross_validation(
     checkpoint_dir: Path = Path("checkpoints"),
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     skip_ica: bool = False,
+    channel: str | None = None,
 ) -> dict:
     """
     Train model using 10-fold cross-validation with comprehensive logging and checkpointing.
@@ -370,15 +440,16 @@ def train_cross_validation(
     :param Path checkpoint_dir: Directory to save checkpoints.
     :param torch.device device: Device to train on.
     :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
+    :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
     :return: Dictionary with cross-validation results.
     :rtype: dict
     """
-    logger.info(f"\n{'=' * 80}")
+    logger.info(f"{'=' * 80}")
     logger.info(f"Starting {n_folds}-Fold Cross-Validation Training")
     logger.info(f"Condition: {condition}, Batch Size: {batch_size}, LR: {learning_rate}")
     logger.info(f"Device: {device}")
     logger.info(f"Skip ICA: {skip_ica}")
-    logger.info(f"{'=' * 80}\n")
+    logger.info(f"{'=' * 80}")
 
     cv_results = {
         "fold_best_acc": [],
@@ -389,9 +460,9 @@ def train_cross_validation(
     logger.info(
         "Step 1: Loading full dataset and converting to spectrograms (one-time preprocessing)..."
     )
-    # TODO: this is weird cause in a way I'm preloading the shit
-    # TODO: pick the channel here based on terminal argument
-    full_mdd_dataset = MDDDataset(condition=condition, preload=False, skip_ica=skip_ica)
+    full_mdd_dataset = MDDDataset(
+        condition=condition, preload=False, skip_ica=skip_ica, channel=channel
+    )
     all_subjects = full_mdd_dataset.get_subjects()
 
     logger.info(f"Found {len(all_subjects)} subjects: {all_subjects}")
@@ -400,7 +471,8 @@ def train_cross_validation(
     logger.info(f"Spectrograms created: {len(full_spec_dataset)} samples")
 
     # Verify spectrogram shape
-    # SpectrogramDataset returns (list[spectrograms], label, subject), so [0][0][0] gets first spectrogram
+    # SpectrogramDataset returns (list[spectrograms], label, subject), so [0][0][0]
+    # gets first spectrogram
     spec_shape = full_spec_dataset[0][0][0].shape[1:]  # (H, W) without channel dim
     assert spec_shape == torch.Size([129, 41]), (
         f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
@@ -425,7 +497,7 @@ def train_cross_validation(
     mdd_folds = np.array_split(mdd_subjects, n_folds)
 
     for fold in range(n_folds):
-        logger.info(f"\n{'=' * 80}")
+        logger.info(f"{'=' * 80}")
         logger.info(f"FOLD {fold + 1}/{n_folds}")
         logger.info(f"{'=' * 80}")
 
@@ -526,7 +598,8 @@ def train_cross_validation(
 
     return cv_results
 
-def add_preprocessing_args(parser):
+
+def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
     """
     Add shared preprocessing arguments to a parser.
 
@@ -551,10 +624,11 @@ def add_preprocessing_args(parser):
         choices=list(MDDDataset.CHANNEL_MAPPING.values()),
         default="Fp1",
         help="Single channel to use (e.g., --channel Fp1). "
-             "When a single channel is selected, ICA is automatically skipped.",
+        "When a single channel is selected, ICA is automatically skipped.",
     )
 
-def get_arg_parser():
+
+def get_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="EEG Classification Training",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -607,7 +681,7 @@ def get_arg_parser():
     return parser
 
 
-def train(args):
+def train(args: argparse.Namespace) -> None:
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
@@ -615,9 +689,13 @@ def train(args):
 
     checkpoint_dir = Path(args.checkpoint_dir)
 
+    # Setup logging to both console and file
+    log_path = setup_logging(checkpoint_dir, args.condition, args.skip_ica, args.channel)
+
     logger.info("Starting MDD EEG Classification Training")
     logger.info("Hyperparameters:")
     logger.info(f"  Condition: {args.condition}")
+    logger.info(f"  Channel: {args.channel}")
     logger.info(f"  N-Fold CV: {args.n_folds}")
     logger.info(f"  Batch Size: {args.batch_size}")
     logger.info(f"  Learning Rate: {args.lr}")
@@ -628,6 +706,7 @@ def train(args):
     logger.info(f"  Skip ICA: {args.skip_ica}")
     logger.info(f"  Device: {device}")
     logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
+    logger.info(f"  Log File: {log_path}")
 
     # Run cross-validation training
     results = train_cross_validation(
@@ -642,6 +721,7 @@ def train(args):
         checkpoint_dir=checkpoint_dir,
         device=device,
         skip_ica=args.skip_ica,
+        channel=args.channel,
     )
 
     # Save final results to file
@@ -669,12 +749,122 @@ def train(args):
     logger.info("Training completed!")
 
 
-def main():
+def run(args: argparse.Namespace) -> None:
+    """
+    Run inference on a single EDF file using a trained model.
+
+    :param argparse.Namespace args: Command-line arguments.
+    """
+    if args.device == "auto":
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(args.device)
+
+    model_path = Path(args.model_path)
+    edf_file = Path(args.edf_file)
+
+    # Validate paths
+    if not model_path.exists():
+        raise IllegalPathError(f"Model checkpoint not found: {model_path}")
+
+    if not edf_file.exists():
+        raise IllegalPathError(f"EDF file not found: {edf_file}")
+
+    logger.info("Running Inference")
+    logger.info(f"{'=' * 80}")
+    logger.info(f"Model: {model_path}")
+    logger.info(f"EDF File: {edf_file}")
+    logger.info(f"Channel: {args.channel}")
+    logger.info(f"Skip ICA: {args.skip_ica}")
+    logger.info(f"Device: {device}")
+    logger.info(f"{'=' * 80}")
+
+    # Load model checkpoint
+    logger.info("Loading model checkpoint...")
+    model = CNN_LSTM_DepCap(
+        input_shape=EXPECTED_SPECTOGRAM_SHAPE,
+        in_channels=1,
+        rnn_type="LSTM",
+        rnn_hidden=100,
+        dropout=0.2,
+        num_classes=2,
+    )
+
+    saved = torch.load(model_path, weights_only=False)  # TODO overriding some security check here
+    model.load_state_dict(saved["model_state_dict"])
+    model.to(device)
+    model.eval()
+    logger.info("Model loaded successfully")
+
+    # Preprocess EDF file
+    logger.info("Preprocessing EDF file...")
+    chunks = MDDDataset.load_and_preprocess_mdd_raw_file(
+        edf_file, args.channel, skip_ica=args.skip_ica
+    )
+    logger.info(f"Extracted {len(chunks)} chunks from EDF file")
+    if len(chunks) == 0:
+        raise RuntimeError("No valid chunks extracted from EDF file")
+    spectograms = SpectrogramDataset.convert_to_spectrograms(
+        chunks, nperseg=256, fs=250, noverlap=192, window="hamming"
+    )
+
+    logger.info("\nRunning inference on each chunk:")
+    logger.info(f"{'Chunk':<8} {'Prediction':<12} {'Class':<10}")
+    logger.info("-" * 50)
+
+    chunk_predictions = []
+
+    # TODO reviewed code till here
+    with torch.no_grad():
+        for chunk_idx, spec in enumerate(spectograms):
+            # Add batch dimension (spec already has shape (1, H, W))
+            spec_tensor = spec.unsqueeze(0)  # (1, 1, H, W)
+            spec_tensor = spec_tensor.to(device)
+
+            # Run inference
+            logits = model(spec_tensor)
+            pred = logits.argmax(dim=1).item()
+
+            chunk_predictions.append(pred)
+            class_name = "Healthy" if pred == 0 else "MDD"
+            logger.info(f"{chunk_idx + 1:<8} {pred:<12} {class_name:<10}")
+
+    # Aggregate predictions using majority voting
+    if len(chunk_predictions) == 0:
+        logger.error("No valid predictions generated")
+        return
+
+    chunk_predictions = np.array(chunk_predictions)
+
+    # Count predictions
+    healthy_count = np.sum(chunk_predictions == 0)
+    mdd_count = np.sum(chunk_predictions == 1)
+
+    # Majority vote
+    final_prediction = np.bincount(chunk_predictions).argmax()
+    final_class = "Healthy" if final_prediction == 0 else "MDD"
+
+    # Print final results
+    logger.info("-" * 50)
+    logger.info("FINAL RESULT (Majority Voting)")
+    logger.info("-" * 50)
+    logger.info(f"Total chunks analyzed: {len(chunk_predictions)}")
+    logger.info(
+        f"Healthy predictions: {healthy_count} ({healthy_count / len(chunk_predictions) * 100:.1f}%)"
+    )
+    logger.info(f"MDD predictions: {mdd_count} ({mdd_count / len(chunk_predictions) * 100:.1f}%)")
+    logger.info(f"Final Prediction: {final_class} (Class {final_prediction})")
+
+
+def main() -> None:
     parser = get_arg_parser()
     args = parser.parse_args()
 
+    # TODO channel still doesnt work
     if args.command == "train":
         train(args)
+    elif args.command == "run":
+        run(args)
     else:
         parser.print_help()
 
