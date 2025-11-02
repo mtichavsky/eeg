@@ -394,6 +394,35 @@ def collate_variable_length_eeg(batch: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def collate_spectrograms(batch: list[tuple[list[torch.Tensor], int, str]]) -> tuple[torch.Tensor, torch.Tensor, list[str]]:
+    """
+    Custom collate function to handle variable-length lists of spectrograms from SpectrogramDataset.
+
+    Each item in the batch is a tuple of (list of spectrograms, label, subject).
+    This function flattens the lists and creates proper batches of individual spectrograms.
+
+    :param list batch: List of tuples (list[spectrograms], label, subject) from SpectrogramDataset.__getitem__()
+    :return: Tuple of (stacked spectrograms, repeated labels, repeated subjects).
+    :rtype: tuple[torch.Tensor, torch.Tensor, list[str]]
+    """
+    all_spectrograms = []
+    all_labels = []
+    all_subjects = []
+
+    for spectrograms, label, subject in batch:
+        # Extend lists with all spectrograms from this file
+        all_spectrograms.extend(spectrograms)
+        # Repeat label and subject for each spectrogram
+        all_labels.extend([label] * len(spectrograms))
+        all_subjects.extend([subject] * len(spectrograms))
+
+    # Stack all spectrograms into a single tensor
+    spectrograms_tensor = torch.stack(all_spectrograms)  # Shape: (total_spectrograms, 1, H, W)
+    labels_tensor = torch.tensor(all_labels, dtype=torch.long)
+
+    return spectrograms_tensor, labels_tensor, all_subjects
+
+
 def create_cross_validation_splits(
     data_dir: Path = MDD_DIR,
     n_folds: int = 5,

@@ -7,15 +7,14 @@ Ve vlaku:
 - [ ] still missing 2 channels, find the one which is closest to the in-ear
 
 Dataset refactor:
-- dependency injection -> dataset into spectogram dataset
+- ✔ dependency injection -> dataset into spectogram dataset
 - og dataset - no preload, no caching
-- spectogram dataset pro dany soubor vrati chunks, subject label
 - nad nim budu mit udelane splity abych mohl delat 10fold
 - doufam, ze se mi podari odstranit tohle delani tech chunku, to je uplne napicu, viz logy nize
 - jak budu mit ten druhy dataset, tak pro nej jenom udelam separatni tridu a tu pak jebnu stejnym zpusobem do toho 
   spectogram datasetu
-- ten preprocessing je specificky pro dataset i model, ale klidne to bake-in do toho datasetu
-- make it possible to pick one of those channels
+- ✔ ten preprocessing je specificky pro dataset i model, ale klidne to bake-in do toho datasetu
+- ✔ make it possible to pick one of those channels
 - ideally supporting lazy loading in that spectogram dataset
 - maybe transform the data only through transform function - to_spectogram and to_wavelet, using lambda you can combine them
 - but it still has to support lazy loading
