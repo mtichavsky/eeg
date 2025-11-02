@@ -8,7 +8,12 @@ import torch.nn as nn
 from sklearn.metrics import confusion_matrix
 from torch.utils.data import DataLoader, Subset
 
-from thesis.dataset import MDDDataset, SpectrogramDataset, collate_variable_length_eeg
+from thesis.dataset import (
+    MDDDataset,
+    SpectrogramDataset,
+    collate_variable_length_eeg,
+    collate_spectrograms,
+)
 from thesis.early_stopping import EarlyStopping
 from thesis.model import CNN_LSTM_DepCap
 
@@ -98,12 +103,18 @@ def aggregate_subject_predictions(
 # Training loop
 # -------------------------
 def train_epoch(model, dataloader, optimizer, criterion, device):
+    """
+    Train model for one epoch at chunk/spectrogram level.
+
+    DataLoader batches files, then collate_spectrograms flattens to individual spectrograms.
+    Each batch contains multiple spectrograms from multiple files.
+    """
     model.train()
     running_loss = 0.0
     all_preds = []
     all_labels = []
     for batch in dataloader:
-        # Unpack batch: SpectrogramDataset returns (spectrogram, label, subject)
+        # Unpack batch: collate_spectrograms returns (spectrograms_tensor, labels_tensor, subjects_list)
         xb, yb, _ = batch  # Ignore subjects during training
         xb = xb.to(device)
         yb = yb.to(device)
@@ -379,6 +390,7 @@ def train_cross_validation(
         "Step 1: Loading full dataset and converting to spectrograms (one-time preprocessing)..."
     )
     # TODO: this is weird cause in a way I'm preloading the shit
+    # TODO: pick the channel here based on terminal argument
     full_mdd_dataset = MDDDataset(condition=condition, preload=False, skip_ica=skip_ica)
     all_subjects = full_mdd_dataset.get_subjects()
 
@@ -443,12 +455,23 @@ def train_cross_validation(
         train_spec_dataset = Subset(full_spec_dataset, train_indices)
         val_spec_dataset = Subset(full_spec_dataset, val_indices)
 
-        # Create DataLoaders
+        # Create DataLoaders with custom collate function for spectrograms
+        # batch_size refers to number of FILES, which will be flattened into individual spectrograms
         train_loader = DataLoader(
-            train_spec_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True
+            train_spec_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=0,
+            pin_memory=True,
+            collate_fn=collate_spectrograms,
         )
         val_loader = DataLoader(
-            val_spec_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True
+            val_spec_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=0,
+            pin_memory=True,
+            collate_fn=collate_spectrograms,
         )
 
         # Initialize model for this fold
