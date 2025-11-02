@@ -2,6 +2,10 @@ Ve vlaku:
 - [ ] precist ten paper
 - [ ] precist Markov - jak resi tyto problemy
 
+python main.py train --skip-ica --channel Fp1
+python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
+python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
+
 - [ ] Pridej ten run subcommand, make sure ze to funguje tak jak ma - tohle je asi prvni vec co chci udelat
 - [ ] checkpoints - pokud ta slozka neco obsahuje, tak nespoustej trenovani
 - [ ] still missing 2 channels, find the one which is closest to the in-ear
