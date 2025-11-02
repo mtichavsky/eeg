@@ -3,7 +3,7 @@ import re
 import warnings
 from functools import lru_cache
 from pathlib import Path
-from typing import Callable, Literal, Optional
+from typing import Any, Callable, Generator, Literal, Optional
 
 import mne
 import numpy as np
@@ -29,23 +29,16 @@ logger = logging.getLogger(__name__)
 class MDDDataset(Dataset):
     """
     PyTorch Dataset for MDD EEG data.
-
-    Usage:
-        # Create dataset
-        dataset = MDDDataset(
-            data_dir=MDD_DIR,
-            condition="EC",  # or "EO", "TASK", or None for all
-            preload=False,   # Set True to preprocess all files at init
-        )
-
-        # Use with DataLoader for batching
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-
-        for batch in dataloader:
-            inputs = batch['eeg']      # Shape: (batch_size, channels, samples)
-            labels = batch['label']    # Shape: (batch_size,)
-            # ... your training code
     """
+
+    CHANNEL_MAPPING = {
+        "EEG Fp1-LE": "Fp1",
+        "EEG Fp2-LE": "Fp2",
+        "EEG C3-LE": "C3",
+        "EEG C4-LE": "C4",
+        "EEG O2-LE": "O2",
+        "EEG Cz-LE": "Cz",
+    }
 
     def __init__(
         self,
@@ -78,57 +71,17 @@ class MDDDataset(Dataset):
         self.skip_ica = skip_ica
         self.files = self._discover_files(condition, subjects, labels)
 
-        # TODO: this part is not fully clear to me - are we saving it to preprocessed_data or what
-        # TODO: I don't think those chunks are handled properly
-        # Build index mapping from chunk index to (file_idx, chunk_idx_in_file)
-        self.chunk_index = []
-        self.file_chunk_counts = {}  # Cache chunk counts per file
+        self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
+            MDDDataset.load_and_preprocess_mdd_raw_file
+        )
 
-        if preload:
-            print("Preprocessing all files...")
-            self.preprocessed_data = {}
-            for file_idx, file_info in enumerate(self.files):
-                chunks = self.preprocess_file_uncached(file_info["path"])
-                self.preprocessed_data[file_idx] = chunks
-                self.file_chunk_counts[file_idx] = len(chunks)
-                # Chunk index exists for O(1) access time through __getitem__
-                for chunk_idx in range(len(chunks)):
-                    self.chunk_index.append((file_idx, chunk_idx))
-            print(f"Loaded {len(self.chunk_index)} chunks from {len(self.files)} files")
-        else:
-            # Get chunk counts from file metadata (fast, no preprocessing)
-            print("Building index from file metadata (fast)...")
-            for file_idx, file_info in enumerate(self.files):
-                # Quick scan: read file header to get duration
-                n_chunks = self._get_chunk_count_fast(file_info["path"])
-                self.file_chunk_counts[file_idx] = n_chunks
-                for chunk_idx in range(n_chunks):
-                    self.chunk_index.append((file_idx, chunk_idx))
-            print(
-                f"Indexed {len(self.chunk_index)} chunks from {len(self.files)} files (no preprocessing yet)"
-            )
 
-            # Cache preprocessed files with LRU
-            self._preprocess_file_cached = lru_cache(maxsize=cache_size)(
-                self.preprocess_file_uncached
-            )
-
-    @staticmethod
-    def _get_chunk_count_fast(file_path: Path):
-        """
-        Quickly estimate chunk count from file metadata without full preprocessing.
-
-        :param Path file_path: Path to the EDF file.
-        :return: Number of chunks in the file.
-        :rtype: int
-        """
-        # Read just the header to get duration
-        raw = mne.io.read_raw_edf(file_path, preload=False, verbose=False)
-        duration = raw.n_times / raw.info["sfreq"]  # duration in seconds
-        n_chunks = int(duration / SEGMENT_LENGTH)  # number of 10-second chunks
-        return n_chunks
-
-    def _discover_files(self, condition, subjects, labels):
+    def _discover_files(
+        self,
+        condition: Optional[Literal["EC", "EO", "TASK"]],
+        subjects: Optional[list[str]],
+        labels: Optional[list[str]],
+    ) -> list[dict[str, Any]]:
         """
         Discover all .edf files matching the criteria.
 
@@ -170,15 +123,18 @@ class MDDDataset(Dataset):
             )
         return files
 
-    def preprocess_file_uncached(self, file_path: Path):
+    @staticmethod
+    def load_and_preprocess_mdd_raw_file(file_path: Path, skip_ica: bool = False) -> torch.Tensor:
         """
-        Preprocess a single EDF file and return chunks.
+        Load an EDF file from disk, preprocess it, and return chunks. This contains all the preprocessing logic in this
+        class.
 
         Applies the full preprocessing pipeline: filtering, optional ICA, artifact removal, and chunking.
 
         :param Path file_path: Path to the EDF file to preprocess.
-        :return: List of numpy arrays, each representing a chunk of shape (channels, samples).
-        :rtype: list[np.ndarray]
+        :param bool skip_ica: If True, skip ICA artifact removal for faster processing.
+        :return: Tensor of preprocessed EEG chunks with shape (num_chunks, channels, samples).
+        :rtype: torch.Tensor
         """
         raw = mne.io.read_raw_edf(file_path, preload=True, verbose=False)
         raw = raw.filter(l_freq=1, h_freq=70, method="iir", verbose=False)
@@ -187,20 +143,12 @@ class MDDDataset(Dataset):
         raw = raw.pick(
             ["EEG Fp1-LE", "EEG Fp2-LE", "EEG C3-LE", "EEG C4-LE", "EEG O2-LE", "EEG Cz-LE"]
         )
-        mapping = {
-            "EEG Fp1-LE": "Fp1",
-            "EEG Fp2-LE": "Fp2",
-            "EEG C3-LE": "C3",
-            "EEG C4-LE": "C4",
-            "EEG O2-LE": "O2",
-            "EEG Cz-LE": "Cz",
-        }
-        raw = raw.rename_channels(mapping)
+        raw = raw.rename_channels(MDDDataset.CHANNEL_MAPPING)
 
         filt_raw = raw.set_eeg_reference("average", verbose=False)
 
         # Apply ICA if not skipped
-        if not self.skip_ica:
+        if not skip_ica:
             ica = ICA(
                 max_iter="auto",
                 method="infomax",
@@ -227,18 +175,19 @@ class MDDDataset(Dataset):
         n_samples = data.shape[1]
         chunks = []
         for i in range(0, n_samples - CHUNK_SAMPLES + 1, CHUNK_SAMPLES):
-            chunk = data[:, i : i + CHUNK_SAMPLES]
+            chunk = data[:, i: i + CHUNK_SAMPLES]
             chunk = zscore(chunk, axis=1)
             chunks.append(chunk)
 
+        chunks = torch.stack([torch.from_numpy(chunk).float() for chunk in chunks])
         return chunks
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.files)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> dict[str, Any]:
         """
-        Get all chunks from a single file.
+        Get file from the dataset preprocessed by self.transform method
 
         :param int idx: Index of the file to retrieve.
         :return: Dictionary containing 'eeg' (tensor of shape (num_chunks, channels, samples)),
@@ -248,18 +197,12 @@ class MDDDataset(Dataset):
         """
         file_info = self.files[idx]
 
-        # Get all chunks for this file
-        if self.preload:
-            chunks = self.preprocessed_data[idx]
-        else:
-            chunks = self._preprocess_file_cached(file_info["path"])
+        chunks = self._load_and_preprocess_mdd_raw_file_cached(file_info["path"], self.skip_ica)
 
-        # Convert list of numpy arrays to single tensor: (num_chunks, channels, samples)
-        eeg_tensor = torch.stack([torch.from_numpy(chunk).float() for chunk in chunks])
-
-        # Apply transform if provided
         if self.transform:
-            eeg_tensor = self.transform(eeg_tensor)
+            eeg_tensor = self.transform(chunks)
+        else:
+            eeg_tensor = chunks
 
         return {
             "eeg": eeg_tensor,
@@ -268,7 +211,7 @@ class MDDDataset(Dataset):
             "condition": file_info["condition"],
         }
 
-    def get_subjects(self):
+    def get_subjects(self) -> list[str]:
         """
         Get a list of unique subjects in the dataset.
 
@@ -277,14 +220,13 @@ class MDDDataset(Dataset):
         """
         return sorted(list(set(f["subject"] for f in self.files)))
 
-    # TODO
-    def get_statistics(self):
+    def get_statistics(self) -> dict[str, Any]:
         """
         Get dataset statistics.
 
-        :return: Dictionary containing total files, total chunks, healthy/MDD file counts,
+        :return: Dictionary containing total files, healthy/MDD file counts,
                  conditions breakdown, and number of unique subjects.
-        :rtype: dict
+        :rtype: dict[str, Any]
         """
         healthy_count = sum(1 for f in self.files if f["label"] == "H")
         mdd_count = sum(1 for f in self.files if f["label"] == "MDD")
@@ -295,7 +237,6 @@ class MDDDataset(Dataset):
 
         return {
             "total_files": len(self.files),
-            "total_chunks": len(self.chunk_index),
             "healthy_files": healthy_count,
             "mdd_files": mdd_count,
             "conditions": conditions,
@@ -303,7 +244,127 @@ class MDDDataset(Dataset):
         }
 
 
-def collate_variable_length_eeg(batch):
+class SpectrogramDataset(Dataset):
+    """
+    Wrapper dataset that converts raw EEG data to spectrograms on-the-fly.
+
+    Takes an MDDDataset and converts EEG chunks to spectrograms using Short-Time Fourier Transform (STFT).
+    Currently, extracts only the first channel from multichannel EEG data.
+    """
+
+    def __init__(
+            self,
+            dataset: MDDDataset,
+            fs: float = SFREQ,
+            nperseg: int = 256,
+            noverlap: int = 192,
+            window: str = "hamming",
+            cache_size: int = 100
+    ):
+        """
+        Initialize the SpectrogramDataset.
+
+        :param MDDDataset dataset: Underlying MDDDataset providing raw EEG data.
+        :param float fs: Sampling frequency for STFT (default: 250 Hz).
+        :param int nperseg: Length of each segment for STFT (default: 256).
+        :param int noverlap: Number of points to overlap between segments (default: 192).
+        :param str window: Window function for STFT (default: "hamming").
+        :param int cache_size: Number of processed items to cache in memory.
+        """
+        self.dataset = dataset
+        self.fs = fs
+        self.nperseg = nperseg
+        self.noverlap = noverlap
+        self.window = window
+
+        # Create a bound method cache for this instance
+        self._get_item_cached = lru_cache(maxsize=cache_size)(self._get_item)
+
+    def convert_to_spectrograms(self, tensor: torch.Tensor) -> list[torch.Tensor]:
+        """
+        Convert EEG tensor to list of spectrograms using STFT.
+
+        Expects input tensor of shape (num_chunks, channels, samples).
+        Extracts only the first channel for spectrogram generation.
+
+        :param torch.Tensor tensor: EEG tensor with shape (num_chunks, channels, samples).
+        :return: List of spectrogram tensors, each with shape (1, freq_bins, time_frames).
+        :rtype: list[torch.Tensor]
+        """
+        spectograms = []
+        for chunk_idx in range(tensor.size(0)):
+            # Extract the first channel for spectrogram generation
+            channel_data = tensor[chunk_idx, 0, :].numpy()
+
+            # Skip if too short for STFT
+            if len(channel_data) < self.nperseg:
+                logger.warning(
+                    f"Skipping sample due to insufficient length: {len(channel_data)}"
+                )
+                continue
+
+            # Compute STFT
+            f, t, Zxx = stft(
+                channel_data,
+                fs=self.fs,
+                nperseg=self.nperseg,
+                noverlap=self.noverlap,
+                window=self.window,
+            )
+
+            # Log magnitude spectrogram
+            Zxx_mag = np.log1p(np.abs(Zxx))
+
+            # Convert to tensor: (1, H, W) for single-channel spectrogram
+            spec_tensor = torch.tensor(Zxx_mag, dtype=torch.float32).unsqueeze(0)
+
+            spectograms.append(spec_tensor)
+
+        logger.info(f"Created {len(spectograms)} spectrograms")
+        return spectograms
+
+    def __len__(self) -> int:
+        return len(self.dataset)
+
+    def _get_item(self, idx: int) -> tuple[list[torch.Tensor], int, str]:
+        """
+        Internal method to get a single item (used by LRU cache).
+
+        :param int idx: Index of the sample.
+        :return: Tuple of (list of spectrograms, label, subject).
+        :rtype: tuple[list[torch.Tensor], int, str]
+        """
+        item = self.dataset.__getitem__(idx)
+        spectograms = self.convert_to_spectrograms(item["eeg"])
+        return spectograms, item["label"], item["subject"]
+
+    def __getitem__(self, idx: int) -> tuple[list[torch.Tensor], int, str]:
+        """
+        Get spectrograms-label-subject tuple for a given index.
+
+        :param int idx: Index of the sample.
+        :return: Tuple of (list of spectrograms, label, subject).
+        :rtype: tuple[list[torch.Tensor], int, str]
+        """
+        return self._get_item_cached(idx)
+
+    def get_indices_for_subjects(self, subject_list: list[str]) -> list[int]:
+        """
+        Get indices of all samples belonging to specific subjects.
+
+        :param list[str] subject_list: List of subject IDs (e.g., ["H S1", "MDD S2"]).
+        :return: List of indices for samples belonging to those subjects.
+        :rtype: list[int]
+        """
+        subject_set = set(subject_list)
+        indices = []
+        for i in range(len(self.dataset)):
+            item = self.dataset[i]
+            if item["subject"] in subject_set:
+                indices.append(i)
+        return indices
+
+def collate_variable_length_eeg(batch: list[dict[str, Any]]) -> dict[str, Any]:
     """
     Custom collate function to handle variable-length EEG tensors.
 
@@ -340,8 +401,8 @@ def create_cross_validation_splits(
     batch_size: int = 32,
     num_workers: int = 0,
     random_seed: int = 42,
-    preload=False,
-):
+    preload: bool = False,
+) -> Generator[tuple[DataLoader, DataLoader, MDDDataset, MDDDataset], None, None]:
     """
     Create K-fold cross-validation splits at the subject level.
 
@@ -360,7 +421,7 @@ def create_cross_validation_splits(
     :param int batch_size: Batch size for DataLoaders.
     :param int num_workers: Number of worker processes for data loading.
     :param int random_seed: Random seed for reproducibility.
-    :param preload: ...
+    :param bool preload: If True, preprocess all files at initialization (slower init, faster training).
     :yield: Tuple of (train_loader, val_loader, train_dataset, val_dataset) for each fold.
     """
     # Get all subjects and split by class
@@ -461,100 +522,3 @@ if __name__ == "__main__":
             break
 
 
-class SpectrogramDataset(Dataset):
-    """
-    Wrapper dataset that converts raw EEG data to spectrograms on-the-fly.
-
-    :param DataLoader raw_loader: DataLoader providing batches with 'eeg' and 'label' keys.
-    :param int fs: Sampling frequency for STFT (default: SFREQ from dataset).
-    :param int nperseg: Length of each segment for STFT (default: 256).
-    :param int noverlap: Number of points to overlap between segments (default: 192).
-    :param str window: Window function for STFT (default: "hamming").
-    """
-
-    def __init__(
-        self,
-        raw_loader: DataLoader,
-        fs: int = SFREQ,
-        nperseg: int = 256,
-        noverlap: int = 192,
-        window: str = "hamming",
-    ):
-        self.raw_loader = raw_loader
-        self.fs = fs
-        self.nperseg = nperseg
-        self.noverlap = noverlap
-        self.window = window
-
-        # Cache all spectrograms, labels, and subject metadata from the raw loader
-        self.spectrograms = []
-        self.labels = []
-        self.subjects = []  # Track which subject each spectrogram came from
-        self._convert_to_spectrograms()
-
-    def _convert_to_spectrograms(self) -> None:
-        """Convert all EEG data from raw loader to spectrograms."""
-        logger.info("Converting EEG data to spectrograms...")
-        for batch in self.raw_loader:
-            eeg = batch["eeg"]  # Shape: (batch_size, num_chunks, channels, samples)
-            labels = batch["label"]  # Shape: (batch_size,)
-            subjects = batch["subject"]  # List of subject IDs
-
-            batch_size, num_chunks = eeg.shape[0], eeg.shape[1]
-            for i in range(batch_size):
-                for chunk_idx in range(num_chunks):
-                    # TODO: Take the first channel (Fp1) for now - can be modified for multi-channel
-                    channel_data = eeg[i, chunk_idx, 0, :].numpy()
-
-                    # Skip if too short for STFT
-                    if len(channel_data) < self.nperseg:
-                        logger.warning(
-                            f"Skipping sample due to insufficient length: {len(channel_data)}"
-                        )
-                        continue
-
-                    # Compute STFT
-                    f, t, Zxx = stft(
-                        channel_data,
-                        fs=self.fs,
-                        nperseg=self.nperseg,
-                        noverlap=self.noverlap,
-                        window=self.window,
-                    )
-
-                    # Log magnitude spectrogram
-                    Zxx_mag = np.log1p(np.abs(Zxx))
-
-                    # Convert to tensor: (1, H, W) for single-channel spectrogram
-                    spec_tensor = torch.tensor(Zxx_mag, dtype=torch.float32).unsqueeze(0)
-
-                    self.spectrograms.append(spec_tensor)
-                    self.labels.append(labels[i].item())
-                    self.subjects.append(subjects[i])  # Track subject for this chunk
-
-        logger.info(f"Created {len(self.spectrograms)} spectrograms")
-
-    def __len__(self) -> int:
-        return len(self.spectrograms)
-
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int, str]:
-        """
-        Get a single spectrogram-label-subject tuple.
-
-        :param int idx: Index of the sample.
-        :return: Tuple of (spectrogram, label, subject).
-        :rtype: tuple[torch.Tensor, int, str]
-        """
-        return self.spectrograms[idx], self.labels[idx], self.subjects[idx]
-
-    def get_indices_for_subjects(self, subject_list: list[str]) -> list[int]:
-        """
-        Get indices of all spectrograms belonging to specific subjects.
-
-        :param list[str] subject_list: List of subject IDs (e.g., ["H S1", "MDD S2"]).
-        :return: List of indices for samples belonging to those subjects.
-        :rtype: list[int]
-        """
-        subject_set = set(subject_list)
-        indices = [i for i, subj in enumerate(self.subjects) if subj in subject_set]
-        return indices
