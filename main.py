@@ -383,19 +383,13 @@ def train_cross_validation(
     all_subjects = full_mdd_dataset.get_subjects()
 
     logger.info(f"Found {len(all_subjects)} subjects: {all_subjects}")
-    full_loader = DataLoader(
-        full_mdd_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=0,
-        collate_fn=collate_variable_length_eeg,
-    )
 
-    full_spec_dataset = SpectrogramDataset(full_loader)
+    full_spec_dataset = SpectrogramDataset(full_mdd_dataset)
     logger.info(f"Spectrograms created: {len(full_spec_dataset)} samples")
 
     # Verify spectrogram shape
-    spec_shape = full_spec_dataset[0][0].shape[1:]  # (H, W) without channel dim
+    # SpectrogramDataset returns (list[spectrograms], label, subject), so [0][0][0] gets first spectrogram
+    spec_shape = full_spec_dataset[0][0][0].shape[1:]  # (H, W) without channel dim
     assert spec_shape == torch.Size([129, 41]), (
         f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
     )
@@ -509,6 +503,33 @@ def train_cross_validation(
 
     return cv_results
 
+def add_preprocessing_args(parser):
+    """
+    Add shared preprocessing arguments to a parser.
+
+    :param argparse.ArgumentParser parser: Parser or subparser to add arguments to.
+    """
+    preproc_group = parser.add_argument_group("Preprocessing options")
+    preproc_group.add_argument(
+        "--condition",
+        type=str,
+        default="EC",
+        choices=["EC", "EO", "TASK"],
+        help="EEG condition to use",
+    )
+    preproc_group.add_argument(
+        "--skip-ica",
+        action="store_true",
+        help="Skip ICA artifact removal (faster but less clean data)",
+    )
+    preproc_group.add_argument(
+        "--channel",
+        type=str,
+        choices=list(MDDDataset.CHANNEL_MAPPING.values()),
+        default="Fp1",
+        help="Single channel to use (e.g., --channel Fp1). "
+             "When a single channel is selected, ICA is automatically skipped.",
+    )
 
 def get_arg_parser():
     parser = argparse.ArgumentParser(
@@ -519,13 +540,7 @@ def get_arg_parser():
 
     # Train subcommand
     train_parser = subparsers.add_parser("train", help="Train the model using cross-validation")
-    train_parser.add_argument(
-        "--condition",
-        type=str,
-        default="EC",
-        choices=["EC", "EO", "TASK"],
-        help="EEG condition to use",
-    )
+    add_preprocessing_args(train_parser)
     train_parser.add_argument(
         "--n-folds", type=int, default=10, help="Number of cross-validation folds"
     )
@@ -545,11 +560,7 @@ def get_arg_parser():
         default="checkpoints",
         help="Directory to save checkpoints",
     )
-    train_parser.add_argument(
-        "--skip-ica",
-        action="store_true",
-        help="Skip ICA artifact removal (faster but less clean data)",
-    )
+
     train_parser.add_argument(
         "--device",
         type=str,
@@ -557,6 +568,19 @@ def get_arg_parser():
         choices=["auto", "cuda", "cpu"],
         help="Device to train on",
     )
+
+    run_parser = subparsers.add_parser("run", help="Run inference on a single EDF file")
+    add_preprocessing_args(run_parser)
+    run_parser.add_argument("model_path", type=str, help="Path to trained model checkpoint (.pth)")
+    run_parser.add_argument("edf_file", type=str, help="Path to EDF file to classify")
+    run_parser.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        choices=["auto", "cuda", "cpu"],
+        help="Device to run inference on",
+    )
+
     return parser
 
 
