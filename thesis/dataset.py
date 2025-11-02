@@ -26,6 +26,7 @@ CHUNK_SAMPLES = int(SEGMENT_LENGTH * SFREQ)
 logger = logging.getLogger(__name__)
 
 
+# TODO: remove preload arg, make it a use_cache flag instead
 class MDDDataset(Dataset):
     """
     PyTorch Dataset for MDD EEG data.
@@ -50,6 +51,7 @@ class MDDDataset(Dataset):
         cache_size: int = 60,
         transform: Optional[Callable] = None,
         skip_ica: bool = False,
+        channel: Optional[str] = None,
     ):
         """
         Initialize the MDD EEG dataset.
@@ -70,11 +72,13 @@ class MDDDataset(Dataset):
         self.preload = preload
         self.skip_ica = skip_ica
         self.files = self._discover_files(condition, subjects, labels)
+        self.channel = channel
+        if channel and not skip_ica:
+            raise RuntimeError("When channel is chosen, skip ICA has to be set to True.")
 
         self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
             MDDDataset.load_and_preprocess_mdd_raw_file
         )
-
 
     def _discover_files(
         self,
@@ -124,7 +128,9 @@ class MDDDataset(Dataset):
         return files
 
     @staticmethod
-    def load_and_preprocess_mdd_raw_file(file_path: Path, skip_ica: bool = False) -> torch.Tensor:
+    def load_and_preprocess_mdd_raw_file(
+        file_path: Path, channel: Optional[str] = None, skip_ica: bool = False
+    ) -> torch.Tensor:
         """
         Load an EDF file from disk, preprocess it, and return chunks. This contains all the preprocessing logic in this
         class.
@@ -145,10 +151,16 @@ class MDDDataset(Dataset):
         )
         raw = raw.rename_channels(MDDDataset.CHANNEL_MAPPING)
 
-        filt_raw = raw.set_eeg_reference("average", verbose=False)
+        # Pick the channel if specified
+        if channel is not None:
+            raw = raw.pick([channel])
+        else:
+            raise RuntimeError("Not implemented properly yet")
+
 
         # Apply ICA if not skipped
         if not skip_ica:
+            filt_raw = raw.set_eeg_reference("average", verbose=False)
             ica = ICA(
                 max_iter="auto",
                 method="infomax",
@@ -169,13 +181,13 @@ class MDDDataset(Dataset):
             preprocessed = filt_raw.copy()
             ica.apply(preprocessed, exclude=exclude_idx, verbose=False)
         else:
-            preprocessed = filt_raw
+            preprocessed = raw
 
         data = preprocessed.get_data()
         n_samples = data.shape[1]
         chunks = []
         for i in range(0, n_samples - CHUNK_SAMPLES + 1, CHUNK_SAMPLES):
-            chunk = data[:, i: i + CHUNK_SAMPLES]
+            chunk = data[:, i : i + CHUNK_SAMPLES]
             chunk = zscore(chunk, axis=1)
             chunks.append(chunk)
 
@@ -197,7 +209,9 @@ class MDDDataset(Dataset):
         """
         file_info = self.files[idx]
 
-        chunks = self._load_and_preprocess_mdd_raw_file_cached(file_info["path"], self.skip_ica)
+        chunks = self._load_and_preprocess_mdd_raw_file_cached(
+            file_info["path"], self.channel, self.skip_ica
+        )
 
         if self.transform:
             eeg_tensor = self.transform(chunks)
@@ -253,13 +267,13 @@ class SpectrogramDataset(Dataset):
     """
 
     def __init__(
-            self,
-            dataset: MDDDataset,
-            fs: float = SFREQ,
-            nperseg: int = 256,
-            noverlap: int = 192,
-            window: str = "hamming",
-            cache_size: int = 100
+        self,
+        dataset: MDDDataset,
+        fs: float = SFREQ,
+        nperseg: int = 256,
+        noverlap: int = 192,
+        window: str = "hamming",
+        cache_size: int = 100,
     ):
         """
         Initialize the SpectrogramDataset.
@@ -280,7 +294,10 @@ class SpectrogramDataset(Dataset):
         # Create a bound method cache for this instance
         self._get_item_cached = lru_cache(maxsize=cache_size)(self._get_item)
 
-    def convert_to_spectrograms(self, tensor: torch.Tensor) -> list[torch.Tensor]:
+    @staticmethod
+    def convert_to_spectrograms(
+        tensor: torch.Tensor, nperseg: int, fs: float, noverlap: int, window: str
+    ) -> list[torch.Tensor]:
         """
         Convert EEG tensor to list of spectrograms using STFT.
 
@@ -288,6 +305,10 @@ class SpectrogramDataset(Dataset):
         Extracts only the first channel for spectrogram generation.
 
         :param torch.Tensor tensor: EEG tensor with shape (num_chunks, channels, samples).
+        :param int nperseg: Length of each segment for STFT.
+        :param float fs: Sampling frequency for STFT.
+        :param int noverlap: Number of points to overlap between segments.
+        :param str window: Window function for STFT.
         :return: List of spectrogram tensors, each with shape (1, freq_bins, time_frames).
         :rtype: list[torch.Tensor]
         """
@@ -297,19 +318,17 @@ class SpectrogramDataset(Dataset):
             channel_data = tensor[chunk_idx, 0, :].numpy()
 
             # Skip if too short for STFT
-            if len(channel_data) < self.nperseg:
-                logger.warning(
-                    f"Skipping sample due to insufficient length: {len(channel_data)}"
-                )
+            if len(channel_data) < nperseg:
+                logger.warning(f"Skipping sample due to insufficient length: {len(channel_data)}")
                 continue
 
             # Compute STFT
             f, t, Zxx = stft(
                 channel_data,
-                fs=self.fs,
-                nperseg=self.nperseg,
-                noverlap=self.noverlap,
-                window=self.window,
+                fs=fs,
+                nperseg=nperseg,
+                noverlap=noverlap,
+                window=window,
             )
 
             # Log magnitude spectrogram
@@ -335,7 +354,9 @@ class SpectrogramDataset(Dataset):
         :rtype: tuple[list[torch.Tensor], int, str]
         """
         item = self.dataset.__getitem__(idx)
-        spectograms = self.convert_to_spectrograms(item["eeg"])
+        spectograms = self.convert_to_spectrograms(
+            item["eeg"], self.nperseg, self.fs, self.noverlap, self.window
+        )
         return spectograms, item["label"], item["subject"]
 
     def __getitem__(self, idx: int) -> tuple[list[torch.Tensor], int, str]:
@@ -363,6 +384,7 @@ class SpectrogramDataset(Dataset):
             if item["subject"] in subject_set:
                 indices.append(i)
         return indices
+
 
 def collate_variable_length_eeg(batch: list[dict[str, Any]]) -> dict[str, Any]:
     """
@@ -394,7 +416,9 @@ def collate_variable_length_eeg(batch: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def collate_spectrograms(batch: list[tuple[list[torch.Tensor], int, str]]) -> tuple[torch.Tensor, torch.Tensor, list[str]]:
+def collate_spectrograms(
+    batch: list[tuple[list[torch.Tensor], int, str]],
+) -> tuple[torch.Tensor, torch.Tensor, list[str]]:
     """
     Custom collate function to handle variable-length lists of spectrograms from SpectrogramDataset.
 
@@ -549,5 +573,3 @@ if __name__ == "__main__":
 
         if fold_idx == 0:  # Only show first fold in example
             break
-
-
