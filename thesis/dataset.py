@@ -57,11 +57,14 @@ class MDDDataset(Dataset):
         Initialize the MDD EEG dataset.
 
         :param Path data_dir: Path to directory containing .edf files.
-        :param Optional[Literal["EC", "EO", "TASK"]] condition: Filter by condition ("EC", "EO", "TASK") or None for all
-               conditions.
-        :param Optional[list[str]] subjects: List of subject IDs to include (e.g., ["H S1", "MDD S1"]). None = all.
-        :param Optional[list[str]] labels: List of labels to include (e.g., ["H", "MDD"]). None = all.
-        :param bool preload: If True, preprocess all files at initialization (slower init, faster training).
+        :param Optional[Literal["EC", "EO", "TASK"]] condition: Filter by condition ("EC", "EO",
+               "TASK") or None for all conditions.
+        :param Optional[list[str]] subjects: List of subject IDs to include (e.g., ["H S1",
+               "MDD S1"]). None = all.
+        :param Optional[list[str]] labels: List of labels to include (e.g., ["H", "MDD"]).
+               None = all.
+        :param bool preload: If True, preprocess all files at initialization (slower init,
+               faster training).
         :param int cache_size: Number of preprocessed files to cache in memory.
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
         :param bool skip_ica: If True, skip ICA artifact removal (faster but less clean data).
@@ -89,7 +92,8 @@ class MDDDataset(Dataset):
         """
         Discover all .edf files matching the criteria.
 
-        :param Optional[Literal["EC", "EO", "TASK"]] condition: Condition filter ("EC", "EO", "TASK") or None.
+        :param Optional[Literal["EC", "EO", "TASK"]] condition: Condition filter ("EC", "EO",
+               "TASK") or None.
         :param Optional[list[str]] subjects: List of subject IDs to include or None for all.
         :param Optional[list[str]] labels: List of labels to include ("H", "MDD") or None for all.
         :return: List of dictionaries containing file metadata.
@@ -132,10 +136,11 @@ class MDDDataset(Dataset):
         file_path: Path, channel: Optional[str] = None, skip_ica: bool = False
     ) -> torch.Tensor:
         """
-        Load an EDF file from disk, preprocess it, and return chunks. This contains all the preprocessing logic in this
-        class.
+        Load an EDF file from disk, preprocess it, and return chunks. This contains all the
+        preprocessing logic in this class.
 
-        Applies the full preprocessing pipeline: filtering, optional ICA, artifact removal, and chunking.
+        Applies the full preprocessing pipeline: filtering, optional ICA, artifact removal,
+        and chunking.
 
         :param Path file_path: Path to the EDF file to preprocess.
         :param bool skip_ica: If True, skip ICA artifact removal for faster processing.
@@ -156,7 +161,6 @@ class MDDDataset(Dataset):
             raw = raw.pick([channel])
         else:
             raise RuntimeError("Not implemented properly yet")
-
 
         # Apply ICA if not skipped
         if not skip_ica:
@@ -262,8 +266,8 @@ class SpectrogramDataset(Dataset):
     """
     Wrapper dataset that converts raw EEG data to spectrograms on-the-fly.
 
-    Takes an MDDDataset and converts EEG chunks to spectrograms using Short-Time Fourier Transform (STFT).
-    Currently, extracts only the first channel from multichannel EEG data.
+    Takes an MDDDataset and converts EEG chunks to spectrograms using Short-Time Fourier
+    Transform (STFT). Currently, extracts only the first channel from multichannel EEG data.
     """
 
     def __init__(
@@ -425,7 +429,8 @@ def collate_spectrograms(
     Each item in the batch is a tuple of (list of spectrograms, label, subject).
     This function flattens the lists and creates proper batches of individual spectrograms.
 
-    :param list batch: List of tuples (list[spectrograms], label, subject) from SpectrogramDataset.__getitem__()
+    :param list batch: List of tuples (list[spectrograms], label, subject) from
+           SpectrogramDataset.__getitem__()
     :return: Tuple of (stacked spectrograms, repeated labels, repeated subjects).
     :rtype: tuple[torch.Tensor, torch.Tensor, list[str]]
     """
@@ -463,7 +468,9 @@ def create_cross_validation_splits(
     to prevent data leakage.
 
     Example:
-        for fold, (train_loader, val_loader, _, _) in enumerate(create_cross_validation_splits(n_folds=5)):
+        for fold, (train_loader, val_loader, _, _) in enumerate(
+            create_cross_validation_splits(n_folds=5)
+        ):
             print(f"Training fold {fold + 1}/5")
             for batch in train_loader:
                 # ... training code
@@ -474,7 +481,8 @@ def create_cross_validation_splits(
     :param int batch_size: Batch size for DataLoaders.
     :param int num_workers: Number of worker processes for data loading.
     :param int random_seed: Random seed for reproducibility.
-    :param bool preload: If True, preprocess all files at initialization (slower init, faster training).
+    :param bool preload: If True, preprocess all files at initialization (slower init,
+           faster training).
     :yield: Tuple of (train_loader, val_loader, train_dataset, val_dataset) for each fold.
     """
     # Get all subjects and split by class
@@ -539,37 +547,3 @@ def create_cross_validation_splits(
         print(f"  Val: {eval_dataset.get_statistics()}")
 
         yield train_loader, eval_loader, train_dataset, eval_dataset
-
-
-# TODO: probably delete this part
-if __name__ == "__main__":
-    # Example usage
-    print("=== Example 1: Simple iteration ===")
-    dataset = MDDDataset(condition="EC", preload=False)
-    print(f"Dataset size: {len(dataset)} chunks")
-    print(f"Statistics: {dataset.get_statistics()}")
-
-    # Get a single sample
-    sample = dataset[0]
-    print(f"Sample keys: {sample.keys()}")
-    print(f"EEG shape: {sample['eeg'].shape}")
-    print(
-        f"Label: {sample['label']} (subject: {sample['subject']}, condition: {sample['condition']})"
-    )
-
-    print("\n=== Example 2: Cross-validation (recommended) ===")
-    cv_splits = create_cross_validation_splits(
-        condition="EC",
-        n_folds=5,
-        batch_size=16,
-    )
-
-    for fold_idx, (train_loader, val_loader, _, _) in enumerate(cv_splits):
-        print(f"\nProcessing fold {fold_idx + 1}")
-        # Get first batch from this fold
-        for batch in train_loader:
-            print(f"  Train batch - EEG: {batch['eeg'].shape}, Labels: {batch['label']}")
-            break
-
-        if fold_idx == 0:  # Only show first fold in example
-            break

@@ -298,12 +298,9 @@ def train_one_fold(
         "epochs": [],
     }
 
-    logger.info(f"\n{'=' * 80}")
     logger.info(f"Starting training for fold {fold + 1}")
-    logger.info(f"{'=' * 80}")
 
-    # TODO if it doesn't run, just raise an exception
-    epoch = 0  # Initialize epoch in case loop doesn't run
+    epoch = 0
     for epoch in range(1, num_epochs + 1):
         # Train
         train_metrics = train_epoch(model, train_loader, optimizer, criterion, device)
@@ -474,7 +471,7 @@ def train_cross_validation(
     # SpectrogramDataset returns (list[spectrograms], label, subject), so [0][0][0]
     # gets first spectrogram
     spec_shape = full_spec_dataset[0][0][0].shape[1:]  # (H, W) without channel dim
-    assert spec_shape == torch.Size([129, 41]), (
+    assert spec_shape == torch.Size(list(EXPECTED_SPECTOGRAM_SHAPE)), (
         f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
     )
     logger.info(f"Spectrogram shape: {spec_shape}")
@@ -739,9 +736,9 @@ def train(args: argparse.Namespace) -> None:
                 f"  Fold {i + 1}: {acc:.4f} (epoch {results['fold_best_epoch'][i]}, "
                 f"stopped at epoch {results['fold_final_epoch'][i]})\n"
             )
-        f.write(
-            f"\nMean Accuracy: {np.mean(results['fold_best_acc']):.4f} ± {np.std(results['fold_best_acc']):.4f}\n"
-        )
+        mean_acc = np.mean(results["fold_best_acc"])
+        std_acc = np.std(results["fold_best_acc"])
+        f.write(f"\nMean Accuracy: {mean_acc:.4f} ± {std_acc:.4f}\n")
         f.write(f"Min Accuracy: {np.min(results['fold_best_acc']):.4f}\n")
         f.write(f"Max Accuracy: {np.max(results['fold_best_acc']):.4f}\n")
 
@@ -790,7 +787,8 @@ def run(args: argparse.Namespace) -> None:
         num_classes=2,
     )
 
-    saved = torch.load(model_path, weights_only=False)  # TODO overriding some security check here
+    # Note: weights_only=False is required to load optimizer state and other training info
+    saved = torch.load(model_path, weights_only=False)
     model.load_state_dict(saved["model_state_dict"])
     model.to(device)
     model.eval()
@@ -849,9 +847,8 @@ def run(args: argparse.Namespace) -> None:
     logger.info("FINAL RESULT (Majority Voting)")
     logger.info("-" * 50)
     logger.info(f"Total chunks analyzed: {len(chunk_predictions)}")
-    logger.info(
-        f"Healthy predictions: {healthy_count} ({healthy_count / len(chunk_predictions) * 100:.1f}%)"
-    )
+    healthy_pct = healthy_count / len(chunk_predictions) * 100
+    logger.info(f"Healthy predictions: {healthy_count} ({healthy_pct:.1f}%)")
     logger.info(f"MDD predictions: {mdd_count} ({mdd_count / len(chunk_predictions) * 100:.1f}%)")
     logger.info(f"Final Prediction: {final_class} (Class {final_prediction})")
 
