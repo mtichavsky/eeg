@@ -10,18 +10,18 @@ python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --chan
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 ```
 
-- [ ] Claude checkpoints - pokud ta slozka neco obsahuje, tak nespoustej trenovani, add commit name to the directory if git is found
-- [ ] Review all TODOs and resolve them
-- [ ] Claude generate readme with usage, take inspo in KNN project, use Makefile for reference
-- [ ] Run on Fp1, on T channel and on A channel
+- [x] Claude checkpoints - pokud ta slozka neco obsahuje, tak nespoustej trenovani, add commit name to the directory if git is found
+- [x] Claude generate readme with usage, take inspo in KNN project, use Makefile for reference
 - [x] Subset, dataloadersm  10-fold logic, collate fn - review
-- [ ] Finish email to Malik
-- [ ] check that the chunking logic works properly via some prints, check lazy loading works properly
-- [ ] finish localizing those channels, so that I have the proper ones
+- [x] Claude: early stopping - 2x delsi doba nez by to melo , zaroven checkni z jakych epoch jsou ty top modely, mozna to by default trenuj 100 epoch nebo neoc
 - [ ] I don't see subject statistics in cv_results
 - [ ] improve logs so that both eval and train logs have the same structure, are saved into checkpoints directory, so
   that I can generate plots and shit from them later
-- [ ] Claude: early stopping - 2x delsi doba nez by to melo , zaroven checkni z jakych epoch jsou ty top modely, mozna to by default trenuj 100 epoch nebo neoc
+- [ ] Review all TODOs and resolve them
+- [ ] Run on Fp1, on T channel and on A channel
+- [ ] Finish email to Malik
+- [ ] check that the chunking logic works properly via some prints, check lazy loading works properly
+- [ ] finish localizing those channels, so that I have the proper ones
 - How did they work with multi channel? Did they use both eyes open/eyes closed? they don't say
 - choose the right channel when working with one only
 - [ ] batch size
