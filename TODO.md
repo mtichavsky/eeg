@@ -14,7 +14,7 @@ python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel
 - [x] Claude generate readme with usage, take inspo in KNN project, use Makefile for reference
 - [x] Subset, dataloadersm  10-fold logic, collate fn - review
 - [x] Claude: early stopping - 2x delsi doba nez by to melo , zaroven checkni z jakych epoch jsou ty top modely, mozna to by default trenuj 100 epoch nebo neoc
-- [ ] I don't see subject statistics in cv_results
+- [x] I don't see subject statistics in cv_results
 - [ ] improve logs so that both eval and train logs have the same structure, are saved into checkpoints directory, so
   that I can generate plots and shit from them later
 - [ ] Review all TODOs and resolve them
