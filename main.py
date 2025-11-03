@@ -352,7 +352,6 @@ def train_one_fold(
         fold_history["train_acc"].append(train_metrics["accuracy"])
         fold_history["epochs"].append(epoch)
 
-        # TODO not sure patience works properly
         # Validate every val_every epochs
         if epoch % val_every == 0 or epoch == num_epochs:
             eval_metrics = eval_epoch(model, val_loader, criterion, device)
