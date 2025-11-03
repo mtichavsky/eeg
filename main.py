@@ -23,8 +23,7 @@ LOG_LEVEL = "INFO"
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
-# TODO check this for training too
-EXPECTED_SPECTOGRAM_SHAPE = (129, 41)  # Expected spectrogram shape from training
+EXPECTED_SPECTROGRAM_SHAPE = (129, 41)  # Expected spectrogram shape from training
 
 
 class IllegalPathError(Exception):
@@ -77,6 +76,8 @@ def setup_logging(
     return log_path
 
 
+# TODO check and understand, check with paper too, figure out how you'll be writing about this in a thesis
+# TODO discuss what we care about, basically eval chapter
 def classification_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float | int]:
     """
     Compute classification metrics from true and predicted labels.
@@ -155,9 +156,7 @@ def aggregate_subject_predictions(
     return np.array(subject_preds), np.array(subject_labels)
 
 
-# -------------------------
-# Training loop
-# -------------------------
+# TODO
 def train_epoch(
     model: nn.Module,
     dataloader: DataLoader,
@@ -198,6 +197,7 @@ def train_epoch(
     return metrics
 
 
+# TODO
 def eval_epoch(
     model: nn.Module, dataloader: DataLoader, criterion: nn.Module, device: torch.device
 ) -> dict[str, dict[str, float | int] | float]:
@@ -287,7 +287,9 @@ def train_one_fold(
     """
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     early_stopping = EarlyStopping(patience=patience, maximize=True)
-    best_val_acc = 0.0
+    best_combined_acc = 0.0
+    corr_chunk_acc = 0.0
+    corr_subject_acc = 0.0
     best_epoch = 0
 
     fold_history = {
@@ -295,6 +297,8 @@ def train_one_fold(
         "train_acc": [],
         "val_loss": [],
         "val_acc": [],
+        "chunk_acc": [],
+        "subject_acc": [],
         "epochs": [],
     }
 
@@ -306,9 +310,9 @@ def train_one_fold(
         train_metrics = train_epoch(model, train_loader, optimizer, criterion, device)
 
         logger.info(
-            f"Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-            f"Train Loss: {train_metrics['loss']:.4f} | "
-            f"Train Acc: {train_metrics['accuracy']:.4f} | "
+            f"TRAIN CHUNK | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
+            f"Loss: {train_metrics['loss']:.4f} | "
+            f"Acc: {train_metrics['accuracy']:.4f} | "
             f"Prec: {train_metrics['precision']:.4f} | "
             f"Recall: {train_metrics['recall']:.4f} | "
             f"Spec: {train_metrics['specificity']:.4f}"
@@ -318,20 +322,19 @@ def train_one_fold(
         fold_history["train_acc"].append(train_metrics["accuracy"])
         fold_history["epochs"].append(epoch)
 
+        # TODO not sure patience works properly
         # Validate every val_every epochs
         if epoch % val_every == 0 or epoch == num_epochs:
-            val_metrics = eval_epoch(model, val_loader, criterion, device)
+            eval_metrics = eval_epoch(model, val_loader, criterion, device)
 
             # Extract chunk and subject metrics
-            chunk_metrics = val_metrics["chunk"]
-            subject_metrics = val_metrics["subject"]
+            chunk_metrics = eval_metrics["chunk"]
+            subject_metrics = eval_metrics["subject"]
 
             logger.info(
-                f"Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-                f"Val Loss: {val_metrics['loss']:.4f}"
-            )
-            logger.info(
-                f"  Chunk-level  -> Acc: {chunk_metrics['accuracy']:.4f} | "
+                f"EVAL CHUNK | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
+                f"Loss: {eval_metrics['loss']:.4f} | "
+                f"Acc: {chunk_metrics['accuracy']:.4f} | "
                 f"Prec: {chunk_metrics['precision']:.4f} | "
                 f"Recall: {chunk_metrics['recall']:.4f} | "
                 f"Spec: {chunk_metrics['specificity']:.4f} | "
@@ -339,7 +342,9 @@ def train_one_fold(
                 f"FP={chunk_metrics['fp']}, FN={chunk_metrics['fn']}"
             )
             logger.info(
-                f"  Subject-level -> Acc: {subject_metrics['accuracy']:.4f} | "
+                f"EVAL SUBJECT | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
+                f"Loss: {eval_metrics['loss']:.4f} | "
+                f"Acc: {subject_metrics['accuracy']:.4f} | "
                 f"Prec: {subject_metrics['precision']:.4f} | "
                 f"Recall: {subject_metrics['recall']:.4f} | "
                 f"Spec: {subject_metrics['specificity']:.4f} | "
@@ -347,18 +352,23 @@ def train_one_fold(
                 f"FP={subject_metrics['fp']}, FN={subject_metrics['fn']}"
             )
 
-            fold_history["val_loss"].append(val_metrics["loss"])
-            fold_history["val_acc"].append(
+            fold_history["val_loss"].append(eval_metrics["loss"])
+            fold_history["chunk_acc"].append(
+                chunk_metrics["accuracy"]
+            )
+            fold_history["subject_acc"].append(
                 subject_metrics["accuracy"]
-            )  # Use subject-level for tracking
+            )
 
             # Combined metric: chunk accuracy weighted by subject accuracy
             # This handles small validation sets better (e.g., 6 subjects in 10-fold CV)
             combined_metric = chunk_metrics["accuracy"] * subject_metrics["accuracy"]
 
-            # Save best model (based on combined metric)
-            if combined_metric > best_val_acc:
-                best_val_acc = combined_metric
+            # Save the best model (based on combined metric)
+            if combined_metric > best_combined_acc:
+                best_combined_acc = combined_metric
+                corr_chunk_acc = chunk_metrics["accuracy"]
+                corr_subject_acc = subject_metrics["accuracy"]
                 best_epoch = epoch
                 best_model_path = checkpoint_dir / f"fold_{fold + 1}_best.pth"
                 torch.save(
@@ -366,8 +376,8 @@ def train_one_fold(
                         "epoch": epoch,
                         "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
-                        "val_acc": best_val_acc,
-                        "val_metrics": val_metrics,
+                        "combined_acc": best_combined_acc,
+                        "val_metrics": eval_metrics,
                     },
                     best_model_path,
                 )
@@ -398,11 +408,13 @@ def train_one_fold(
 
     logger.info(
         f"\nFold {fold + 1} training completed. "
-        f"Best Val Acc: {best_val_acc:.4f} at epoch {best_epoch}"
+        f"Best Combined Val Acc: {best_combined_acc:.4f} at epoch {best_epoch}"
     )
 
     return {
-        "best_val_acc": best_val_acc,
+        "best_eval_combined_acc": best_combined_acc,
+        "eval_chunk_acc": corr_chunk_acc,
+        "eval_subject_acc": corr_subject_acc,
         "best_epoch": best_epoch,
         "final_epoch": epoch,
         "history": fold_history,
@@ -413,7 +425,7 @@ def train_cross_validation(
     condition: Literal["EC", "EO", "TASK"] = "EC",
     n_folds: int = 10,
     batch_size: int = 32,
-    num_epochs: int = 50,
+    num_epochs: int = 100,
     learning_rate: float = 1e-4,
     val_every: int = 2,
     save_every: int = 10,
@@ -438,7 +450,7 @@ def train_cross_validation(
     :param torch.device device: Device to train on.
     :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
-    :return: Dictionary with cross-validation results.
+    :return: Dictionary with cross-validation results. Subject accuracy corresponds to the best combined accuracy model.
     :rtype: dict
     """
     logger.info(f"{'=' * 80}")
@@ -449,35 +461,35 @@ def train_cross_validation(
     logger.info(f"{'=' * 80}")
 
     cv_results = {
-        "fold_best_acc": [],
+        "fold_best_eval_combined_acc": [],
+        "fold_eval_chunk_acc": [],
+        "fold_eval_subject_acc": [],
         "fold_best_epoch": [],
         "fold_final_epoch": [],
     }
 
     logger.info(
-        "Step 1: Loading full dataset and converting to spectrograms (one-time preprocessing)..."
+        "Step 1: Lazy loading the dataset (preprocessing is cached with LRU cache)..."
     )
     full_mdd_dataset = MDDDataset(
-        condition=condition, preload=False, skip_ica=skip_ica, channel=channel
+        condition=condition, skip_ica=skip_ica, channel=channel
     )
-    all_subjects = full_mdd_dataset.get_subjects()
+    all_subjects = full_mdd_dataset.get_sorted_subjects()
 
     logger.info(f"Found {len(all_subjects)} subjects: {all_subjects}")
 
     full_spec_dataset = SpectrogramDataset(full_mdd_dataset)
-    logger.info(f"Spectrograms created: {len(full_spec_dataset)} samples")
+    logger.info(f"Got {len(full_spec_dataset)} spectrogram samples")
 
     # Verify spectrogram shape
     # SpectrogramDataset returns (list[spectrograms], label, subject), so [0][0][0]
     # gets first spectrogram
     spec_shape = full_spec_dataset[0][0][0].shape[1:]  # (H, W) without channel dim
-    assert spec_shape == torch.Size(list(EXPECTED_SPECTOGRAM_SHAPE)), (
+    assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
         f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
     )
-    logger.info(f"Spectrogram shape: {spec_shape}")
 
     logger.info(f"Step 2: Creating {n_folds}-fold cross-validation splits...")
-
     # Split subjects by class (stratified)
     healthy_subjects = [s for s in all_subjects if s.startswith("H ")]
     mdd_subjects = [s for s in all_subjects if s.startswith("MDD ")]
@@ -489,7 +501,7 @@ def train_cross_validation(
     rng.shuffle(healthy_subjects)
     rng.shuffle(mdd_subjects)
 
-    # Create folds for each class separately (stratified)
+    # Create folds for each class separately
     healthy_folds = np.array_split(healthy_subjects, n_folds)
     mdd_folds = np.array_split(mdd_subjects, n_folds)
 
@@ -509,7 +521,6 @@ def train_cross_validation(
         # Convert numpy strings to regular strings for cleaner logging
         train_subjects_clean = [str(s) for s in train_subjects]
         val_subjects_clean = [str(s) for s in val_subjects]
-
         logger.info(f"Train subjects ({len(train_subjects)}): {train_subjects_clean}")
         logger.info(f"Val subjects ({len(val_subjects)}): {val_subjects_clean}")
 
@@ -524,8 +535,11 @@ def train_cross_validation(
         train_spec_dataset = Subset(full_spec_dataset, train_indices)
         val_spec_dataset = Subset(full_spec_dataset, val_indices)
 
+        # TODO if I don't like one thing is that the batch size is not fixed here and is not like 32 chunks
+        # TODO batch_size refers to number of FILES, which will be flattened into individual spectrograms
+        # TODO number workers=0
+        # TODO pin_memory flag
         # Create DataLoaders with custom collate function for spectrograms
-        # batch_size refers to number of FILES, which will be flattened into individual spectrograms
         train_loader = DataLoader(
             train_spec_dataset,
             batch_size=batch_size,
@@ -572,7 +586,9 @@ def train_cross_validation(
             checkpoint_dir=checkpoint_dir,
         )
 
-        cv_results["fold_best_acc"].append(fold_result["best_val_acc"])
+        cv_results["fold_best_eval_combined_acc"].append(fold_result["best_eval_combined_acc"])
+        cv_results["fold_eval_chunk_acc"].append(fold_result["eval_chunk_acc"])
+        cv_results["fold_eval_subject_acc"].append(fold_result["eval_subject_acc"])
         cv_results["fold_best_epoch"].append(fold_result["best_epoch"])
         cv_results["fold_final_epoch"].append(fold_result["final_epoch"])
 
@@ -581,19 +597,38 @@ def train_cross_validation(
     logger.info(f"{n_folds}-FOLD CROSS-VALIDATION RESULTS")
     logger.info(f"{'=' * 80}")
 
-    mean_acc = np.mean(cv_results["fold_best_acc"])
-    std_acc = np.std(cv_results["fold_best_acc"])
-
     logger.info("\nPer-fold best validation accuracy:")
-    for i, acc in enumerate(cv_results["fold_best_acc"]):
-        logger.info(f"  Fold {i + 1}: {acc:.4f} (epoch {cv_results['fold_best_epoch'][i]})")
+    for i, combined_acc in enumerate(cv_results["fold_best_eval_combined_acc"]):
+        logger.info(f"  Fold {i + 1}: {combined_acc:.4f} (epoch {cv_results['fold_best_epoch'][i]})")
 
-    logger.info(f"\nMean Accuracy: {mean_acc:.4f} ± {std_acc:.4f}")
-    logger.info(f"Min Accuracy: {np.min(cv_results['fold_best_acc']):.4f}")
-    logger.info(f"Max Accuracy: {np.max(cv_results['fold_best_acc']):.4f}")
+    write_results(logger.info, cv_results)
     logger.info(f"{'=' * 80}\n")
 
     return cv_results
+
+def write_results(writer: callable, cv_results: dict[str, list[float]]) -> None:
+    combined_mean_acc = np.mean(cv_results["fold_best_eval_combined_acc"])
+    combined_std_acc = np.std(cv_results["fold_best_eval_combined_acc"])
+    chunk_mean_acc = np.mean(cv_results["fold_eval_chunk_acc"])
+    chunk_std_acc = np.std(cv_results["fold_eval_chunk_acc"])
+    subject_mean_acc = np.mean(cv_results["fold_eval_subject_acc"])
+    subject_std_acc = np.std(cv_results["fold_eval_subject_acc"])
+
+    writer(
+        f"COMBINED Accuracy Mean: {combined_mean_acc:.4f} ± {combined_std_acc:.4f}, "
+        f"Min: {np.min(cv_results['fold_best_eval_combined_acc']):.4f}, "
+        f"Max: {np.max(cv_results['fold_best_eval_combined_acc']):.4f}"
+    )
+    writer(
+        f"CHUNK Accuracy Mean: {chunk_mean_acc:.4f} ± {chunk_std_acc:.4f}, "
+        f"Min: {np.min(cv_results['fold_eval_chunk_acc']):.4f}, "
+        f"Max: {np.max(cv_results['fold_eval_chunk_acc']):.4f}"
+    )
+    writer(
+        f"SUBJECT Accuracy Mean: {subject_mean_acc:.4f} ± {subject_std_acc:.4f}, "
+        f"Min: {np.min(cv_results['fold_eval_subject_acc']):.4f}, "
+        f"Max: {np.max(cv_results['fold_eval_subject_acc']):.4f}"
+    )
 
 
 def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
@@ -731,17 +766,16 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"Learning Rate: {args.lr}\n")
         f.write(f"Skip ICA: {args.skip_ica}\n\n")
         f.write("Per-fold best validation accuracy:\n")
-        for i, acc in enumerate(results["fold_best_acc"]):
+        for i in range(len(results["fold_best_eval_combined_acc"])):
+            combined_acc = results["fold_best_eval_combined_acc"][i]
+            chunk_acc = results["fold_eval_chunk_acc"][i]
+            subject_acc = results["fold_eval_subject_acc"][i]
             f.write(
-                f"  Fold {i + 1}: {acc:.4f} (epoch {results['fold_best_epoch'][i]}, "
+                f"  Fold {i + 1}: combined={combined_acc:.4f}, chunk={chunk_acc:.4f}, "
+                f"subject={subject_acc:.4f} (epoch {results['fold_best_epoch'][i]}, "
                 f"stopped at epoch {results['fold_final_epoch'][i]})\n"
             )
-        mean_acc = np.mean(results["fold_best_acc"])
-        std_acc = np.std(results["fold_best_acc"])
-        f.write(f"\nMean Accuracy: {mean_acc:.4f} ± {std_acc:.4f}\n")
-        f.write(f"Min Accuracy: {np.min(results['fold_best_acc']):.4f}\n")
-        f.write(f"Max Accuracy: {np.max(results['fold_best_acc']):.4f}\n")
-
+        write_results(f.write, results)
     logger.info(f"\nResults saved to {results_file}")
     logger.info("Training completed!")
 
@@ -776,10 +810,11 @@ def run(args: argparse.Namespace) -> None:
     logger.info(f"Device: {device}")
     logger.info(f"{'=' * 80}")
 
+    # TODO - maybe I should remove drophout here no? I HAVE TO make sure dropout is not applied in eval nor here
     # Load model checkpoint
     logger.info("Loading model checkpoint...")
     model = CNN_LSTM_DepCap(
-        input_shape=EXPECTED_SPECTOGRAM_SHAPE,
+        input_shape=EXPECTED_SPECTROGRAM_SHAPE,
         in_channels=1,
         rnn_type="LSTM",
         rnn_hidden=100,
