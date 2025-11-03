@@ -1,5 +1,7 @@
 import argparse
 import logging
+import random
+import string
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -28,6 +30,34 @@ EXPECTED_SPECTROGRAM_SHAPE = (129, 41)  # Expected spectrogram shape from traini
 
 class IllegalPathError(Exception):
     pass
+
+
+def get_unique_checkpoint_dir(checkpoint_dir: Path, suffix_length: int = 3) -> Path:
+    """
+    Generate a unique checkpoint directory name by appending a random suffix if it already exists.
+
+    :param Path checkpoint_dir: Desired checkpoint directory path.
+    :param int suffix_length: Length of random suffix to append (default: 3).
+    :return: Unique directory path (either original or with random suffix).
+    :rtype: Path
+    """
+    if not checkpoint_dir.exists():
+        return checkpoint_dir
+
+    # Directory exists, add random suffix
+    original_name = checkpoint_dir.name
+    parent_dir = checkpoint_dir.parent
+
+    # Generate random suffix
+    random_suffix = "".join(random.choices(string.ascii_lowercase, k=suffix_length))
+    new_dir = parent_dir / f"{original_name}_{random_suffix}"
+
+    logger.warning(
+        f"Checkpoint directory '{checkpoint_dir}' already exists. "
+        f"Using '{new_dir}' instead to avoid overwriting."
+    )
+
+    return new_dir
 
 
 def setup_logging(
@@ -353,12 +383,8 @@ def train_one_fold(
             )
 
             fold_history["val_loss"].append(eval_metrics["loss"])
-            fold_history["chunk_acc"].append(
-                chunk_metrics["accuracy"]
-            )
-            fold_history["subject_acc"].append(
-                subject_metrics["accuracy"]
-            )
+            fold_history["chunk_acc"].append(chunk_metrics["accuracy"])
+            fold_history["subject_acc"].append(subject_metrics["accuracy"])
 
             # Combined metric: chunk accuracy weighted by subject accuracy
             # This handles small validation sets better (e.g., 6 subjects in 10-fold CV)
@@ -468,12 +494,8 @@ def train_cross_validation(
         "fold_final_epoch": [],
     }
 
-    logger.info(
-        "Step 1: Lazy loading the dataset (preprocessing is cached with LRU cache)..."
-    )
-    full_mdd_dataset = MDDDataset(
-        condition=condition, skip_ica=skip_ica, channel=channel
-    )
+    logger.info("Step 1: Lazy loading the dataset (preprocessing is cached with LRU cache)...")
+    full_mdd_dataset = MDDDataset(condition=condition, skip_ica=skip_ica, channel=channel)
     all_subjects = full_mdd_dataset.get_sorted_subjects()
 
     logger.info(f"Found {len(all_subjects)} subjects: {all_subjects}")
@@ -599,12 +621,15 @@ def train_cross_validation(
 
     logger.info("\nPer-fold best validation accuracy:")
     for i, combined_acc in enumerate(cv_results["fold_best_eval_combined_acc"]):
-        logger.info(f"  Fold {i + 1}: {combined_acc:.4f} (epoch {cv_results['fold_best_epoch'][i]})")
+        logger.info(
+            f"  Fold {i + 1}: {combined_acc:.4f} (epoch {cv_results['fold_best_epoch'][i]})"
+        )
 
     write_results(logger.info, cv_results)
     logger.info(f"{'=' * 80}\n")
 
     return cv_results
+
 
 def write_results(writer: callable, cv_results: dict[str, list[float]]) -> None:
     combined_mean_acc = np.mean(cv_results["fold_best_eval_combined_acc"])
@@ -719,7 +744,7 @@ def train(args: argparse.Namespace) -> None:
     else:
         device = torch.device(args.device)
 
-    checkpoint_dir = Path(args.checkpoint_dir)
+    checkpoint_dir = get_unique_checkpoint_dir(Path(args.checkpoint_dir))
 
     # Setup logging to both console and file
     log_path = setup_logging(checkpoint_dir, args.condition, args.skip_ica, args.channel)

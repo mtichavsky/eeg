@@ -3,7 +3,7 @@ import re
 import warnings
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable, Generator, Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 import mne
 import numpy as np
@@ -12,7 +12,7 @@ from mne.preprocessing import ICA
 from mne_icalabel import label_components
 from scipy.signal import stft
 from scipy.stats import zscore
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 warnings.filterwarnings("ignore")
 
@@ -79,7 +79,9 @@ class MDDDataset(Dataset):
                 MDDDataset.load_and_preprocess_mdd_raw_file
             )
         else:
-            self._load_and_preprocess_mdd_raw_file_cached = MDDDataset.load_and_preprocess_mdd_raw_file
+            self._load_and_preprocess_mdd_raw_file_cached = (
+                MDDDataset.load_and_preprocess_mdd_raw_file
+            )
 
     def _discover_files(
         self,
