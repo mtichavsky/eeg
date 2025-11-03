@@ -23,10 +23,9 @@ class CNN_LSTM_DepCap(nn.Module):
 
         Implements the architecture from the paper:
          - Conv2D(64, 10x10, stride=2), ReLU -> MaxPool(2x2, stride=1)
-         - Conv2D(32, 15x15, stride=1), ReLU -> MaxPool(2x2, stride=1) - here the kernel is
-           5x5 only.
+         - Conv2D(32, 5x5, stride=1), ReLU -> MaxPool(2x2, stride=1) - paper uses 15x15 kernel
          - Reshape to sequence (time=W) and pass through LSTM/GRU (hidden=100)
-         - Dense 64 -> Dense 32 -> output 2
+         - Dense 64 -> Dense 32 -> Output 2 classes
 
 
         :param tuple input_shape: Tuple of (height, width) for the input spectrogram.

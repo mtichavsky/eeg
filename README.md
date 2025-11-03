@@ -1,30 +1,59 @@
 Ve vlaku:
 - [ ] precist Markov - jak resi tyto problemy
 
+## Usage
+
 ```bash
+python main.py train --skip-ica --channel Fp1 --batch-size 4 --checkpoint-dir="checkpoints_fp1_001"
 python main.py train --skip-ica --channel Fp1
 python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 ```
 
-- [ ] checkpoints - pokud ta slozka neco obsahuje, tak nespoustej trenovani, add commit name to the directory if git is found
-- [ ] Subset, dataloadersm  10-fold logic, collate fn - review
-- [ ] Still missing 2 channels, find the one which is closest to the in-ear, or send him an email
-- [ ] foreach channel, get subject statistics as well, just because it's interesting
+- [ ] Claude checkpoints - pokud ta slozka neco obsahuje, tak nespoustej trenovani, add commit name to the directory if git is found
+- [ ] Review all TODOs and resolve them
+- [ ] Claude generate readme with usage, take inspo in KNN project, use Makefile for reference
+- [ ] Run on Fp1, on T channel and on A channel
+- [x] Subset, dataloadersm  10-fold logic, collate fn - review
+- [ ] Finish email to Malik
 - [ ] check that the chunking logic works properly via some prints, check lazy loading works properly
 - [ ] finish localizing those channels, so that I have the proper ones
 - [ ] I don't see subject statistics in cv_results
 - [ ] improve logs so that both eval and train logs have the same structure, are saved into checkpoints directory, so
   that I can generate plots and shit from them later
-- [ ] early stopping - 2x delsi doba nez by to melo , zaroven checkni z jakych epoch jsou ty top modely, mozna to by default trenuj 100 epoch nebo neoc
-- How did they work with multi channel? Did they use both eyes open/eyes closed?
+- [ ] Claude: early stopping - 2x delsi doba nez by to melo , zaroven checkni z jakych epoch jsou ty top modely, mozna to by default trenuj 100 epoch nebo neoc
+- How did they work with multi channel? Did they use both eyes open/eyes closed? they don't say
 - choose the right channel when working with one only
+- [ ] batch size
 
 ---
 
-Channels: ['EEG Fp1-LE', 'EEG F3-LE', 'EEG C3-LE', 'EEG P3-LE', 'EEG O1-LE', 'EEG F7-LE', 'EEG T3-LE', 'EEG T5-LE',
+Dear prof. Malik,
+
+I've written a first MVP and it looks very promising. ... share your results ... mention it's vibe coded
+so far only one channel, Eyes closed
+
+Looking at the whiteboard (sending it in the attachment)_, you told me to pick some channels, but I think you have some
+typo in there. T7 and T8 are not present in the 10-20 system, I should pick T3 and T4, right?
+Also, just to double-check, that harder to read channel is Cz, right?
+
+All avaialble channles: ['EEG Fp1-LE', 'EEG F3-LE', 'EEG C3-LE', 'EEG P3-LE', 'EEG O1-LE', 'EEG F7-LE', 'EEG T3-LE', 'EEG T5-LE',
 'EEG Fz-LE', 'EEG Fp2-LE', 'EEG F4-LE', 'EEG C4-LE', 'EEG P4-LE', 'EEG O2-LE', 'EEG F8-LE', 'EEG T4-LE', 'EEG T6-LE',
 'EEG Cz-LE', 'EEG Pz-LE', 'EEG A2-A1']
+
+You were saying I should start working with T channels from the beginning and then move to in-ear channels.
+I noticed there's an 'EEG A2-A1' channel in the MDD dataset. Looks pretty periodic. Is it the in-ear channel?
+
+
+Loss function design:
+`combined_metric = chunk_metrics["accuracy"] * subject_metrics["accuracy"]`
+This is probably the best right? But do I have it baked into training? No.
+So I need to clear up this inconsistency, cause training runs surely on chunk_metrics only
+if it was possible to calculate loss like that 
+Right now, training is done based on chunk accuracy, best model based on combine metrics eval results.
+That's kinda inconsistent
+
+
 
 from depcap
 
@@ -34,6 +63,15 @@ T5, T6, P3, P4, Pz, O1, O2, C3, C4, and Cz.
 ale v tom co jsem stahnul je jich min nebo co
 
 ---
+
+Model:
+
+
+- I'm doing dropout only on the output from LSTM right? Not on the whole net? Maybe it wouldn't be possible as dimensions
+  would get fucked up
+
+
+The early stopping class is just not ready for patience to work. tell claude
 
 Dataset refactor:
 - og dataset - no preload, no caching - double check 
