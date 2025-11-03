@@ -26,7 +26,6 @@ CHUNK_SAMPLES = int(SEGMENT_LENGTH * SFREQ)
 logger = logging.getLogger(__name__)
 
 
-# TODO: remove preload arg, make it a use_cache flag instead
 class MDDDataset(Dataset):
     """
     PyTorch Dataset for MDD EEG data.
@@ -47,8 +46,7 @@ class MDDDataset(Dataset):
         condition: Optional[Literal["EC", "EO", "TASK"]] = None,
         subjects: Optional[list[str]] = None,
         labels: Optional[list[str]] = None,
-        preload: bool = False,
-        cache_size: int = 60,
+        cache_size: Optional[int] = 100,
         transform: Optional[Callable] = None,
         skip_ica: bool = False,
         channel: Optional[str] = None,
@@ -63,25 +61,25 @@ class MDDDataset(Dataset):
                "MDD S1"]). None = all.
         :param Optional[list[str]] labels: List of labels to include (e.g., ["H", "MDD"]).
                None = all.
-        :param bool preload: If True, preprocess all files at initialization (slower init,
-               faster training).
-        :param int cache_size: Number of preprocessed files to cache in memory.
+        :param int cache_size: Number of preprocessed files to cache in memory. If None, cache is not used
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
         :param bool skip_ica: If True, skip ICA artifact removal (faster but less clean data).
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
-        self.preload = preload
         self.skip_ica = skip_ica
         self.files = self._discover_files(condition, subjects, labels)
         self.channel = channel
         if channel and not skip_ica:
             raise RuntimeError("When channel is chosen, skip ICA has to be set to True.")
 
-        self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
-            MDDDataset.load_and_preprocess_mdd_raw_file
-        )
+        if cache_size:
+            self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
+                MDDDataset.load_and_preprocess_mdd_raw_file
+            )
+        else:
+            self._load_and_preprocess_mdd_raw_file_cached = MDDDataset.load_and_preprocess_mdd_raw_file
 
     def _discover_files(
         self,
@@ -229,7 +227,7 @@ class MDDDataset(Dataset):
             "condition": file_info["condition"],
         }
 
-    def get_subjects(self) -> list[str]:
+    def get_sorted_subjects(self) -> list[str]:
         """
         Get a list of unique subjects in the dataset.
 
@@ -258,7 +256,7 @@ class MDDDataset(Dataset):
             "healthy_files": healthy_count,
             "mdd_files": mdd_count,
             "conditions": conditions,
-            "subjects": len(self.get_subjects()),
+            "subjects": len(self.get_sorted_subjects()),
         }
 
 
@@ -390,36 +388,6 @@ class SpectrogramDataset(Dataset):
         return indices
 
 
-def collate_variable_length_eeg(batch: list[dict[str, Any]]) -> dict[str, Any]:
-    """
-    Custom collate function to handle variable-length EEG tensors.
-
-    Trims all tensors in the batch to the minimum number of chunks.
-
-    :param list batch: List of dictionaries from MDDDataset.__getitem__()
-    :return: Batched dictionary with trimmed tensors.
-    :rtype: dict
-    """
-    # Find the minimum number of chunks in this batch
-    min_chunks = min(item["eeg"].size(0) for item in batch)
-    logger.info(f"Trimming batch chunks to {min_chunks} chunks.")
-
-    # Trim all EEG tensors to min_chunks
-    eeg_trimmed = torch.stack([item["eeg"][:min_chunks] for item in batch])
-
-    # Stack other fields
-    labels = torch.tensor([item["label"] for item in batch], dtype=torch.long)
-    subjects = [item["subject"] for item in batch]
-    conditions = [item["condition"] for item in batch]
-
-    return {
-        "eeg": eeg_trimmed,  # Shape: (batch_size, min_chunks, channels, samples)
-        "label": labels,  # Shape: (batch_size,)
-        "subject": subjects,
-        "condition": conditions,
-    }
-
-
 def collate_spectrograms(
     batch: list[tuple[list[torch.Tensor], int, str]],
 ) -> tuple[torch.Tensor, torch.Tensor, list[str]]:
@@ -450,100 +418,3 @@ def collate_spectrograms(
     labels_tensor = torch.tensor(all_labels, dtype=torch.long)
 
     return spectrograms_tensor, labels_tensor, all_subjects
-
-
-def create_cross_validation_splits(
-    data_dir: Path = MDD_DIR,
-    n_folds: int = 5,
-    condition: Optional[Literal["EC", "EO", "TASK"]] = None,
-    batch_size: int = 32,
-    num_workers: int = 0,
-    random_seed: int = 42,
-    preload: bool = False,
-) -> Generator[tuple[DataLoader, DataLoader, MDDDataset, MDDDataset], None, None]:
-    """
-    Create K-fold cross-validation splits at the subject level.
-
-    Yields train/validation DataLoaders for each fold with stratified subject-level splitting
-    to prevent data leakage.
-
-    Example:
-        for fold, (train_loader, val_loader, _, _) in enumerate(
-            create_cross_validation_splits(n_folds=5)
-        ):
-            print(f"Training fold {fold + 1}/5")
-            for batch in train_loader:
-                # ... training code
-
-    :param Path data_dir: Path to data directory.
-    :param int n_folds: Number of folds for cross-validation.
-    :param Optional[Literal["EC", "EO", "TASK"]] condition: Filter by condition.
-    :param int batch_size: Batch size for DataLoaders.
-    :param int num_workers: Number of worker processes for data loading.
-    :param int random_seed: Random seed for reproducibility.
-    :param bool preload: If True, preprocess all files at initialization (slower init,
-           faster training).
-    :yield: Tuple of (train_loader, val_loader, train_dataset, val_dataset) for each fold.
-    """
-    # Get all subjects and split by class
-    temp_dataset = MDDDataset(data_dir=data_dir, condition=condition, preload=False)
-    all_subjects = temp_dataset.get_subjects()
-
-    # TODO this logic is not ideal, I'd rather it work with the `labels` field then filenames
-    healthy_subjects = [s for s in all_subjects if s.startswith("H ")]
-    mdd_subjects = [s for s in all_subjects if s.startswith("MDD ")]
-
-    # Shuffle subjects
-    rng = np.random.RandomState(random_seed)
-    rng.shuffle(healthy_subjects)
-    rng.shuffle(mdd_subjects)
-
-    # Create folds for each class separately (stratified)
-    healthy_folds = np.array_split(healthy_subjects, n_folds)
-    mdd_folds = np.array_split(mdd_subjects, n_folds)
-
-    # Yield each fold
-    for fold_idx in range(n_folds):
-        # Validation subjects for this fold
-        eval_subjects = list(healthy_folds[fold_idx]) + list(mdd_folds[fold_idx])
-
-        # Training subjects (all other folds)
-        train_subjects: list[str] = []
-        for i in range(n_folds):
-            if i != fold_idx:
-                train_subjects.extend(healthy_folds[i])
-                train_subjects.extend(mdd_folds[i])
-
-        train_dataset = MDDDataset(
-            data_dir=data_dir,
-            condition=condition,
-            subjects=train_subjects,
-            preload=preload,
-        )
-        eval_dataset = MDDDataset(
-            data_dir=data_dir,
-            condition=condition,
-            subjects=eval_subjects,
-            preload=preload,
-        )
-
-        train_loader = DataLoader(
-            train_dataset,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=num_workers,
-            collate_fn=collate_variable_length_eeg,
-        )
-        eval_loader = DataLoader(
-            eval_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            num_workers=num_workers,
-            collate_fn=collate_variable_length_eeg,
-        )
-
-        print(f"\nFold {fold_idx + 1}/{n_folds}:")
-        print(f"  Train: {train_dataset.get_statistics()}")
-        print(f"  Val: {eval_dataset.get_statistics()}")
-
-        yield train_loader, eval_loader, train_dataset, eval_dataset
