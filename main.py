@@ -106,7 +106,8 @@ def setup_logging(
     return log_path
 
 
-# TODO check and understand, check with paper too, figure out how you'll be writing about this in a thesis
+# TODO check and understand, check with paper too, figure out how you'll be writing
+# about this in a thesis
 # TODO discuss what we care about, basically eval chapter
 def classification_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float | int]:
     """
@@ -475,7 +476,8 @@ def train_cross_validation(
     :param torch.device device: Device to train on.
     :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
-    :return: Dictionary with cross-validation results. Subject accuracy corresponds to the best combined accuracy model.
+    :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
+           best combined accuracy model.
     :rtype: dict
     """
     logger.info(f"{'=' * 80}")
@@ -556,8 +558,10 @@ def train_cross_validation(
         train_spec_dataset = Subset(full_spec_dataset, train_indices)
         val_spec_dataset = Subset(full_spec_dataset, val_indices)
 
-        # TODO if I don't like one thing is that the batch size is not fixed here and is not like 32 chunks
-        # TODO batch_size refers to number of FILES, which will be flattened into individual spectrograms
+        # TODO if I don't like one thing is that the batch size is not fixed here and
+        # is not like 32 chunks
+        # TODO batch_size refers to number of FILES, which will be flattened into
+        # individual spectrograms
         # TODO number workers=0
         # TODO pin_memory flag
         # Create DataLoaders with custom collate function for spectrograms
@@ -614,7 +618,7 @@ def train_cross_validation(
         cv_results["fold_final_epoch"].append(fold_result["final_epoch"])
 
     # Print final cross-validation results
-    logger.info(f"\n{'=' * 80}")
+    logger.info(f"{'=' * 80}")
     logger.info(f"{n_folds}-FOLD CROSS-VALIDATION RESULTS")
     logger.info(f"{'=' * 80}")
 
@@ -641,17 +645,17 @@ def write_results(writer: callable, cv_results: dict[str, list[float]]) -> None:
     writer(
         f"COMBINED Accuracy Mean: {combined_mean_acc:.4f} ± {combined_std_acc:.4f}, "
         f"Min: {np.min(cv_results['fold_best_eval_combined_acc']):.4f}, "
-        f"Max: {np.max(cv_results['fold_best_eval_combined_acc']):.4f}"
+        f"Max: {np.max(cv_results['fold_best_eval_combined_acc']):.4f}\n"
     )
     writer(
         f"CHUNK Accuracy Mean: {chunk_mean_acc:.4f} ± {chunk_std_acc:.4f}, "
         f"Min: {np.min(cv_results['fold_eval_chunk_acc']):.4f}, "
-        f"Max: {np.max(cv_results['fold_eval_chunk_acc']):.4f}"
+        f"Max: {np.max(cv_results['fold_eval_chunk_acc']):.4f}\n"
     )
     writer(
         f"SUBJECT Accuracy Mean: {subject_mean_acc:.4f} ± {subject_std_acc:.4f}, "
         f"Min: {np.min(cv_results['fold_eval_subject_acc']):.4f}, "
-        f"Max: {np.max(cv_results['fold_eval_subject_acc']):.4f}"
+        f"Max: {np.max(cv_results['fold_eval_subject_acc']):.4f}\n"
     )
 
 
@@ -697,16 +701,16 @@ def get_arg_parser() -> argparse.ArgumentParser:
     train_parser.add_argument(
         "--n-folds", type=int, default=10, help="Number of cross-validation folds"
     )
-    train_parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
+    train_parser.add_argument("--batch-size", type=int, default=8, help="Batch size for training")
     train_parser.add_argument(
-        "--epochs", type=int, default=50, help="Maximum number of epochs per fold"
+        "--epochs", type=int, default=100, help="Maximum number of epochs per fold"
     )
     train_parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     train_parser.add_argument("--val-every", type=int, default=2, help="Validate every N epochs")
     train_parser.add_argument(
         "--save-every", type=int, default=10, help="Save checkpoint every N epochs"
     )
-    train_parser.add_argument("--patience", type=int, default=15, help="Early stopping patience")
+    train_parser.add_argument("--patience", type=int, default=20, help="Early stopping patience")
     train_parser.add_argument(
         "--checkpoint-dir",
         type=str,
@@ -834,7 +838,8 @@ def run(args: argparse.Namespace) -> None:
     logger.info(f"Device: {device}")
     logger.info(f"{'=' * 80}")
 
-    # TODO - maybe I should remove drophout here no? I HAVE TO make sure dropout is not applied in eval nor here
+    # TODO - maybe I should remove drophout here no? I HAVE TO make sure dropout is
+    # not applied in eval nor here
     # Load model checkpoint
     logger.info("Loading model checkpoint...")
     model = CNN_LSTM_DepCap(
@@ -850,7 +855,7 @@ def run(args: argparse.Namespace) -> None:
     saved = torch.load(model_path, weights_only=False)
     model.load_state_dict(saved["model_state_dict"])
     model.to(device)
-    model.eval()
+    model.eval()  # This among other things deactivates dropout
     logger.info("Model loaded successfully")
 
     # Preprocess EDF file
