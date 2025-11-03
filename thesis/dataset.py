@@ -61,7 +61,8 @@ class MDDDataset(Dataset):
                "MDD S1"]). None = all.
         :param Optional[list[str]] labels: List of labels to include (e.g., ["H", "MDD"]).
                None = all.
-        :param int cache_size: Number of preprocessed files to cache in memory. If None, cache is not used
+        :param int cache_size: Number of preprocessed files to cache in memory. If None,
+               cache is not used
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
         :param bool skip_ica: If True, skip ICA artifact removal (faster but less clean data).
         """
