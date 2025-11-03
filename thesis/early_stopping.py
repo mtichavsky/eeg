@@ -65,7 +65,7 @@ class EarlyStopping:
             self.best_epoch = current_epoch
             self.epochs_without_improvement = 0
         else:
-            logger.info(
+            logger.debug(
                 f"No improvement for {self.epochs_without_improvement} epochs "
                 f"(best: {self.best_score:.4f} at epoch {self.best_epoch}, "
                 f"current: {score:.4f})"

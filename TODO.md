@@ -10,10 +10,6 @@ python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --chan
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 ```
 
-- [x] Claude checkpoints - pokud ta slozka neco obsahuje, tak nespoustej trenovani, add commit name to the directory if git is found
-- [x] Claude generate readme with usage, take inspo in KNN project, use Makefile for reference
-- [x] Subset, dataloadersm  10-fold logic, collate fn - review
-- [x] Claude: early stopping - 2x delsi doba nez by to melo , zaroven checkni z jakych epoch jsou ty top modely, mozna to by default trenuj 100 epoch nebo neoc
 - [x] I don't see subject statistics in cv_results
 - [ ] improve logs so that both eval and train logs have the same structure, are saved into checkpoints directory, so
   that I can generate plots and shit from them later
@@ -28,21 +24,6 @@ python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel
 
 ---
 
-Dear prof. Malik,
-
-I've written a first MVP and it looks very promising. ... share your results ... mention it's vibe coded
-so far only one channel, Eyes closed
-
-Looking at the whiteboard (sending it in the attachment)_, you told me to pick some channels, but I think you have some
-typo in there. T7 and T8 are not present in the 10-20 system, I should pick T3 and T4, right?
-Also, just to double-check, that harder to read channel is Cz, right?
-
-All avaialble channles: ['EEG Fp1-LE', 'EEG F3-LE', 'EEG C3-LE', 'EEG P3-LE', 'EEG O1-LE', 'EEG F7-LE', 'EEG T3-LE', 'EEG T5-LE',
-'EEG Fz-LE', 'EEG Fp2-LE', 'EEG F4-LE', 'EEG C4-LE', 'EEG P4-LE', 'EEG O2-LE', 'EEG F8-LE', 'EEG T4-LE', 'EEG T6-LE',
-'EEG Cz-LE', 'EEG Pz-LE', 'EEG A2-A1']
-
-You were saying I should start working with T channels from the beginning and then move to in-ear channels.
-I noticed there's an 'EEG A2-A1' channel in the MDD dataset. Looks pretty periodic. Is it the in-ear channel?
 
 
 Loss function design:
