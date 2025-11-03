@@ -32,12 +32,15 @@ class MDDDataset(Dataset):
     """
 
     CHANNEL_MAPPING = {
-        "EEG Fp1-LE": "Fp1",
-        "EEG Fp2-LE": "Fp2",
+        "EEG A2-A1": "A2-A1",
         "EEG C3-LE": "C3",
         "EEG C4-LE": "C4",
-        "EEG O2-LE": "O2",
         "EEG Cz-LE": "Cz",
+        "EEG Fp1-LE": "Fp1",
+        "EEG Fp2-LE": "Fp2",
+        "EEG O2-LE": "O2",
+        "EEG T3-LE": "T3",
+        "EEG T4-LE": "T4",
     }
 
     def __init__(
@@ -152,9 +155,7 @@ class MDDDataset(Dataset):
         raw = raw.filter(l_freq=1, h_freq=70, method="iir", verbose=False)
         raw = raw.notch_filter(freqs=50, verbose=False)
 
-        raw = raw.pick(
-            ["EEG Fp1-LE", "EEG Fp2-LE", "EEG C3-LE", "EEG C4-LE", "EEG O2-LE", "EEG Cz-LE"]
-        )
+        raw = raw.pick(list(MDDDataset.CHANNEL_MAPPING.keys()))
         raw = raw.rename_channels(MDDDataset.CHANNEL_MAPPING)
 
         # Pick the channel if specified
