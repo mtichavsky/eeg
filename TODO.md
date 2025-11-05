@@ -10,17 +10,14 @@ python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --chan
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 ```
 
-- [x] I don't see subject statistics in cv_results
-- [ ] improve logs so that both eval and train logs have the same structure, are saved into checkpoints directory, so
-  that I can generate plots and shit from them later
 - [ ] Review all TODOs and resolve them
-- [ ] Run on Fp1, on T channel and on A channel
-- [ ] Finish email to Malik
 - [ ] check that the chunking logic works properly via some prints, check lazy loading works properly
 - [ ] finish localizing those channels, so that I have the proper ones
 - How did they work with multi channel? Did they use both eyes open/eyes closed? they don't say
 - choose the right channel when working with one only
 - [ ] batch size
+- [ ] manually remove files and train one epoch
+- [ ] how long recordings do I need for X pct validations? - plot some graph in evaluation
 
 ---
 
@@ -64,7 +61,7 @@ Dataset refactor:
 - they might be using 0.6 dropout
 - batch size 128 (probably individual chunks), adam, cross entropy, learning rate 0.0001
 
-- [ ] Combining multiple channels - vubec nevim jak to delaji
+- [ ] Combining multiple channels - vubec nevim jak to delaji - tohle muzu udelat podle sebe asi
 - [ ] zaroven velikost toho jejich spektogramu je vetsi -> my second convolution is 5x5, not 15x15
 - 
 > With 10-second segments, you can't get (254, 342) dimensions using standard STFT. Even with maximum overlap:

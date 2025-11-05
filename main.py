@@ -13,6 +13,7 @@ from sklearn.metrics import confusion_matrix
 from torch.utils.data import DataLoader, Subset
 
 from thesis.dataset import (
+    FlattenedSpectrogramDataset,
     MDDDataset,
     SpectrogramDataset,
     collate_spectrograms,
@@ -502,12 +503,13 @@ def train_cross_validation(
     logger.info(f"Found {len(all_subjects)} subjects: {all_subjects}")
 
     full_spec_dataset = SpectrogramDataset(full_mdd_dataset)
-    logger.info(f"Got {len(full_spec_dataset)} spectrogram samples")
+    full_flat_dataset = FlattenedSpectrogramDataset(full_spec_dataset)
+    logger.info(f"Got {len(full_flat_dataset)} spectrogram chunks")
 
     # Verify spectrogram shape
-    # SpectrogramDataset returns (list[spectrograms], label, subject), so [0][0][0]
+    # FlattenedSpectrogramDataset returns (spectrogram, label, subject), so [0][0]
     # gets first spectrogram
-    spec_shape = full_spec_dataset[0][0][0].shape[1:]  # (H, W) without channel dim
+    spec_shape = full_flat_dataset[0][0].shape[1:]  # (H, W) without channel dim
     assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
         f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
     )
@@ -547,38 +549,34 @@ def train_cross_validation(
         logger.info(f"Train subjects ({len(train_subjects)}): {train_subjects_clean}")
         logger.info(f"Val subjects ({len(val_subjects)}): {val_subjects_clean}")
 
-        # Get indices for train/val based on subjects
-        train_indices = full_spec_dataset.get_indices_for_subjects(train_subjects)
-        val_indices = full_spec_dataset.get_indices_for_subjects(val_subjects)
+        # Get indices for train/val based on subjects (chunk-level indices)
+        train_indices = full_flat_dataset.get_indices_for_subjects(train_subjects)
+        val_indices = full_flat_dataset.get_indices_for_subjects(val_subjects)
 
-        logger.info(f"Training samples: {len(train_indices)}")
-        logger.info(f"Validation samples: {len(val_indices)}")
+        logger.info(f"Training chunks: {len(train_indices)}")
+        logger.info(f"Validation chunks: {len(val_indices)}")
 
         # Create Subset datasets (reusing precomputed spectrograms!)
-        train_spec_dataset = Subset(full_spec_dataset, train_indices)
-        val_spec_dataset = Subset(full_spec_dataset, val_indices)
+        train_flat_dataset = Subset(full_flat_dataset, train_indices)
+        val_flat_dataset = Subset(full_flat_dataset, val_indices)
 
-        # TODO if I don't like one thing is that the batch size is not fixed here and
-        # is not like 32 chunks
-        # TODO batch_size refers to number of FILES, which will be flattened into
-        # individual spectrograms
-        # TODO number workers=0
-        # TODO pin_memory flag
-        # Create DataLoaders with custom collate function for spectrograms
+        # Small dataset fits in RAM → extra workers add overhead, not speed
+        # pin_memory speeds up CPU→GPU transfers, enabling Direct Memory Access
+        pin_memory = True if device == "cuda" else False
         train_loader = DataLoader(
-            train_spec_dataset,
+            train_flat_dataset,
             batch_size=batch_size,
             shuffle=True,
             num_workers=0,
-            pin_memory=True,
+            pin_memory=pin_memory,
             collate_fn=collate_spectrograms,
         )
         val_loader = DataLoader(
-            val_spec_dataset,
+            val_flat_dataset,
             batch_size=batch_size,
             shuffle=False,
             num_workers=0,
-            pin_memory=True,
+            pin_memory=pin_memory,
             collate_fn=collate_spectrograms,
         )
 
@@ -701,7 +699,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     train_parser.add_argument(
         "--n-folds", type=int, default=10, help="Number of cross-validation folds"
     )
-    train_parser.add_argument("--batch-size", type=int, default=8, help="Batch size for training")
+    train_parser.add_argument("--batch-size", type=int, default=64, help="Batch size for training")
     train_parser.add_argument(
         "--epochs", type=int, default=100, help="Maximum number of epochs per fold"
     )
