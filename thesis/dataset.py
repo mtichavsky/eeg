@@ -392,33 +392,95 @@ class SpectrogramDataset(Dataset):
         return indices
 
 
+class FlattenedSpectrogramDataset(Dataset):
+    """
+    Wrapper that flattens SpectrogramDataset to operate on individual chunks.
+
+    SpectrogramDataset returns (list[spectrograms], label, subject) where each item
+    represents all chunks from a file. This wrapper flattens it so each index
+    corresponds to a single chunk/spectrogram.
+    """
+
+    def __init__(self, spectrogram_dataset: SpectrogramDataset):
+        """
+        Initialize the flattened dataset.
+
+        :param SpectrogramDataset spectrogram_dataset: The underlying spectrogram dataset.
+        """
+        self.dataset = spectrogram_dataset
+        # Build index mapping: (file_idx, chunk_idx) for each chunk
+        self.index: list[tuple[int, int]] = []
+
+        logger.info("Building chunk index for FlattenedSpectrogramDataset...")
+        for file_idx in range(len(spectrogram_dataset)):
+            spec_list, _, _ = spectrogram_dataset[file_idx]
+            for chunk_idx in range(len(spec_list)):
+                self.index.append((file_idx, chunk_idx))
+        logger.info(f"Built index with {len(self.index)} total chunks")
+
+    def __len__(self) -> int:
+        return len(self.index)
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int, str]:
+        """
+        Get a single chunk/spectrogram.
+
+        :param int idx: Index of the chunk to retrieve.
+        :return: Tuple of (spectrogram, label, subject).
+        :rtype: tuple[torch.Tensor, int, str]
+        """
+        file_idx, chunk_idx = self.index[idx]
+        spec_list, label, subject = self.dataset[file_idx]
+        return spec_list[chunk_idx], label, subject
+
+    def get_indices_for_subjects(self, subject_list: list[str]) -> list[int]:
+        """
+        Get indices of all chunks belonging to specific subjects.
+
+        :param list[str] subject_list: List of subject IDs (e.g., ["H S1", "MDD S2"]).
+        :return: List of indices for chunks belonging to those subjects.
+        :rtype: list[int]
+        """
+        # Get file-level indices from underlying dataset
+        file_indices = set(self.dataset.get_indices_for_subjects(subject_list))
+
+        # Find all chunk indices that belong to those files
+        chunk_indices = []
+        for chunk_idx, (file_idx, _) in enumerate(self.index):
+            if file_idx in file_indices:
+                chunk_indices.append(chunk_idx)
+
+        return chunk_indices
+
+
 def collate_spectrograms(
-    batch: list[tuple[list[torch.Tensor], int, str]],
+    batch: list[tuple[torch.Tensor, int, str]],
 ) -> tuple[torch.Tensor, torch.Tensor, list[str]]:
     """
-    Custom collate function to handle variable-length lists of spectrograms from SpectrogramDataset.
+    Custom collate function to handle potentially variable-sized spectrograms.
 
-    Each item in the batch is a tuple of (list of spectrograms, label, subject).
-    This function flattens the lists and creates proper batches of individual spectrograms.
+    Each item in the batch is a tuple of (spectrogram, label, subject).
+    This function stacks them into proper batches.
 
-    :param list batch: List of tuples (list[spectrograms], label, subject) from
-           SpectrogramDataset.__getitem__()
-    :return: Tuple of (stacked spectrograms, repeated labels, repeated subjects).
+    :param list batch: List of tuples (spectrogram, label, subject) from
+           FlattenedSpectrogramDataset.__getitem__()
+    :return: Tuple of (stacked spectrograms, labels, subjects).
     :rtype: tuple[torch.Tensor, torch.Tensor, list[str]]
     """
-    all_spectrograms = []
-    all_labels = []
-    all_subjects = []
+    spectrograms = []
+    labels = []
+    subjects = []
 
-    for spectrograms, label, subject in batch:
-        # Extend lists with all spectrograms from this file
-        all_spectrograms.extend(spectrograms)
-        # Repeat label and subject for each spectrogram
-        all_labels.extend([label] * len(spectrograms))
-        all_subjects.extend([subject] * len(spectrograms))
+    for spectrogram, label, subject in batch:
+        spectrograms.append(spectrogram)
+        labels.append(label)
+        subjects.append(subject)
+
+    shapes = [s.shape for s in spectrograms]
+    assert len(set(shapes)) == 1, f"Inconsistent shapes: {set(shapes)}"
 
     # Stack all spectrograms into a single tensor
-    spectrograms_tensor = torch.stack(all_spectrograms)  # Shape: (total_spectrograms, 1, H, W)
-    labels_tensor = torch.tensor(all_labels, dtype=torch.long)
+    spectrograms_tensor = torch.stack(spectrograms)  # Shape: (batch_size, 1, H, W)
+    labels_tensor = torch.tensor(labels)
 
-    return spectrograms_tensor, labels_tensor, all_subjects
+    return spectrograms_tensor, labels_tensor, subjects
