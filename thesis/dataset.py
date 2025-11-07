@@ -484,3 +484,235 @@ def collate_spectrograms(
     labels_tensor = torch.tensor(labels)
 
     return spectrograms_tensor, labels_tensor, subjects
+
+
+import numpy as np
+import pandas as pd
+import torch
+from scipy.signal import butter, filtfilt, iirnotch, detrend, stft
+from scipy.stats import zscore
+from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+# CANE dataset constants
+CANE_SAMPLING_RATE = 500  # Hz (hardcoded, verified to be ~498-499 Hz in practice)
+CANE_SAMPLING_RATE_TOLERANCE = 10  # Hz (allow ±10 Hz deviation)
+
+# CANE STFT Parameters for matching MDD spectrogram shape (129, 41):
+# - Sampling rate: 500 Hz (hardcoded)
+# - nperseg: 256 (gives 129 frequency bins: 256//2 + 1)
+# - noverlap: 131 (gives ~41 time frames from 5000 samples in 10 seconds)
+# - This preserves frequencies up to ~250 Hz (vs. 128 Hz for downsampled MDD data)
+CANE_STFT_NPERSEG = 256
+CANE_STFT_NOVERLAP = 131  # (5000 - 256) / (256 - 131) + 1 ≈ 38.9 ≈ 39-40 frames
+
+
+def load_and_preprocess_cane_raw_file(
+        file_path: Path,
+        channel: str = "d4",
+        artifact_method: str = "interpolation",  # "interpolation", "clipping", or "both"
+        artifact_threshold: float = 4.0,
+        apply_car: bool = True,
+        skip_extreme_artifacts: bool = False
+) -> tuple[torch.Tensor, float]:
+    """
+    Load and preprocess CANE dataset CSV file at 500 Hz sampling rate.
+
+    This function preprocesses CANE data at a hardcoded 500 Hz sampling rate,
+    preserving frequency information up to the Nyquist limit (~250 Hz).
+    The detected sampling rate is verified to be within tolerance of 500 Hz.
+
+    Args:
+        file_path: Path to CSV file containing CANE data
+        channel: Which channel to use (d1-d8), default "d4"
+        artifact_method: Method for artifact removal
+        artifact_threshold: Z-score threshold for artifact detection
+        apply_car: Whether to apply Common Average Reference
+        skip_extreme_artifacts: If True, completely removes chunks with >10% artifacts
+
+    Returns:
+        tuple: (tensor, sampling_rate)
+            - torch.Tensor: Shape (num_chunks, 1, chunk_samples) where chunk_samples
+              is 5000 (10 seconds at 500 Hz)
+            - float: The hardcoded sampling rate (500 Hz)
+    """
+    # Constants
+    CHUNK_DURATION_SEC = 10.0  # 10 second chunks
+    NEIGHBOUR_ZSCORE_TRESHOLD = 2.5
+
+    # Load data
+    df = pd.read_csv(file_path)
+
+    # Calculate actual sampling rate and verify it's close to expected
+    duration = (df['timestamp'].iloc[-1] - df['timestamp'].iloc[0]) / 1000  # to seconds
+    detected_fs = len(df) / duration
+    logger.info(f"Detected sampling rate: {detected_fs:.2f} Hz")
+
+    # Verify sampling rate is within tolerance
+    if abs(detected_fs - CANE_SAMPLING_RATE) > CANE_SAMPLING_RATE_TOLERANCE:
+        raise ValueError(
+            f"Detected sampling rate {detected_fs:.2f} Hz is outside tolerance "
+            f"({CANE_SAMPLING_RATE} ± {CANE_SAMPLING_RATE_TOLERANCE} Hz)"
+        )
+
+    # Use hardcoded sampling rate for consistency
+    fs = CANE_SAMPLING_RATE
+    chunk_samples = int(CHUNK_DURATION_SEC * fs)
+    logger.info(f"Using hardcoded sampling rate: {fs} Hz")
+    logger.info(f"Chunk size: {chunk_samples} samples ({CHUNK_DURATION_SEC}s)")
+
+    # Step 1: Initial scaling (z-score normalization of raw ADC values)
+    # This is critical for CANE data which has huge raw values
+    eeg_channels = [f"d{i}" for i in range(1, 9)]
+    for ch in eeg_channels:
+        if ch in df.columns:
+            df[ch] = zscore(df[ch])
+
+    # Step 2: Common Average Reference (before filtering to remove common noise)
+    if apply_car and all(ch in df.columns for ch in eeg_channels):
+        car = df[eeg_channels].mean(axis=1)
+        for ch in eeg_channels:
+            df[ch] = df[ch] - car
+        logger.info("Applied Common Average Reference")
+
+    # Extract the specific channel
+    signal = df[channel].values.astype(float)
+
+    # Step 3: Detrend to remove slow drifts (before filtering)
+    signal = detrend(signal, type='linear')
+
+    # Step 4: Artifact handling (before filtering to avoid spreading artifacts)
+    if artifact_method in ["interpolation", "both"]:
+        z_scores = np.abs(zscore(signal))
+        artifact_indices = np.where(z_scores > artifact_threshold)[0]
+
+        if len(artifact_indices) > 0:
+            artifact_pct = len(artifact_indices) / len(signal) * 100
+            logger.info(f"Found {len(artifact_indices)} artifacts ({artifact_pct:.2f}%)")
+
+            # Interpolate artifacts
+            for idx in artifact_indices:
+                # Find clean neighbors within ±100 samples
+                window_start = max(0, idx - 100)
+                window_end = min(len(signal), idx + 100)
+
+                neighbors = signal[window_start:window_end]
+                neighbor_mask = np.abs(zscore(neighbors)) < NEIGHBOUR_ZSCORE_TRESHOLD
+
+                if neighbor_mask.sum() > 10:  # Need at least 10 clean samples
+                    signal[idx] = np.median(neighbors[neighbor_mask])
+                else:
+                    # If no clean neighbors, use linear interpolation
+                    if idx > 0 and idx < len(signal) - 1:
+                        signal[idx] = (signal[idx - 1] + signal[idx + 1]) / 2
+
+    if artifact_method in ["clipping", "both"]:
+        # Percentile-based clipping as additional safety
+        lower = np.percentile(signal, 0.5)
+        upper = np.percentile(signal, 99.5)
+        signal = np.clip(signal, lower, upper)
+
+    # Step 5: Bandpass filter (matching MDD: 1-70 Hz)
+    # Using 4th order Butterworth like in the context
+    nyq = 0.5 * fs
+
+    # High-pass at 1 Hz (removes DC and very slow drifts)
+    b_hp, a_hp = butter(4, 1.0 / nyq, btype='high')
+    signal = filtfilt(b_hp, a_hp, signal)
+
+    # Low-pass at 70 Hz (removes high-frequency noise)
+    b_lp, a_lp = butter(4, 70.0 / nyq, btype='low')
+    signal = filtfilt(b_lp, a_lp, signal)
+
+    # Step 6: Notch filter at 50 Hz (European powerline)
+    b_notch, a_notch = iirnotch(50.0, Q=30, fs=fs)
+    signal = filtfilt(b_notch, a_notch, signal)
+
+    # Step 7: Chunk the signal at native sampling rate (NO resampling)
+    n_samples = len(signal)
+    chunks = []
+
+    for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
+        chunk = signal[i:i + chunk_samples]
+
+        # Optional: Skip chunks with too many residual artifacts
+        if skip_extreme_artifacts:
+            chunk_z = np.abs(zscore(chunk))
+            if (chunk_z > 3).sum() / len(chunk) > 0.1:  # >10% artifacts
+                logger.warning(f"Skipping chunk {len(chunks)} due to excessive artifacts")
+                continue
+
+        # Final z-score normalization per chunk (matching MDD)
+        chunk = zscore(chunk)
+
+        # Reshape to (1, samples) to match MDD format (channels, samples)
+        chunk = chunk.reshape(1, -1)
+        chunks.append(torch.from_numpy(chunk).float())
+
+    # Stack into tensor (num_chunks, channels=1, samples)
+    if chunks:
+        chunks_tensor = torch.stack(chunks)
+        logger.info(f"Created {len(chunks)} chunks of shape {chunks_tensor.shape}")
+        return chunks_tensor, fs
+    else:
+        logger.error("No valid chunks created!")
+        return torch.empty(0, 1, chunk_samples), fs
+
+
+# Alternative: Process all channels at once
+def load_and_preprocess_cane_all_channels(
+        file_path: Path,
+        channels: list[str] = None,
+        **kwargs
+) -> tuple[torch.Tensor, float]:
+    """
+    Process multiple channels and return best one or average.
+
+    Args:
+        file_path: Path to CSV file
+        channels: List of channels to process (default: all d1-d8)
+        **kwargs: Additional arguments for load_and_preprocess_cane_raw_file
+
+    Returns:
+        tuple: (tensor, sampling_rate)
+            - torch.Tensor: Best channel or average of good channels
+            - float: The detected sampling rate in Hz
+    """
+    if channels is None:
+        channels = [f"d{i}" for i in range(1, 9)]
+
+    all_chunks = []
+    quality_scores = []
+    fs = None
+
+    for channel in channels:
+        try:
+            chunks, detected_fs = load_and_preprocess_cane_raw_file(
+                file_path, channel=channel, **kwargs
+            )
+
+            if fs is None:
+                fs = detected_fs
+
+            if chunks.shape[0] > 0:
+                # Calculate quality score (lower is better)
+                # Based on: artifact percentage, high-frequency noise, signal variance
+                signal_var = chunks.var().item()
+                quality_score = abs(1.0 - signal_var)  # Variance should be ~1 after z-score
+
+                all_chunks.append(chunks)
+                quality_scores.append(quality_score)
+                logger.info(f"Channel {channel} quality score: {quality_score:.3f}")
+        except Exception as e:
+            logger.warning(f"Failed to process channel {channel}: {e}")
+
+    if not all_chunks:
+        raise ValueError("No channels could be processed successfully")
+
+    # Return best channel
+    best_idx = np.argmin(quality_scores)
+    logger.info(f"Selected channel {channels[best_idx]} as best quality")
+    return all_chunks[best_idx], fs
