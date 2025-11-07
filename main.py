@@ -919,7 +919,6 @@ def main() -> None:
     parser = get_arg_parser()
     args = parser.parse_args()
 
-    # TODO channel still doesnt work
     if args.command == "train":
         train(args)
     elif args.command == "run":
