@@ -111,7 +111,20 @@ Each EDF file undergoes the following preprocessing (see `thesis/dataset.py`):
 
 ## Development
 
-Formatting and linting
+### Viewing Spectrograms
+
+You can visualize the spectrograms generated from preprocessed EEG data using the test scripts:
+
+```bash
+# View MDD dataset spectrograms
+poetry run python mdd.py
+# View CANE dataset spectrograms
+poetry run python cane.py
+```
+
+Spectrograms will be saved into `spectogram_(mdd|cane).png` files.
+
+### Formatting and Linting
 
 ```bash
 # Format code with ruff
