@@ -15,7 +15,7 @@ class CNN_LSTM_DepCap(nn.Module):
         in_channels=1,
         rnn_type="LSTM",
         rnn_hidden=100,
-        dropout=0.2,
+        dropout=0.6,
         num_classes=2,
     ):
         """

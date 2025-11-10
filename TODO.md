@@ -10,18 +10,16 @@ python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --chan
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 ```
 
-- [ ] Combine preprocessing pieline from Opus, Claude and prototyping and keep track of the steps somewhere in .md file
-- [ ] Create CANEDataset class and train the model, wanna see how bad it is
-- [ ] Dropout 0.6 to prevent overfitting
+- [ ] Dropout 0.6 to prevent overfitting: check what [Claude has suggested](https://claude.ai/share/8b2c46f9-19d3-411f-acac-ae3c87e180ba)
+  - seems like not enough
+  - basically look at overfitting and based on that decide what metrics you need to get during training
 - [ ] Explain to me why are there frequencies >70Hz when it should be fitlered
 - [ ] Also, I hope the tensor you provide to the network doesn't contain these frequencies, would be a waste
 - [ ] What is the frequency range of the spectogram? If you cropped it at 70Hz, maybe that's all you should provide
 - [ ] How do you know you over-fitted the model?
-- Malik mail
 - [ ] Unit/automatic testing of what I have written - what do you test in these ML applications - is it more like you
   see the results of the model /how good it is and that ´s it ? Bcs thats kinda the validation ? Or do you write unit
   tests?
-- [ ] mozna je to dobre, ze to musim nasobit peti, protoze aspon je to dobre normalizovane
 - [ ] Review all TODOs and resolve them
 - [ ] check that the chunking logic works properly via some prints, check lazy loading works properly
 - [ ] finish localizing those channels, so that I have the proper ones
@@ -35,6 +33,7 @@ python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel
 - [ ] My preprocessing is still using all channels so the question is if to do the preprocessing on chunk level to get
       closer to online and to one channel or to do multichannel preprocessing
 - [ ] CANE the spectogram goes into higher frequencies then it should -> poor filtering
+- [ ] make run to handle cane dataset too
 
 CANE:
 
