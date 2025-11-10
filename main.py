@@ -10,9 +10,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import confusion_matrix
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import ConcatDataset, DataLoader, Subset
 
 from thesis.dataset import (
+    CANEDataset,
     FlattenedSpectrogramDataset,
     MDDDataset,
     SpectrogramDataset,
@@ -21,6 +22,7 @@ from thesis.dataset import (
 from thesis.early_stopping import EarlyStopping
 from thesis.model import CNN_LSTM_DepCap
 
+DROPOUT = 0.5
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
 LOG_LEVEL = "INFO"
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
@@ -110,31 +112,82 @@ def setup_logging(
 # TODO check and understand, check with paper too, figure out how you'll be writing
 # about this in a thesis
 # TODO discuss what we care about, basically eval chapter
-def classification_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float | int]:
+def classification_metrics(
+    y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 2
+) -> dict[str, float | int]:
     """
     Compute classification metrics from true and predicted labels.
 
-    :param np.ndarray y_true: True labels (0/1).
-    :param np.ndarray y_pred: Predicted labels (0/1).
-    :return: Dictionary with accuracy, precision, recall, specificity, and confusion matrix values.
+    For binary classification (num_classes=2): computes accuracy, precision, recall, specificity.
+    For multi-class (num_classes>2): computes accuracy and per-class precision/recall.
+
+    :param np.ndarray y_true: True labels.
+    :param np.ndarray y_pred: Predicted labels.
+    :param int num_classes: Number of classes (2 for binary, 3 for ternary).
+    :return: Dictionary with metrics.
     :rtype: dict
     """
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
-    acc = (tp + tn) / (tp + tn + fp + fn)
-    # TODO idk what the following mean
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0  # sensitivity
-    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-    return {
-        "accuracy": acc,
-        "precision": precision,
-        "recall": recall,
-        "specificity": specificity,
-        "tp": int(tp),
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
-    }
+    acc = np.mean(y_true == y_pred)
+    metrics = {"accuracy": acc}
+
+    if num_classes == 2:
+        # Binary classification: compute traditional metrics
+        cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
+        if cm.shape == (2, 2):
+            tn, fp, fn, tp = cm.ravel()
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0  # sensitivity
+            specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            metrics.update(
+                {
+                    "precision": precision,
+                    "recall": recall,
+                    "specificity": specificity,
+                    "tp": int(tp),
+                    "tn": int(tn),
+                    "fp": int(fp),
+                    "fn": int(fn),
+                }
+            )
+        else:
+            # Handle edge case where only one class is predicted
+            metrics.update(
+                {
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "specificity": 0.0,
+                    "tp": 0,
+                    "tn": 0,
+                    "fp": 0,
+                    "fn": 0,
+                }
+            )
+    else:
+        # Multi-class: compute per-class precision and recall
+        all_labels = list(range(num_classes))
+        cm = confusion_matrix(y_true, y_pred, labels=all_labels)
+
+        for class_idx in all_labels:
+            # Per-class metrics
+            tp = cm[class_idx, class_idx]
+            fp = cm[:, class_idx].sum() - tp
+            fn = cm[class_idx, :].sum() - tp
+
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+
+            class_names = ["normal", "mdd", "anxious"]
+            class_name = (
+                class_names[class_idx] if class_idx < len(class_names) else f"class_{class_idx}"
+            )
+
+            metrics[f"precision_{class_name}"] = precision
+            metrics[f"recall_{class_name}"] = recall
+
+        # Store confusion matrix as well
+        metrics["confusion_matrix"] = cm
+
+    return metrics
 
 
 def aggregate_subject_predictions(
@@ -195,6 +248,7 @@ def train_epoch(
     optimizer: torch.optim.Optimizer,
     criterion: nn.Module,
     device: torch.device,
+    num_classes: int = 2,
 ) -> dict[str, float | int]:
     """
     Train model for one epoch at chunk/spectrogram level.
@@ -223,7 +277,7 @@ def train_epoch(
         all_labels.extend(yb.detach().cpu().numpy())
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
-    metrics = classification_metrics(all_labels, all_preds)
+    metrics = classification_metrics(all_labels, all_preds, num_classes=num_classes)
     avg_loss = running_loss / len(dataloader.dataset)
     metrics["loss"] = avg_loss
     return metrics
@@ -231,7 +285,11 @@ def train_epoch(
 
 # TODO
 def eval_epoch(
-    model: nn.Module, dataloader: DataLoader, criterion: nn.Module, device: torch.device
+    model: nn.Module,
+    dataloader: DataLoader,
+    criterion: nn.Module,
+    device: torch.device,
+    num_classes: int = 2,
 ) -> dict[str, dict[str, float | int] | float]:
     """
     Evaluate model for one epoch, computing both chunk-level and subject-level metrics.
@@ -240,6 +298,7 @@ def eval_epoch(
     :param DataLoader dataloader: Validation data loader (expects Subset of SpectrogramDataset).
     :param nn.Module criterion: Loss function.
     :param torch.device device: Device to evaluate on.
+    :param int num_classes: Number of classes (2 or 3).
     :return: Dictionary containing chunk-level and subject-level metrics.
     :rtype: dict
     """
@@ -269,20 +328,48 @@ def eval_epoch(
     all_labels = np.array(all_labels)
 
     # Chunk-level metrics
-    chunk_metrics = classification_metrics(all_labels, all_preds)
+    chunk_metrics = classification_metrics(all_labels, all_preds, num_classes=num_classes)
     avg_loss = running_loss / len(dataloader.dataset)
 
     # Subject-level metrics (majority voting)
     subject_preds, subject_labels = aggregate_subject_predictions(
         all_preds, all_labels, all_subjects
     )
-    subject_metrics = classification_metrics(subject_labels, subject_preds)
+    subject_metrics = classification_metrics(subject_labels, subject_preds, num_classes=num_classes)
 
     return {
         "chunk": chunk_metrics,
         "subject": subject_metrics,
         "loss": avg_loss,
     }
+
+
+def format_metrics_for_logging(metrics: dict[str, float | int], num_classes: int) -> str:
+    """
+    Format metrics dictionary for logging.
+
+    :param dict metrics: Metrics dictionary from classification_metrics().
+    :param int num_classes: Number of classes (2 or 3).
+    :return: Formatted metrics string.
+    :rtype: str
+    """
+    if num_classes == 2:
+        # Binary classification: use traditional metrics
+        return (
+            f"Acc: {metrics['accuracy']:.4f} | "
+            f"Prec: {metrics['precision']:.4f} | "
+            f"Recall: {metrics['recall']:.4f} | "
+            f"Spec: {metrics['specificity']:.4f}"
+        )
+    else:
+        # Multi-class: show per-class precision and recall
+        parts = [f"Acc: {metrics['accuracy']:.4f}"]
+        for class_name in ["normal", "mdd", "anxious"]:
+            if f"precision_{class_name}" in metrics:
+                prec = metrics[f"precision_{class_name}"]
+                rec = metrics[f"recall_{class_name}"]
+                parts.append(f"{class_name}: P={prec:.3f} R={rec:.3f}")
+        return " | ".join(parts)
 
 
 def train_one_fold(
@@ -293,6 +380,7 @@ def train_one_fold(
     criterion: nn.Module,
     optimizer: torch.optim.Optimizer,
     device: torch.device,
+    num_classes: int = 2,
     num_epochs: int = 50,
     save_every: int = 10,
     val_every: int = 2,
@@ -339,15 +427,12 @@ def train_one_fold(
     epoch = 0
     for epoch in range(1, num_epochs + 1):
         # Train
-        train_metrics = train_epoch(model, train_loader, optimizer, criterion, device)
+        train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, num_classes)
 
+        metrics_str = format_metrics_for_logging(train_metrics, num_classes)
         logger.info(
             f"TRAIN CHUNK | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-            f"Loss: {train_metrics['loss']:.4f} | "
-            f"Acc: {train_metrics['accuracy']:.4f} | "
-            f"Prec: {train_metrics['precision']:.4f} | "
-            f"Recall: {train_metrics['recall']:.4f} | "
-            f"Spec: {train_metrics['specificity']:.4f}"
+            f"Loss: {train_metrics['loss']:.4f} | {metrics_str}"
         )
 
         fold_history["train_loss"].append(train_metrics["loss"])
@@ -356,32 +441,36 @@ def train_one_fold(
 
         # Validate every val_every epochs
         if epoch % val_every == 0 or epoch == num_epochs:
-            eval_metrics = eval_epoch(model, val_loader, criterion, device)
+            eval_metrics = eval_epoch(model, val_loader, criterion, device, num_classes)
 
             # Extract chunk and subject metrics
             chunk_metrics = eval_metrics["chunk"]
             subject_metrics = eval_metrics["subject"]
 
+            chunk_metrics_str = format_metrics_for_logging(chunk_metrics, num_classes)
+            subject_metrics_str = format_metrics_for_logging(subject_metrics, num_classes)
+
             logger.info(
                 f"EVAL CHUNK | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-                f"Loss: {eval_metrics['loss']:.4f} | "
-                f"Acc: {chunk_metrics['accuracy']:.4f} | "
-                f"Prec: {chunk_metrics['precision']:.4f} | "
-                f"Recall: {chunk_metrics['recall']:.4f} | "
-                f"Spec: {chunk_metrics['specificity']:.4f} | "
-                f"Confusion: TP={chunk_metrics['tp']}, TN={chunk_metrics['tn']}, "
-                f"FP={chunk_metrics['fp']}, FN={chunk_metrics['fn']}"
+                f"Loss: {eval_metrics['loss']:.4f} | {chunk_metrics_str}"
             )
+            if num_classes == 2 and "confusion_matrix" not in chunk_metrics:
+                # Log confusion matrix for binary classification
+                logger.info(
+                    f"  Confusion: TP={chunk_metrics['tp']}, TN={chunk_metrics['tn']}, "
+                    f"FP={chunk_metrics['fp']}, FN={chunk_metrics['fn']}"
+                )
+
             logger.info(
                 f"EVAL SUBJECT | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-                f"Loss: {eval_metrics['loss']:.4f} | "
-                f"Acc: {subject_metrics['accuracy']:.4f} | "
-                f"Prec: {subject_metrics['precision']:.4f} | "
-                f"Recall: {subject_metrics['recall']:.4f} | "
-                f"Spec: {subject_metrics['specificity']:.4f} | "
-                f"Confusion: TP={subject_metrics['tp']}, TN={subject_metrics['tn']}, "
-                f"FP={subject_metrics['fp']}, FN={subject_metrics['fn']}"
+                f"Loss: {eval_metrics['loss']:.4f} | {subject_metrics_str}"
             )
+            if num_classes == 2 and "confusion_matrix" not in subject_metrics:
+                # Log confusion matrix for binary classification
+                logger.info(
+                    f"  Confusion: TP={subject_metrics['tp']}, TN={subject_metrics['tn']}, "
+                    f"FP={subject_metrics['fp']}, FN={subject_metrics['fn']}"
+                )
 
             fold_history["val_loss"].append(eval_metrics["loss"])
             fold_history["chunk_acc"].append(chunk_metrics["accuracy"])
@@ -448,7 +537,211 @@ def train_one_fold(
     }
 
 
+def prepare_mdd_dataset(
+    condition: Literal["EC", "EO", "TASK"],
+    skip_ica: bool,
+    channel: str | None,
+    rng: np.random.RandomState,
+) -> tuple:
+    """
+    Prepare MDD dataset with spectrograms and split subjects by class.
+
+    :param str condition: EEG condition ("EC", "EO", "TASK").
+    :param bool skip_ica: Whether to skip ICA preprocessing.
+    :param str | None channel: Single channel to use (e.g., "Fp1").
+    :param np.random.RandomState rng: Random number generator for shuffling.
+    :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
+    :rtype: tuple
+    """
+    mdd_dataset = MDDDataset(condition=condition, skip_ica=skip_ica, channel=channel)
+    mdd_spec_dataset = SpectrogramDataset(mdd_dataset, fs=MDDDataset.FS)
+    mdd_flat_dataset = FlattenedSpectrogramDataset(mdd_spec_dataset)
+
+    spec_shape = mdd_flat_dataset[0][0].shape[1:]
+    assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+        f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
+    )
+
+    mdd_subjects = mdd_dataset.get_sorted_subjects()
+    mdd_normal, mdd_depressed, mdd_anxious = split_subjects_into_classes(mdd_subjects, "mdd", rng)
+    return mdd_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious
+
+
+def prepare_cane_dataset(
+    condition: Literal["EC", "EO"],
+    channel: str | None,
+    rng: np.random.RandomState,
+    remap_labels: bool = False,
+) -> tuple:
+    """
+    Prepare CANE dataset with spectrograms and split subjects by class.
+
+    :param str condition: EEG condition ("EC" or "EO" - lowercase).
+    :param str | None channel: Single channel to use (e.g., "Fp1").
+    :param np.random.RandomState rng: Random number generator for shuffling.
+    :param bool remap_labels: If True, remap labels {0->0, 2->1} for binary classification.
+    :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
+    :rtype: tuple
+    """
+    cane_dataset = CANEDataset(condition=condition, channel=channel, skip_extreme_artifacts=True)
+    cane_spec_dataset = SpectrogramDataset(
+        cane_dataset,
+        fs=CANEDataset.FS,
+        nperseg=CANEDataset.STFT_NPERSEG,
+        noverlap=CANEDataset.STFT_NOVERLAP,
+    )
+
+    # Apply label remapping if training on CANE alone (binary classification)
+    label_mapping = {0: 0, 2: 1} if remap_labels else None
+    cane_flat_dataset = FlattenedSpectrogramDataset(cane_spec_dataset, label_mapping=label_mapping)
+
+    spec_shape = cane_flat_dataset[0][0].shape[1:]
+    assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+        f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
+    )
+
+    cane_subjects = cane_dataset.get_sorted_subjects()
+    cane_normal, cane_depressed, cane_anxious = split_subjects_into_classes(
+        cane_subjects, "cane", rng
+    )
+    return cane_flat_dataset, cane_normal, cane_depressed, cane_anxious
+
+
+def split_subjects_into_classes(subjects, dataset_label, rng):
+    normal = []
+    depressed = []
+    anxious = []
+    for subj in subjects:
+        if subj.startswith("H "):
+            normal.append((dataset_label, subj))
+        elif subj.startswith("MDD "):
+            depressed.append((dataset_label, subj))
+        elif subj.startswith("AX "):
+            anxious.append((dataset_label, subj))
+
+    if len(normal) > 0:
+        rng.shuffle(normal)
+    if len(depressed) > 0:
+        rng.shuffle(depressed)
+    if len(anxious) > 0:
+        rng.shuffle(anxious)
+    return normal, depressed, anxious
+
+
+def create_balanced_folds(mdd_subjects, cane_subjects, n_folds):
+    """
+    Create balanced folds ensuring both datasets appear in each fold.
+
+    Splits each dataset separately into n_folds, then merges corresponding folds.
+    This ensures each fold contains samples from both datasets (if available).
+
+    :param list mdd_subjects: List of tuples (dataset_label, subject_id) from MDD.
+    :param list cane_subjects: List of tuples (dataset_label, subject_id) from CANE.
+    :param int n_folds: Number of folds to create.
+    :return: List of n_folds, each containing subjects from both datasets.
+    :rtype: list
+    """
+    mdd_folds = (
+        np.array_split(mdd_subjects, n_folds)
+        if len(mdd_subjects) > 0
+        else [np.array([]) for _ in range(n_folds)]
+    )
+    cane_folds = (
+        np.array_split(cane_subjects, n_folds)
+        if len(cane_subjects) > 0
+        else [np.array([]) for _ in range(n_folds)]
+    )
+
+    # Merge corresponding folds: fold_i = mdd_fold_i + cane_fold_i
+    combined_folds = []
+    for mdd_fold, cane_fold in zip(mdd_folds, cane_folds):
+        combined_fold = np.concatenate([mdd_fold, cane_fold])
+        combined_folds.append(combined_fold)
+
+    return combined_folds
+
+
+def get_datasets_for_fold(
+    fold, normal_folds, mdd_folds, anxious_folds, dataset_type, mdd_flat_dataset, cane_flat_dataset, flat_dataset
+):
+    # Determine train/val subjects for this fold from all classes
+    val_subjects_with_dataset = []
+    train_subjects_with_dataset = []
+
+    # Collect validation subjects from all classes
+    val_subjects_with_dataset.extend(normal_folds[fold])
+    val_subjects_with_dataset.extend(mdd_folds[fold])
+    val_subjects_with_dataset.extend(anxious_folds[fold])
+
+    # Collect training subjects from all other folds
+    for i in range(len(normal_folds)):
+        if i != fold:
+            train_subjects_with_dataset.extend(normal_folds[i])
+            train_subjects_with_dataset.extend(mdd_folds[i])
+            train_subjects_with_dataset.extend(anxious_folds[i])
+
+    # Log subject distribution
+    val_subjects_clean = [f"{ds}:{subj}" for ds, subj in val_subjects_with_dataset]
+    train_subjects_clean = [f"{ds}:{subj}" for ds, subj in train_subjects_with_dataset]
+    logger.info(f"Train subjects ({len(train_subjects_clean)}): {train_subjects_clean[:100]}...")
+    logger.info(f"Val subjects ({len(val_subjects_clean)}): {val_subjects_clean}")
+
+    # Get indices for train/val based on subjects (chunk-level indices)
+    # Need to handle combined dataset differently
+    if dataset_type == "both":
+        # Split by dataset source
+        mdd_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "mdd"]
+        mdd_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "mdd"]
+        cane_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "cane"]
+        cane_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "cane"]
+
+        # Get indices from each dataset
+        mdd_train_indices = mdd_flat_dataset.get_indices_for_subjects(mdd_train_subjects)
+        mdd_val_indices = mdd_flat_dataset.get_indices_for_subjects(mdd_val_subjects)
+        cane_train_indices = cane_flat_dataset.get_indices_for_subjects(cane_train_subjects)
+        cane_val_indices = cane_flat_dataset.get_indices_for_subjects(cane_val_subjects)
+
+        train_dataset = ConcatDataset(
+            [
+                Subset(mdd_flat_dataset, mdd_train_indices),
+                Subset(cane_flat_dataset, cane_train_indices),
+            ]
+        )
+        val_dataset = ConcatDataset(
+            [
+                Subset(mdd_flat_dataset, mdd_val_indices),
+                Subset(cane_flat_dataset, cane_val_indices),
+            ]
+        )
+
+        logger.info(
+            f"Training chunks: MDD={len(mdd_train_indices)}, CANE={len(cane_train_indices)}, "
+            f"Total={len(train_dataset)}"
+        )
+        logger.info(
+            f"Validation chunks: MDD={len(mdd_val_indices)}, CANE={len(cane_val_indices)}, "
+            f"Total={len(val_dataset)}"
+        )
+    else:
+        # Single dataset: extract just the subject names
+        train_subjects = [subj for ds, subj in train_subjects_with_dataset]
+        val_subjects = [subj for ds, subj in val_subjects_with_dataset]
+
+        train_indices = flat_dataset.get_indices_for_subjects(train_subjects)
+        val_indices = flat_dataset.get_indices_for_subjects(val_subjects)
+
+        logger.info(f"Training chunks: {len(train_indices)}")
+        logger.info(f"Validation chunks: {len(val_indices)}")
+
+        # Create Subset datasets (reusing precomputed spectrograms!)
+        train_dataset = Subset(flat_dataset, train_indices)
+        val_dataset = Subset(flat_dataset, val_indices)
+
+    return train_dataset, val_dataset
+
+
 def train_cross_validation(
+    dataset_type: Literal["mdd", "cane", "both"] = "mdd",
     condition: Literal["EC", "EO", "TASK"] = "EC",
     n_folds: int = 10,
     batch_size: int = 32,
@@ -465,6 +758,7 @@ def train_cross_validation(
     """
     Train model using 10-fold cross-validation with comprehensive logging and checkpointing.
 
+    :param str dataset_type: Dataset to use ("mdd", "cane", or "both").
     :param str condition: EEG condition to use ("EC", "EO", "TASK", or None for all).
     :param int n_folds: Number of cross-validation folds.
     :param int batch_size: Batch size for training.
@@ -483,7 +777,8 @@ def train_cross_validation(
     """
     logger.info(f"{'=' * 80}")
     logger.info(f"Starting {n_folds}-Fold Cross-Validation Training")
-    logger.info(f"Condition: {condition}, Batch Size: {batch_size}, LR: {learning_rate}")
+    logger.info(f"Dataset: {dataset_type}, Condition: {condition}")
+    logger.info(f"Batch Size: {batch_size}, LR: {learning_rate}")
     logger.info(f"Device: {device}")
     logger.info(f"Skip ICA: {skip_ica}")
     logger.info(f"{'=' * 80}")
@@ -496,75 +791,69 @@ def train_cross_validation(
         "fold_final_epoch": [],
     }
 
-    logger.info("Step 1: Lazy loading the dataset (preprocessing is cached with LRU cache)...")
-    full_mdd_dataset = MDDDataset(condition=condition, skip_ica=skip_ica, channel=channel)
-    all_subjects = full_mdd_dataset.get_sorted_subjects()
-
-    logger.info(f"Found {len(all_subjects)} subjects: {all_subjects}")
-
-    full_spec_dataset = SpectrogramDataset(full_mdd_dataset)
-    full_flat_dataset = FlattenedSpectrogramDataset(full_spec_dataset)
-    logger.info(f"Got {len(full_flat_dataset)} spectrogram chunks")
-
-    # Verify spectrogram shape
-    # FlattenedSpectrogramDataset returns (spectrogram, label, subject), so [0][0]
-    # gets first spectrogram
-    spec_shape = full_flat_dataset[0][0].shape[1:]  # (H, W) without channel dim
-    assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-        f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
-    )
-
-    logger.info(f"Step 2: Creating {n_folds}-fold cross-validation splits...")
-    # Split subjects by class (stratified)
-    healthy_subjects = [s for s in all_subjects if s.startswith("H ")]
-    mdd_subjects = [s for s in all_subjects if s.startswith("MDD ")]
-
-    logger.info(f"Healthy subjects: {len(healthy_subjects)}, MDD subjects: {len(mdd_subjects)}")
-
-    # Shuffle subjects
     rng = np.random.RandomState(42)
-    rng.shuffle(healthy_subjects)
-    rng.shuffle(mdd_subjects)
+    if condition == "TASK" and dataset_type == "cane":
+        raise ValueError("condition TASK not possible for CANE dataset")
 
-    # Create folds for each class separately
-    healthy_folds = np.array_split(healthy_subjects, n_folds)
-    mdd_folds = np.array_split(mdd_subjects, n_folds)
+    mdd_flat_dataset, cane_flat_dataset, flat_dataset = None, None, None
+    num_classes = 2
+    if dataset_type == "mdd":
+        flat_dataset, normal, depressed, anxious = prepare_mdd_dataset(
+            condition, skip_ica, channel, rng
+        )
+        logger.info(f"MDD dataset: {len(normal)} normal, {len(depressed)} MDD subjects")
+    elif dataset_type == "cane":
+        flat_dataset, normal, depressed, anxious = prepare_cane_dataset(
+            condition, channel, rng, remap_labels=True
+        )
+        logger.info(f"CANE dataset: {len(normal)} normal, {len(anxious)} anxious subjects")
+    elif dataset_type == "both":
+        mdd_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious = prepare_mdd_dataset(
+            condition, skip_ica, channel, rng
+        )
+        cane_flat_dataset, cane_normal, cane_depressed, cane_anxious = prepare_cane_dataset(
+            condition, channel, rng
+        )
+        num_classes = 3
 
+    # Create folds for each class separately (stratified)
+    if dataset_type == "both":
+        # For combined dataset, stratify each dataset separately then merge corresponding folds
+        normal_folds = create_balanced_folds(mdd_normal, cane_normal, n_folds)
+        mdd_folds = create_balanced_folds(mdd_depressed, cane_depressed, n_folds)
+        anxious_folds = create_balanced_folds(mdd_anxious, cane_anxious, n_folds)
+        logger.info(
+            f"Created {n_folds} balanced folds with subjects from both MDD and CANE datasets"
+        )
+    else:
+        empty_folds = [[] for _ in range(n_folds)]
+        normal_folds = np.array_split(normal, n_folds)
+        mdd_folds = np.array_split(depressed, n_folds) if depressed else empty_folds
+        anxious_folds = np.array_split(anxious, n_folds) if anxious else empty_folds
+
+    spec_shape = EXPECTED_SPECTROGRAM_SHAPE
     for fold in range(n_folds):
         logger.info(f"{'=' * 80}")
         logger.info(f"FOLD {fold + 1}/{n_folds}")
         logger.info(f"{'=' * 80}")
 
-        # Determine train/val subjects for this fold
-        val_subjects = list(healthy_folds[fold]) + list(mdd_folds[fold])
-        train_subjects = []
-        for i in range(n_folds):
-            if i != fold:
-                train_subjects.extend(healthy_folds[i])
-                train_subjects.extend(mdd_folds[i])
+        train_dataset, val_dataset = get_datasets_for_fold(
+            fold,
+            normal_folds,
+            mdd_folds,
+            anxious_folds,
+            dataset_type,
+            mdd_flat_dataset,
+            cane_flat_dataset,
+            flat_dataset,
+        )
 
-        # Convert numpy strings to regular strings for cleaner logging
-        train_subjects_clean = [str(s) for s in train_subjects]
-        val_subjects_clean = [str(s) for s in val_subjects]
-        logger.info(f"Train subjects ({len(train_subjects)}): {train_subjects_clean}")
-        logger.info(f"Val subjects ({len(val_subjects)}): {val_subjects_clean}")
-
-        # Get indices for train/val based on subjects (chunk-level indices)
-        train_indices = full_flat_dataset.get_indices_for_subjects(train_subjects)
-        val_indices = full_flat_dataset.get_indices_for_subjects(val_subjects)
-
-        logger.info(f"Training chunks: {len(train_indices)}")
-        logger.info(f"Validation chunks: {len(val_indices)}")
-
-        # Create Subset datasets (reusing precomputed spectrograms!)
-        train_flat_dataset = Subset(full_flat_dataset, train_indices)
-        val_flat_dataset = Subset(full_flat_dataset, val_indices)
-
+        # Create DataLoaders
         # Small dataset fits in RAM → extra workers add overhead, not speed
         # pin_memory speeds up CPU→GPU transfers, enabling Direct Memory Access
         pin_memory = True if device == "cuda" else False
         train_loader = DataLoader(
-            train_flat_dataset,
+            train_dataset,
             batch_size=batch_size,
             shuffle=True,
             num_workers=0,
@@ -572,7 +861,7 @@ def train_cross_validation(
             collate_fn=collate_spectrograms,
         )
         val_loader = DataLoader(
-            val_flat_dataset,
+            val_dataset,
             batch_size=batch_size,
             shuffle=False,
             num_workers=0,
@@ -586,8 +875,8 @@ def train_cross_validation(
             in_channels=1,
             rnn_type="LSTM",
             rnn_hidden=100,
-            dropout=0.2,
-            num_classes=2,
+            dropout=DROPOUT,
+            num_classes=num_classes,
         ).to(device)
 
         criterion = nn.CrossEntropyLoss()
@@ -602,6 +891,7 @@ def train_cross_validation(
             criterion=criterion,
             optimizer=optimizer,
             device=device,
+            num_classes=num_classes,
             num_epochs=num_epochs,
             save_every=save_every,
             val_every=val_every,
@@ -668,8 +958,9 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         "--condition",
         type=str,
         default="EC",
-        choices=["EC", "EO", "TASK"],
-        help="EEG condition to use",
+        help="EEG condition to use (case-insensitive). Options: EC/EO for eyes closed/open "
+        "(both datasets), TASK for MDD task condition (MDD only). "
+        "Examples: --condition ec, --condition EC",
     )
     preproc_group.add_argument(
         "--skip-ica",
@@ -696,6 +987,15 @@ def get_arg_parser() -> argparse.ArgumentParser:
     # Train subcommand
     train_parser = subparsers.add_parser("train", help="Train the model using cross-validation")
     add_preprocessing_args(train_parser)
+    train_parser.add_argument(
+        "--dataset",
+        type=str,
+        default="mdd",
+        choices=["mdd", "cane", "both"],
+        help="Dataset to train on: 'mdd' (2 classes: normal, mdd), "
+        "'cane' (2-3 classes: normal, anxious[, mdd]), "
+        "or 'both' (3 classes: normal, mdd, anxious)",
+    )
     train_parser.add_argument(
         "--n-folds", type=int, default=10, help="Number of cross-validation folds"
     )
@@ -750,13 +1050,15 @@ def train(args: argparse.Namespace) -> None:
     # Setup logging to both console and file
     log_path = setup_logging(checkpoint_dir, args.condition, args.skip_ica, args.channel)
 
-    logger.info("Starting MDD EEG Classification Training")
+    logger.info("Starting EEG Classification Training")
     logger.info("Hyperparameters:")
+    logger.info(f"  Dataset: {args.dataset}")
     logger.info(f"  Condition: {args.condition}")
     logger.info(f"  Channel: {args.channel}")
     logger.info(f"  N-Fold CV: {args.n_folds}")
     logger.info(f"  Batch Size: {args.batch_size}")
     logger.info(f"  Learning Rate: {args.lr}")
+    logger.info(f"  Dropout: {DROPOUT}")
     logger.info(f"  Max Epochs: {args.epochs}")
     logger.info(f"  Validation Every: {args.val_every} epochs")
     logger.info(f"  Save Checkpoint Every: {args.save_every} epochs")
@@ -768,6 +1070,7 @@ def train(args: argparse.Namespace) -> None:
 
     # Run cross-validation training
     results = train_cross_validation(
+        dataset_type=args.dataset,
         condition=args.condition,
         n_folds=args.n_folds,
         batch_size=args.batch_size,
@@ -787,6 +1090,7 @@ def train(args: argparse.Namespace) -> None:
     with open(results_file, "w") as f:
         f.write(f"{args.n_folds}-Fold Cross-Validation Results\n")
         f.write(f"{'=' * 80}\n\n")
+        f.write(f"Dataset: {args.dataset}\n")
         f.write(f"Condition: {args.condition}\n")
         f.write(f"Batch Size: {args.batch_size}\n")
         f.write(f"Learning Rate: {args.lr}\n")
@@ -845,7 +1149,7 @@ def run(args: argparse.Namespace) -> None:
         in_channels=1,
         rnn_type="LSTM",
         rnn_hidden=100,
-        dropout=0.2,
+        dropout=0,
         num_classes=2,
     )
 

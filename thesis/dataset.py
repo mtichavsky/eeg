@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore")
 
-CANE_DIR = Path("../CANE/")
+CANE_DIR = Path("/home/milan/Documents/diplomka/CANE/")
 MDD_DIR = Path("/home/milan/Documents/diplomka/MDD/")
 
 CHUNK_DURATION_SEC = 10
@@ -75,7 +75,7 @@ class MDDDataset(Dataset):
         self.condition = condition
         self.transform = transform
         self.skip_ica = skip_ica
-        self.files = self._discover_files(condition, subjects, labels)
+        self.files = self._discover_files(condition.upper() if not None else None, subjects, labels)
         self.channel = channel
         if channel and not skip_ica:
             raise RuntimeError("When channel is chosen, skip ICA has to be set to True.")
@@ -266,6 +266,10 @@ class MDDDataset(Dataset):
         }
 
 
+class NaNValuesError(Exception):
+    pass
+
+
 class CANEDataset(Dataset):
     """
     PyTorch Dataset for CANE EEG data (anxiety detection).
@@ -280,8 +284,22 @@ class CANEDataset(Dataset):
 
     NEIGHBOUR_ZSCORE_THRESHOLD = 2.5
 
-    # Available EEG channels
+    # Available EEG channels in raw CANE data
     CHANNELS = [f"d{i}" for i in range(1, 9)]
+
+    CHANNEL_MAPPING = {
+      "d1": "Fp1",
+      "d2": "Fp2",
+      "d3": "T7",
+      "d4": "C3",
+      "d5": "Cz",
+      "d6": "C4",
+      "d7": "T8",
+      "d8": "Oz"
+    }
+
+    # Reverse mapping: MDD -> CANE (for when user specifies MDD channel name)
+    REVERSE_CHANNEL_MAPPING = {v: k for k, v in CHANNEL_MAPPING.items()}
 
     def __init__(
         self,
@@ -291,7 +309,7 @@ class CANEDataset(Dataset):
         labels: Optional[list[str]] = None,
         cache_size: Optional[int] = 100,
         transform: Optional[Callable] = None,
-        channel: str = "d4",
+        channel: str = "Fp1",
         artifact_method: str = "interpolation",
         artifact_threshold: float = 4.0,
         apply_car: bool = True,
@@ -301,7 +319,7 @@ class CANEDataset(Dataset):
         Initialize the CANE EEG dataset.
 
         :param Path data_dir: Path to directory containing .csv files.
-        :param Optional[Literal["ec", "eo"]] condition: Filter by condition ("ec" or "eo")
+        :param Optional[Literal["EC", "EO"]] condition: Filter by condition
                or None for all conditions.
         :param Optional[list[str]] subjects: List of subject IDs to include. None = all.
         :param Optional[list[str]] labels: List of labels to include (e.g., ["normal", "anxiety"]).
@@ -309,7 +327,8 @@ class CANEDataset(Dataset):
         :param int cache_size: Number of preprocessed files to cache in memory. If None,
                cache is not used.
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
-        :param str channel: Which channel to use (d1-d8), default "d4".
+        :param str channel: Which channel to use. Can be MDD channel names (Fp1, Fp2, C3, C4, etc.)
+               which will be mapped to CANE channels (d1-d8), or direct CANE channel names (d1-d8).
         :param str artifact_method: Method for artifact removal ("interpolation", "clipping",
                or "both").
         :param float artifact_threshold: Z-score threshold for artifact detection.
@@ -317,7 +336,7 @@ class CANEDataset(Dataset):
         :param bool skip_extreme_artifacts: If True, completely removes chunks with >10% artifacts.
         """
         self.data_dir = Path(data_dir)
-        self.condition = condition
+        self.condition = str(condition).lower()
         self.transform = transform
         self.channel = channel
         self.artifact_method = artifact_method
@@ -360,6 +379,8 @@ class CANEDataset(Dataset):
         pattern = re.compile(r"(\d+)_?(EC|EO|Ec|Eo|ec|eo)\.csv", re.IGNORECASE)
 
         # Traverse the directory structure: {label}/{condition}/*.csv
+        label_map = {"normal": "H", "anxiety": "AX"}
+        condition_map = {"ec": "EC", "eo": "EO"}
         for label_dir in ["normal", "anxiety"]:
             label_path = self.data_dir / label_dir
             if not label_path.exists():
@@ -381,7 +402,8 @@ class CANEDataset(Dataset):
                         continue
 
                     subject_num, _ = match.groups()
-                    subject_id = f"{label_dir}_S{subject_num}"
+                    label = label_map.get(label_dir, label_dir)
+                    subject_id = f"{label} S{subject_num} {condition_map.get(condition_dir, condition_dir)}"
 
                     # Filtering by subjects
                     if subjects and subject_id not in subjects:
@@ -397,7 +419,7 @@ class CANEDataset(Dataset):
                             "label": label_dir,
                             "subject": subject_id,
                             "condition": condition_dir,
-                            "label_int": 0 if label_dir == "normal" else 1,  # normal=0, anxiety=1
+                            "label_int": 0 if label_dir == "normal" else 2,  # normal=0, anxiety=2
                         }
                     )
 
@@ -425,7 +447,7 @@ class CANEDataset(Dataset):
     @staticmethod
     def load_and_preprocess_cane_raw_file(
         file_path: Path,
-        channel: str = "d4",
+        channel: str = "Fp1",
         artifact_method: str = "interpolation",
         artifact_threshold: float = 4.0,
         apply_car: bool = True,
@@ -463,9 +485,14 @@ class CANEDataset(Dataset):
                 df[ch] = df[ch] - car
             logger.info("Applied Common Average Reference")
 
+        df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
         # Extract the specific channel
         logger.info(f"Picking {channel} channel")
         signal = df[channel].values.astype(float)
+
+        # Check for NaN/inf values before detrending
+        if np.any(np.isnan(signal)) or np.any(np.isinf(signal)):
+            raise NaNValuesError(f"Double check file {file_path}, seems like its standard deviation is 0.")
 
         # Step 3: Detrend to remove slow drifts (before filtering)
         signal = detrend(signal, type="linear")
@@ -562,7 +589,7 @@ class CANEDataset(Dataset):
 
         chunks = self._load_and_preprocess_cane_raw_file(
             file_info["path"],
-            self.channel,
+            self.channel,  # Use CANE channel name for reading CSV
             self.artifact_method,
             self.artifact_threshold,
             self.apply_car,
@@ -751,13 +778,20 @@ class FlattenedSpectrogramDataset(Dataset):
     corresponds to a single chunk/spectrogram.
     """
 
-    def __init__(self, spectrogram_dataset: SpectrogramDataset):
+    def __init__(
+        self,
+        spectrogram_dataset: SpectrogramDataset,
+        label_mapping: Optional[dict[int, int]] = None,
+    ):
         """
         Initialize the flattened dataset.
 
         :param SpectrogramDataset spectrogram_dataset: The underlying spectrogram dataset.
+        :param Optional[dict[int, int]] label_mapping: Optional mapping to remap labels.
+               E.g., {0: 0, 2: 1} remaps label 2 to 1 for binary classification.
         """
         self.dataset = spectrogram_dataset
+        self.label_mapping = label_mapping
         # Build index mapping: (file_idx, chunk_idx) for each chunk
         self.index: list[tuple[int, int]] = []
 
@@ -781,6 +815,11 @@ class FlattenedSpectrogramDataset(Dataset):
         """
         file_idx, chunk_idx = self.index[idx]
         spec_list, label, subject = self.dataset[file_idx]
+
+        # Apply label remapping if configured
+        if self.label_mapping is not None:
+            label = self.label_mapping.get(label, label)
+
         return spec_list[chunk_idx], label, subject
 
     def get_indices_for_subjects(self, subject_list: list[str]) -> list[int]:

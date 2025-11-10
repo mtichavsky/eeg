@@ -24,7 +24,7 @@ test_file = CANE_DIR / "anxiety/ec/1065_EC.csv"
 logger.info(f"Testing CANE preprocessing with file: {test_file}")
 
 # Load and preprocess using the static method
-chunks = CANEDataset.load_and_preprocess_cane_raw_file(test_file, channel="d4")
+chunks = CANEDataset.load_and_preprocess_cane_raw_file(test_file, channel="Fp1")
 fs = CANEDataset.FS
 
 logger.info(f"Chunks shape: {chunks.shape}")
