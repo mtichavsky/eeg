@@ -12,9 +12,12 @@ This is a thesis project for EEG-based depression (MDD) & anxiety detection usin
 - Poetry for dependency management
 - Python 3.13
 
-## Dataset
+## Datasets
 
-The project uses the MDD EEG dataset located at `/home/milan/Documents/diplomka/MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {EC|EO|TASK}.edf`
+The project supports two EEG datasets that can be used independently or combined:
+
+### 1. MDD Dataset
+Located at `/home/milan/Documents/diplomka/MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {EC|EO|TASK}.edf`
 
 - **H** = Healthy control
 - **MDD** = Major Depressive Disorder
@@ -23,7 +26,23 @@ The project uses the MDD EEG dataset located at `/home/milan/Documents/diplomka/
 - **Sampling**: 250 Hz (SFREQ = 1000/4)
 - **Segments**: 10-second chunks (2500 samples each)
 
-For detailed dataset usage, see DATASET_USAGE.md.
+### 2. CANE Dataset
+Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
+
+- **H** = Healthy control
+- **AX** = Anxiety disorder
+- **Conditions**: ec (eyes closed), eo (eyes open) - lowercase
+- **Channels**: Same 6 channels as MDD
+- **Sampling**: 500 Hz
+- **Preprocessing**: Uses `skip_extreme_artifacts=True` instead of ICA
+
+### Multi-Dataset Training
+The system supports training on:
+- `--dataset mdd`: MDD only (2 classes: normal vs depressed)
+- `--dataset cane`: CANE only (2 classes: normal vs anxious)
+- `--dataset both`: Combined (3 classes: normal vs depressed vs anxious)
+
+For detailed dataset usage, see DATASET_USAGE.md and context.md.
 
 ## Common Commands
 
@@ -123,10 +142,18 @@ The `MDDDataset` supports two modes:
 
 ## Key Implementation Details
 
-**Cross-Validation:**
-- Subject-level splits prevent data leakage (all chunks from same subject stay together)
-- Stratified to maintain H/MDD balance across folds
-- Standard: 10-fold CV as per EEG depression literature
+**Cross-Validation Architecture:**
+- **Subject-level splits**: All chunks from same subject stay together to prevent data leakage
+- **Stratified folding**: Maintains class balance (normal/depressed/anxious) across folds
+- **Balanced multi-dataset folding**: When using `--dataset both`, each fold contains subjects from BOTH MDD and CANE datasets (not just mixed randomly). This is achieved via `create_balanced_folds()` which stratifies each dataset independently then merges corresponding folds.
+- **Standard**: 10-fold CV as per EEG depression literature
+
+**Design Principles:**
+1. **Modularity**: Dataset preparation separated into `prepare_mdd_dataset()` and `prepare_cane_dataset()` functions
+2. **Extensibility**: Adding new datasets requires implementing a prepare function following the same pattern
+3. **Data leakage prevention**: Never split chunks from the same subject across train/val
+4. **Reproducibility**: Fixed random seed (42) for deterministic fold creation
+5. **Dataset independence**: When combining datasets, maintain separate preprocessing pipelines (e.g., MDD uses ICA, CANE uses artifact detection)
 
 **Preprocessing Pipeline (in `thesis/dataset.py`):**
 ```python
@@ -165,6 +192,47 @@ Sphinx/reStructuredText (reST) style documentation:
 - Full sentences with proper capitalization
 
 
+## Architecture Philosophy
+
+**Why Two-Level Metrics (Chunk + Subject)?**
+- **Chunk-level accuracy**: Measures per-segment classification performance (more samples, lower variance)
+- **Subject-level accuracy**: Aggregates chunks via majority voting (clinical relevance, what matters for diagnosis)
+- **Combined metric**: `chunk_acc × subject_acc` balances both for model selection
+- **Rationale**: A model that's 100% accurate on chunks but only 50% on subjects is overfitting to chunk-level noise
+
+**Why Balanced Fold Stratification?**
+When training on combined datasets, naive concatenation + splitting would create folds with only MDD or only CANE subjects. This causes:
+- Unrepresentative validation sets
+- Dataset-specific overfitting
+- Unreliable cross-validation metrics
+
+Solution: Stratify each dataset independently, then merge corresponding folds. Every fold becomes a mini-representation of the full combined dataset.
+
+**Why Subject-Level Splits?**
+EEG data has temporal dependencies. Splitting at chunk level would leak information:
+- Training chunks at time T could correlate with validation chunks at T+10s from same subject
+- Model learns subject-specific patterns instead of generalizable depression markers
+- Artificially inflated performance metrics
+
+**Why Separate Dataset Classes?**
+- Different preprocessing requirements (MDD: ICA, CANE: artifact detection)
+- Different STFT parameters (though standardized to same output shape)
+- Different channel names/orderings in raw files
+- Allows independent evolution of preprocessing pipelines
+
+## Code Evolution Notes
+
+**Recent Major Changes:**
+- Refactored from single-dataset to multi-dataset support
+- Moved from simple array splits to balanced stratified folding
+- Introduced dataset-aware subject tuples: `(dataset_label, subject_id)`
+- See `context.md` for detailed refactoring history
+
+**Deprecated Patterns:**
+- ~~Direct use of `MDDDataset` for training~~ → Use `prepare_mdd_dataset()`
+- ~~Simple `np.array_split()` for combined datasets~~ → Use `create_balanced_folds()`
+- ~~Concatenating subject lists without dataset labels~~ → Use tuples with dataset prefix
+
 ## Important Notes
 
 - The MDD dataset path is hardcoded in `thesis/dataset.py` as `MDD_DIR`
@@ -173,3 +241,9 @@ Sphinx/reStructuredText (reST) style documentation:
 - Model expects preprocessed spectrograms, not raw EEG directly (unless using the raw EEG example model)
 - Use logging for prints, not print statements.
 - Add mypy typing to any newly generated code.
+
+## Quick Reference Files
+- `context.md` - Detailed recent refactoring history and implementation rationale
+- `DATASET_USAGE.md` - Dataset-specific preprocessing and loading details
+- `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, SpectrogramDataset)
+- `main.py` - Training orchestration and cross-validation logic
