@@ -30,10 +30,35 @@ python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel
 - [ ] batch size
 - [ ] manually remove files and train one epoch
 - [ ] how long recordings do I need for X pct validations? - plot some graph in evaluation
+- [ ] maybe add some augumentations
+- [ ] CANE preprocessing - start by chunking or preprocess over the whole recording / all channels
+- [ ] My preprocessing is still using all channels so the question is if to do the preprocessing on chunk level to get
+      closer to online and to one channel or to do multichannel preprocessing
+- [ ] CANE the spectogram goes into higher frequencies then it should -> poor filtering
+
+CANE:
+
+Things I Skipped That You Could Add Later:
+- ICA (Independent Component Analysis)
+    - Would require converting to MNE format
+    - Most effective but computationally expensive 
+    - -Could add as optional like in MDD pipeline
+- Wavelet denoising
+  - Could be more effective than simple filtering
+  - Preserves transients better
+- ASR (Artifact Subspace Reconstruction)
+  - State-of-the-art for continuous artifact removal
+  - Would need additional libraries
+- Adaptive filtering
+  - Could better handle time-varying noise
+- Bad channel detection and interpolation
+  - The multi-channel function starts this but could be more sophisticated
+- EOG/EMG regression
+  - If you have reference channels
+- More sophisticated resampling
+  - Anti-aliasing filter before downsampling
 
 ---
-
-
 
 Loss function design:
 `combined_metric = chunk_metrics["accuracy"] * subject_metrics["accuracy"]`
