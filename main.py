@@ -880,7 +880,7 @@ def train_cross_validation(
         ).to(device)
 
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
 
         # Train this fold
         fold_result = train_one_fold(
