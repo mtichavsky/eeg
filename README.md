@@ -71,6 +71,9 @@ checkpoints/
 └── cv_results.json          # Cross-validation results summary
 ```
 
+You can use `plot_training_curves.py` script to generate directory `loss_curves/` in your `checkpoints_*` dir for
+loss curve analysis.
+
 ## Model Inference
 
 Run inference on a single EDF file using a trained model:
