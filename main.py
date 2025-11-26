@@ -22,7 +22,6 @@ from thesis.dataset import (
 from thesis.early_stopping import EarlyStopping
 from thesis.model import CNN_LSTM_DepCap
 
-DROPOUT = 0.5
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
 LOG_LEVEL = "INFO"
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
@@ -271,6 +270,7 @@ def train_epoch(
         loss = criterion(logits, yb)
         loss.backward()
         optimizer.step()
+        # TODO also this calculation
         running_loss += float(loss.item()) * xb.size(0)
         preds = logits.argmax(dim=1).detach().cpu().numpy()
         all_preds.extend(preds)
@@ -278,6 +278,7 @@ def train_epoch(
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
     metrics = classification_metrics(all_labels, all_preds, num_classes=num_classes)
+    # TODO corresponding line
     avg_loss = running_loss / len(dataloader.dataset)
     metrics["loss"] = avg_loss
     return metrics
@@ -329,6 +330,7 @@ def eval_epoch(
 
     # Chunk-level metrics
     chunk_metrics = classification_metrics(all_labels, all_preds, num_classes=num_classes)
+    # TODO maybe double check this line - so that it's normalized properly
     avg_loss = running_loss / len(dataloader.dataset)
 
     # Subject-level metrics (majority voting)
@@ -750,6 +752,8 @@ def train_cross_validation(
     val_every: int = 2,
     save_every: int = 10,
     patience: int = 15,
+    dropout: float = 0.5,
+    weight_decay: float = 0.0,
     checkpoint_dir: Path = Path("checkpoints"),
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     skip_ica: bool = False,
@@ -767,6 +771,8 @@ def train_cross_validation(
     :param int val_every: Validate every N epochs.
     :param int save_every: Save checkpoint every N epochs.
     :param int patience: Early stopping patience.
+    :param float dropout: Dropout.
+    :param float weight_decay: Weight decay (L2 penalty).
     :param Path checkpoint_dir: Directory to save checkpoints.
     :param torch.device device: Device to train on.
     :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
@@ -875,12 +881,12 @@ def train_cross_validation(
             in_channels=1,
             rnn_type="LSTM",
             rnn_hidden=100,
-            dropout=DROPOUT,
+            dropout=dropout,
             num_classes=num_classes,
         ).to(device)
 
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
         # Train this fold
         fold_result = train_one_fold(
@@ -1004,6 +1010,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--epochs", type=int, default=100, help="Maximum number of epochs per fold"
     )
     train_parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
+    train_parser.add_argument("--dropout", type=float, default=0.5, help="Dropout")
+    train_parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay (L2 regularization)")
     train_parser.add_argument("--val-every", type=int, default=2, help="Validate every N epochs")
     train_parser.add_argument(
         "--save-every", type=int, default=10, help="Save checkpoint every N epochs"
@@ -1058,7 +1066,8 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  N-Fold CV: {args.n_folds}")
     logger.info(f"  Batch Size: {args.batch_size}")
     logger.info(f"  Learning Rate: {args.lr}")
-    logger.info(f"  Dropout: {DROPOUT}")
+    logger.info(f"  Dropout: {args.dropout}")
+    logger.info(f"  Weight decay (L2 penalty): {args.weight_decay}")
     logger.info(f"  Max Epochs: {args.epochs}")
     logger.info(f"  Validation Every: {args.val_every} epochs")
     logger.info(f"  Save Checkpoint Every: {args.save_every} epochs")
@@ -1079,6 +1088,8 @@ def train(args: argparse.Namespace) -> None:
         val_every=args.val_every,
         save_every=args.save_every,
         patience=args.patience,
+        dropout=args.dropout,
+        weight_decay=args.weight_decay,
         checkpoint_dir=checkpoint_dir,
         device=device,
         skip_ica=args.skip_ica,
@@ -1094,6 +1105,8 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"Condition: {args.condition}\n")
         f.write(f"Batch Size: {args.batch_size}\n")
         f.write(f"Learning Rate: {args.lr}\n")
+        f.write(f"Dropout: {args.dropout}\n")
+        f.write(f"Weight Decay (L2 regularization): {args.weight_decay}\n")
         f.write(f"Skip ICA: {args.skip_ica}\n\n")
         f.write("Per-fold best validation accuracy:\n")
         for i in range(len(results["fold_best_eval_combined_acc"])):
