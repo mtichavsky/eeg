@@ -2,9 +2,10 @@ import argparse
 import logging
 import random
 import string
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import torch
@@ -22,6 +23,7 @@ from thesis.dataset import (
 from thesis.early_stopping import EarlyStopping
 from thesis.model import CNN_LSTM_DepCap
 
+RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
 LOG_LEVEL = "INFO"
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
@@ -113,7 +115,7 @@ def setup_logging(
 # TODO discuss what we care about, basically eval chapter
 def classification_metrics(
     y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 2
-) -> dict[str, float | int]:
+) -> dict[str, float | int | np.ndarray]:
     """
     Compute classification metrics from true and predicted labels.
 
@@ -191,7 +193,7 @@ def classification_metrics(
 
 def aggregate_subject_predictions(
     chunk_preds: np.ndarray, chunk_labels: np.ndarray, subjects: list[str]
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Aggregate chunk-level predictions to subject-level using majority voting.
 
@@ -201,21 +203,21 @@ def aggregate_subject_predictions(
 
     :param np.ndarray chunk_preds: Predictions for each chunk (0/1).
     :param np.ndarray chunk_labels: Ground truth labels for each chunk (0/1).
-    :param list[str] subjects: Subject ID for each chunk (e.g., "H S1", "MDD S2").
-    :return: Tuple of (subject_predictions, subject_labels) where each array contains
-             one value per unique subject.
-    :rtype: tuple[np.ndarray, np.ndarray]
+    :param list[str] subjects: Subject ID for each chunk (e.g., "H S1 EC", "MDD S2 EO").
+    :return: Tuple of (subject_predictions, subject_labels, subject_ids) where each array
+             contains one value per unique subject.
+    :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
 
     Example:
         >>> chunk_preds = np.array([0, 1, 1, 0, 0])
         >>> chunk_labels = np.array([0, 0, 0, 1, 1])
-        >>> subjects = ["H S1", "H S1", "H S1", "MDD S2", "MDD S2"]
-        >>> subj_preds, subj_labels = aggregate_subject_predictions(
+        >>> subjects = ["H S1 EC", "H S1 EC", "H S1 EC", "MDD S2 EO", "MDD S2 EO"]
+        >>> subj_preds, subj_labels, subj_ids = aggregate_subject_predictions(
         ...     chunk_preds, chunk_labels, subjects
         ... )
-        >>> subj_preds  # H S1 gets 1 (majority), MDD S2 gets 0 (majority)
+        >>> subj_preds  # H S1 EC gets 1 (majority), MDD S2 EO gets 0 (majority)
         array([1, 0])
-        >>> subj_labels  # H S1 is 0, MDD S2 is 1
+        >>> subj_labels  # H S1 EC is 0, MDD S2 EO is 1
         array([0, 1])
     """
     subject_preds_dict = {}
@@ -231,13 +233,15 @@ def aggregate_subject_predictions(
     # Compute majority vote for each subject
     subject_preds = []
     subject_labels = []
+    subject_ids = []
     for subject in subject_preds_dict:
         chunk_preds_for_subject = subject_preds_dict[subject]
         majority_pred = np.bincount(chunk_preds_for_subject).argmax()
         subject_preds.append(majority_pred)
         subject_labels.append(subject_labels_dict[subject])
+        subject_ids.append(subject)
 
-    return np.array(subject_preds), np.array(subject_labels)
+    return np.array(subject_preds), np.array(subject_labels), np.array(subject_ids)
 
 
 # TODO
@@ -248,7 +252,7 @@ def train_epoch(
     criterion: nn.Module,
     device: torch.device,
     num_classes: int = 2,
-) -> dict[str, float | int]:
+) -> dict[str, float | int | np.ndarray]:
     """
     Train model for one epoch at chunk/spectrogram level.
 
@@ -291,7 +295,7 @@ def eval_epoch(
     criterion: nn.Module,
     device: torch.device,
     num_classes: int = 2,
-) -> dict[str, dict[str, float | int] | float]:
+) -> dict[str, dict[str, float | int | np.ndarray] | float]:
     """
     Evaluate model for one epoch, computing both chunk-level and subject-level metrics.
 
@@ -334,14 +338,27 @@ def eval_epoch(
     avg_loss = running_loss / len(dataloader.dataset)
 
     # Subject-level metrics (majority voting)
-    subject_preds, subject_labels = aggregate_subject_predictions(
+    subject_preds, subject_labels, subject_ids = aggregate_subject_predictions(
         all_preds, all_labels, all_subjects
     )
     subject_metrics = classification_metrics(subject_labels, subject_preds, num_classes=num_classes)
 
+    # Separate metrics by condition (EC vs EO)
+    condition_metrics = {}
+    for condition in ["EC", "EO"]:
+        # Filter subjects by condition
+        condition_mask = [condition in subj_id for subj_id in subject_ids]
+        if any(condition_mask):
+            cond_preds = subject_preds[condition_mask]
+            cond_labels = subject_labels[condition_mask]
+            condition_metrics[condition] = classification_metrics(
+                cond_labels, cond_preds, num_classes=num_classes
+            )
+
     return {
         "chunk": chunk_metrics,
         "subject": subject_metrics,
+        "condition": condition_metrics,
         "loss": avg_loss,
     }
 
@@ -448,6 +465,7 @@ def train_one_fold(
             # Extract chunk and subject metrics
             chunk_metrics = eval_metrics["chunk"]
             subject_metrics = eval_metrics["subject"]
+            condition_metrics = eval_metrics.get("condition", {})
 
             chunk_metrics_str = format_metrics_for_logging(chunk_metrics, num_classes)
             subject_metrics_str = format_metrics_for_logging(subject_metrics, num_classes)
@@ -472,6 +490,15 @@ def train_one_fold(
                 logger.info(
                     f"  Confusion: TP={subject_metrics['tp']}, TN={subject_metrics['tn']}, "
                     f"FP={subject_metrics['fp']}, FN={subject_metrics['fn']}"
+                )
+
+            # Log condition-specific metrics if available (combined EC vs EO on one line)
+            if "EC" in condition_metrics and "EO" in condition_metrics:
+                ec_acc = condition_metrics["EC"]["accuracy"]
+                eo_acc = condition_metrics["EO"]["accuracy"]
+                logger.info(
+                    f"EVAL EC vs EO | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
+                    f"EO chunk acc: {eo_acc:.4f} | EC chunk acc: {ec_acc:.4f}"
                 )
 
             fold_history["val_loss"].append(eval_metrics["loss"])
@@ -540,7 +567,7 @@ def train_one_fold(
 
 
 def prepare_mdd_dataset(
-    condition: Literal["EC", "EO", "TASK"],
+    conditions: list[Literal["EC", "EO", "TASK"]],
     skip_ica: bool,
     channel: str | None,
     rng: np.random.RandomState,
@@ -548,29 +575,42 @@ def prepare_mdd_dataset(
     """
     Prepare MDD dataset with spectrograms and split subjects by class.
 
-    :param str condition: EEG condition ("EC", "EO", "TASK").
+    :param list[str] conditions: EEG conditions to load (e.g., ["EC", "EO"]).
     :param bool skip_ica: Whether to skip ICA preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1").
     :param np.random.RandomState rng: Random number generator for shuffling.
     :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
     :rtype: tuple
     """
-    mdd_dataset = MDDDataset(condition=condition, skip_ica=skip_ica, channel=channel)
-    mdd_spec_dataset = SpectrogramDataset(mdd_dataset, fs=MDDDataset.FS)
-    mdd_flat_dataset = FlattenedSpectrogramDataset(mdd_spec_dataset)
+    all_flat_datasets = []
+    all_subjects = []
 
-    spec_shape = mdd_flat_dataset[0][0].shape[1:]
-    assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-        f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
-    )
+    for condition in conditions:
+        mdd_dataset = MDDDataset(condition=condition, skip_ica=skip_ica, channel=channel)
+        mdd_spec_dataset = SpectrogramDataset(mdd_dataset, fs=MDDDataset.FS)
+        mdd_flat_dataset = FlattenedSpectrogramDataset(mdd_spec_dataset)
 
-    mdd_subjects = mdd_dataset.get_sorted_subjects()
-    mdd_normal, mdd_depressed, mdd_anxious = split_subjects_into_classes(mdd_subjects, "mdd", rng)
-    return mdd_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious
+        spec_shape = mdd_flat_dataset[0][0].shape[1:]
+        assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+            f"Expected (129, 41), got {spec_shape}. "
+            f"The neural net was designed using this assumption."
+        )
+
+        all_flat_datasets.append(mdd_flat_dataset)
+        all_subjects.extend(mdd_dataset.get_sorted_subjects())
+
+    # Combine datasets if multiple conditions
+    if len(all_flat_datasets) == 1:
+        combined_flat_dataset = all_flat_datasets[0]
+    else:
+        combined_flat_dataset = ConcatDataset(all_flat_datasets)
+
+    mdd_normal, mdd_depressed, mdd_anxious = split_subjects_into_classes(all_subjects, "mdd", rng)
+    return combined_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious
 
 
 def prepare_cane_dataset(
-    condition: Literal["EC", "EO"],
+    conditions: list[Literal["ec", "eo"]],
     channel: str | None,
     rng: np.random.RandomState,
     remap_labels: bool = False,
@@ -578,41 +618,60 @@ def prepare_cane_dataset(
     """
     Prepare CANE dataset with spectrograms and split subjects by class.
 
-    :param str condition: EEG condition ("EC" or "EO" - lowercase).
+    :param list[str] conditions: EEG conditions to load (e.g., ["ec", "eo"]).
     :param str | None channel: Single channel to use (e.g., "Fp1").
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param bool remap_labels: If True, remap labels {0->0, 2->1} for binary classification.
     :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
     :rtype: tuple
     """
-    cane_dataset = CANEDataset(condition=condition, channel=channel, skip_extreme_artifacts=True)
-    cane_spec_dataset = SpectrogramDataset(
-        cane_dataset,
-        fs=CANEDataset.FS,
-        nperseg=CANEDataset.STFT_NPERSEG,
-        noverlap=CANEDataset.STFT_NOVERLAP,
-    )
+    all_flat_datasets = []
+    all_subjects = []
 
-    # Apply label remapping if training on CANE alone (binary classification)
-    label_mapping = {0: 0, 2: 1} if remap_labels else None
-    cane_flat_dataset = FlattenedSpectrogramDataset(cane_spec_dataset, label_mapping=label_mapping)
+    for condition in conditions:
+        cane_dataset = CANEDataset(
+            condition=condition, channel=channel, skip_extreme_artifacts=True
+        )
+        cane_spec_dataset = SpectrogramDataset(
+            cane_dataset,
+            fs=CANEDataset.FS,
+            nperseg=CANEDataset.STFT_NPERSEG,
+            noverlap=CANEDataset.STFT_NOVERLAP,
+        )
 
-    spec_shape = cane_flat_dataset[0][0].shape[1:]
-    assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-        f"Expected (129, 41), got {spec_shape}. The neural net was designed using this assumption."
-    )
+        # Apply label remapping if training on CANE alone (binary classification)
+        label_mapping = {0: 0, 2: 1} if remap_labels else None
+        cane_flat_dataset = FlattenedSpectrogramDataset(
+            cane_spec_dataset, label_mapping=label_mapping
+        )
 
-    cane_subjects = cane_dataset.get_sorted_subjects()
+        spec_shape = cane_flat_dataset[0][0].shape[1:]
+        assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+            f"Expected (129, 41), got {spec_shape}. "
+            f"The neural net was designed using this assumption."
+        )
+
+        all_flat_datasets.append(cane_flat_dataset)
+        all_subjects.extend(cane_dataset.get_sorted_subjects())
+
+    # Combine datasets if multiple conditions
+    if len(all_flat_datasets) == 1:
+        cane_combined_flat = all_flat_datasets[0]
+    else:
+        cane_combined_flat = ConcatDataset(all_flat_datasets)
+
     cane_normal, cane_depressed, cane_anxious = split_subjects_into_classes(
-        cane_subjects, "cane", rng
+        all_subjects, "cane", rng
     )
-    return cane_flat_dataset, cane_normal, cane_depressed, cane_anxious
+    return cane_combined_flat, cane_normal, cane_depressed, cane_anxious
 
 
-def split_subjects_into_classes(subjects, dataset_label, rng):
-    normal = []
-    depressed = []
-    anxious = []
+def split_subjects_into_classes(
+    subjects: list[str], dataset_label: str, rng: np.random.RandomState
+) -> tuple[list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
+    normal: list[tuple[str, str]] = []
+    depressed: list[tuple[str, str]] = []
+    anxious: list[tuple[str, str]] = []
     for subj in subjects:
         if subj.startswith("H "):
             normal.append((dataset_label, subj))
@@ -630,45 +689,90 @@ def split_subjects_into_classes(subjects, dataset_label, rng):
     return normal, depressed, anxious
 
 
-def create_balanced_folds(mdd_subjects, cane_subjects, n_folds):
+def create_balanced_folds(
+    mdd_normal: list[tuple[str, str]],
+    mdd_depressed: list[tuple[str, str]],
+    cane_normal: list[tuple[str, str]],
+    cane_depressed: list[tuple[str, str]],
+    cane_anxious: list[tuple[str, str]],
+    n_folds: int,
+) -> tuple[Any, Any, Any]:
     """
     Create balanced folds ensuring both datasets appear in each fold.
 
     Splits each dataset separately into n_folds, then merges corresponding folds.
-    This ensures each fold contains samples from both datasets (if available).
+    Groups subjects by base ID to keep EC/EO recordings together.
 
-    :param list mdd_subjects: List of tuples (dataset_label, subject_id) from MDD.
-    :param list cane_subjects: List of tuples (dataset_label, subject_id) from CANE.
+    :param list mdd_normal: List of tuples (dataset_label, subject_id) from MDD normal
+        subjects.
+    :param list mdd_depressed: List of tuples (dataset_label, subject_id) from MDD
+        depressed subjects.
+    :param list cane_normal: List of tuples (dataset_label, subject_id) from CANE normal
+        subjects.
+    :param list cane_depressed: List of tuples (dataset_label, subject_id) from CANE
+        depressed subjects.
+    :param list cane_anxious: List of tuples (dataset_label, subject_id) from CANE anxious
+        subjects.
     :param int n_folds: Number of folds to create.
-    :return: List of n_folds, each containing subjects from both datasets.
-    :rtype: list
+    :return: Tuple of (normal_folds, anxious_folds, mdd_folds).
+    :rtype: tuple
     """
-    mdd_folds = (
-        np.array_split(mdd_subjects, n_folds)
-        if len(mdd_subjects) > 0
-        else [np.array([]) for _ in range(n_folds)]
-    )
-    cane_folds = (
-        np.array_split(cane_subjects, n_folds)
-        if len(cane_subjects) > 0
-        else [np.array([]) for _ in range(n_folds)]
-    )
+    empty_folds: list[Any] = [np.array([]) for _ in range(n_folds)]
 
-    # Merge corresponding folds: fold_i = mdd_fold_i + cane_fold_i
-    combined_folds = []
-    for mdd_fold, cane_fold in zip(mdd_folds, cane_folds):
-        combined_fold = np.concatenate([mdd_fold, cane_fold])
-        combined_folds.append(combined_fold)
+    mdd_normal_folds = split_into_folds(mdd_normal, n_folds)
+    mdd_mdd_folds = split_into_folds(mdd_depressed, n_folds)
+    cane_normal_folds = split_into_folds(cane_normal, n_folds)
+    cane_anxious_folds = split_into_folds(cane_anxious, n_folds)
+    cane_mdd_folds = split_into_folds(cane_depressed, n_folds) if cane_depressed else empty_folds
 
-    return combined_folds
+    normal_folds: list[Any] = []
+    anxious_folds = cane_anxious_folds
+    mdd_folds: list[Any] = []
+    for mn, cn, mm, cm in zip(mdd_normal_folds, cane_normal_folds, mdd_mdd_folds, cane_mdd_folds):
+        normal_folds.append(np.concatenate([mn, cn]))
+        if len(cm) > 0:
+            mdd_folds.append(np.concatenate([mm, cm]))
+        else:
+            mdd_folds.append(mm)
+
+    return normal_folds, anxious_folds, mdd_folds
+
+
+def get_indices_from_concat_dataset(
+    concat_dataset: ConcatDataset, subject_list: list[str]
+) -> list[int]:
+    """
+    Get indices for subjects from a ConcatDataset.
+
+    :param ConcatDataset concat_dataset: ConcatDataset containing multiple
+        FlattenedSpectrogramDatasets.
+    :param list[str] subject_list: List of subject IDs.
+    :return: List of indices in the concatenated dataset.
+    :rtype: list[int]
+    """
+    all_indices = []
+    offset = 0
+    for dataset in concat_dataset.datasets:
+        dataset_indices = dataset.get_indices_for_subjects(subject_list)
+        # Adjust indices by offset in concatenated dataset
+        all_indices.extend([idx + offset for idx in dataset_indices])
+        offset += len(dataset)
+    return all_indices
 
 
 def get_datasets_for_fold(
-    fold, normal_folds, mdd_folds, anxious_folds, dataset_type, mdd_flat_dataset, cane_flat_dataset, flat_dataset
-):
+    fold: int,
+    normal_folds: Any,
+    mdd_folds: Any,
+    anxious_folds: Any,
+    dataset_type: str,
+    mdd_flat_dataset: Any,
+    cane_flat_dataset: Any,
+    flat_dataset: Any,
+) -> tuple[Any, Any]:
     # Determine train/val subjects for this fold from all classes
-    val_subjects_with_dataset = []
-    train_subjects_with_dataset = []
+    val_subjects_with_dataset: list[Any] = []
+    train_subjects_with_dataset: list[Any] = []
 
     # Collect validation subjects from all classes
     val_subjects_with_dataset.extend(normal_folds[fold])
@@ -697,11 +801,24 @@ def get_datasets_for_fold(
         cane_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "cane"]
         cane_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "cane"]
 
-        # Get indices from each dataset
-        mdd_train_indices = mdd_flat_dataset.get_indices_for_subjects(mdd_train_subjects)
-        mdd_val_indices = mdd_flat_dataset.get_indices_for_subjects(mdd_val_subjects)
-        cane_train_indices = cane_flat_dataset.get_indices_for_subjects(cane_train_subjects)
-        cane_val_indices = cane_flat_dataset.get_indices_for_subjects(cane_val_subjects)
+        # Handle case where datasets might be ConcatDataset (multiple conditions)
+        if isinstance(mdd_flat_dataset, ConcatDataset):
+            mdd_train_indices = get_indices_from_concat_dataset(
+                mdd_flat_dataset, mdd_train_subjects
+            )
+            mdd_val_indices = get_indices_from_concat_dataset(mdd_flat_dataset, mdd_val_subjects)
+        else:
+            mdd_train_indices = mdd_flat_dataset.get_indices_for_subjects(mdd_train_subjects)
+            mdd_val_indices = mdd_flat_dataset.get_indices_for_subjects(mdd_val_subjects)
+
+        if isinstance(cane_flat_dataset, ConcatDataset):
+            cane_train_indices = get_indices_from_concat_dataset(
+                cane_flat_dataset, cane_train_subjects
+            )
+            cane_val_indices = get_indices_from_concat_dataset(cane_flat_dataset, cane_val_subjects)
+        else:
+            cane_train_indices = cane_flat_dataset.get_indices_for_subjects(cane_train_subjects)
+            cane_val_indices = cane_flat_dataset.get_indices_for_subjects(cane_val_subjects)
 
         train_dataset = ConcatDataset(
             [
@@ -729,8 +846,13 @@ def get_datasets_for_fold(
         train_subjects = [subj for ds, subj in train_subjects_with_dataset]
         val_subjects = [subj for ds, subj in val_subjects_with_dataset]
 
-        train_indices = flat_dataset.get_indices_for_subjects(train_subjects)
-        val_indices = flat_dataset.get_indices_for_subjects(val_subjects)
+        # Handle case where dataset might be ConcatDataset (multiple conditions)
+        if isinstance(flat_dataset, ConcatDataset):
+            train_indices = get_indices_from_concat_dataset(flat_dataset, train_subjects)
+            val_indices = get_indices_from_concat_dataset(flat_dataset, val_subjects)
+        else:
+            train_indices = flat_dataset.get_indices_for_subjects(train_subjects)
+            val_indices = flat_dataset.get_indices_for_subjects(val_subjects)
 
         logger.info(f"Training chunks: {len(train_indices)}")
         logger.info(f"Validation chunks: {len(val_indices)}")
@@ -741,10 +863,28 @@ def get_datasets_for_fold(
 
     return train_dataset, val_dataset
 
+def split_into_folds(
+    subjects: list[tuple[str, str]], n_folds: int
+) -> list[list[tuple[str, str]]]:
+    mapping: dict[str, list[tuple[str, str]]] = {}
+    for dataset, subject in subjects:
+        subject_parts = subject.split()
+        base = " ".join(subject_parts[:-1])
+        if base not in mapping:
+            mapping[base] = [(dataset, subject)]
+        else:
+            mapping[base].append((dataset, subject))
+
+    # Use unique base subjects only (no duplicates)
+    base_subjects = list(mapping.keys())
+    folds = np.array_split(base_subjects, n_folds)
+    folds_with_conditions = [[s for base in split for s in mapping[base]] for split in folds]
+    return folds_with_conditions
+
 
 def train_cross_validation(
     dataset_type: Literal["mdd", "cane", "both"] = "mdd",
-    condition: Literal["EC", "EO", "TASK"] = "EC",
+    condition: str = "EC",
     n_folds: int = 10,
     batch_size: int = 32,
     num_epochs: int = 100,
@@ -760,10 +900,10 @@ def train_cross_validation(
     channel: str | None = None,
 ) -> dict:
     """
-    Train model using 10-fold cross-validation with comprehensive logging and checkpointing.
+    Train model using n-fold cross-validation with comprehensive logging and checkpointing.
 
     :param str dataset_type: Dataset to use ("mdd", "cane", or "both").
-    :param str condition: EEG condition to use ("EC", "EO", "TASK", or None for all).
+    :param str condition: EEG condition to use ("EC", "EO", "TASK", or "EC+EO").
     :param int n_folds: Number of cross-validation folds.
     :param int batch_size: Batch size for training.
     :param int num_epochs: Maximum number of epochs per fold.
@@ -781,9 +921,16 @@ def train_cross_validation(
            best combined accuracy model.
     :rtype: dict
     """
+    # Parse condition argument to handle EC+EO
+    condition_upper = condition.upper()
+    if "+" in condition_upper:
+        conditions = condition_upper.split("+")
+    else:
+        conditions = [condition_upper]
+
     logger.info(f"{'=' * 80}")
     logger.info(f"Starting {n_folds}-Fold Cross-Validation Training")
-    logger.info(f"Dataset: {dataset_type}, Condition: {condition}")
+    logger.info(f"Dataset: {dataset_type}, Condition(s): {conditions}")
     logger.info(f"Batch Size: {batch_size}, LR: {learning_rate}")
     logger.info(f"Device: {device}")
     logger.info(f"Skip ICA: {skip_ica}")
@@ -797,45 +944,48 @@ def train_cross_validation(
         "fold_final_epoch": [],
     }
 
-    rng = np.random.RandomState(42)
-    if condition == "TASK" and dataset_type == "cane":
+    rng = np.random.RandomState(RANDOM_SEED)
+    if "TASK" in conditions and dataset_type == "cane":
         raise ValueError("condition TASK not possible for CANE dataset")
 
     mdd_flat_dataset, cane_flat_dataset, flat_dataset = None, None, None
     num_classes = 2
     if dataset_type == "mdd":
         flat_dataset, normal, depressed, anxious = prepare_mdd_dataset(
-            condition, skip_ica, channel, rng
+            conditions, skip_ica, channel, rng
         )
         logger.info(f"MDD dataset: {len(normal)} normal, {len(depressed)} MDD subjects")
     elif dataset_type == "cane":
+        # Convert to lowercase for CANE
+        cane_conditions = [c.lower() for c in conditions]
         flat_dataset, normal, depressed, anxious = prepare_cane_dataset(
-            condition, channel, rng, remap_labels=True
+            cane_conditions, channel, rng, remap_labels=True
         )
         logger.info(f"CANE dataset: {len(normal)} normal, {len(anxious)} anxious subjects")
     elif dataset_type == "both":
         mdd_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious = prepare_mdd_dataset(
-            condition, skip_ica, channel, rng
+            conditions, skip_ica, channel, rng
         )
+        cane_conditions = [c.lower() for c in conditions]
         cane_flat_dataset, cane_normal, cane_depressed, cane_anxious = prepare_cane_dataset(
-            condition, channel, rng
+            cane_conditions, channel, rng
         )
         num_classes = 3
 
     # Create folds for each class separately (stratified)
     if dataset_type == "both":
         # For combined dataset, stratify each dataset separately then merge corresponding folds
-        normal_folds = create_balanced_folds(mdd_normal, cane_normal, n_folds)
-        mdd_folds = create_balanced_folds(mdd_depressed, cane_depressed, n_folds)
-        anxious_folds = create_balanced_folds(mdd_anxious, cane_anxious, n_folds)
+        normal_folds, anxious_folds, mdd_folds = create_balanced_folds(
+            mdd_normal, mdd_depressed, cane_normal, cane_depressed, cane_anxious, n_folds
+        )
         logger.info(
             f"Created {n_folds} balanced folds with subjects from both MDD and CANE datasets"
         )
     else:
         empty_folds = [[] for _ in range(n_folds)]
-        normal_folds = np.array_split(normal, n_folds)
-        mdd_folds = np.array_split(depressed, n_folds) if depressed else empty_folds
-        anxious_folds = np.array_split(anxious, n_folds) if anxious else empty_folds
+        normal_folds = split_into_folds(normal, n_folds)
+        mdd_folds = split_into_folds(depressed, n_folds) if depressed else empty_folds
+        anxious_folds = split_into_folds(anxious, n_folds) if anxious else empty_folds
 
     spec_shape = EXPECTED_SPECTROGRAM_SHAPE
     for fold in range(n_folds):
@@ -886,7 +1036,9 @@ def train_cross_validation(
         ).to(device)
 
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=learning_rate, weight_decay=weight_decay
+        )
 
         # Train this fold
         fold_result = train_one_fold(
@@ -928,7 +1080,7 @@ def train_cross_validation(
     return cv_results
 
 
-def write_results(writer: callable, cv_results: dict[str, list[float]]) -> None:
+def write_results(writer: Callable[[str], Any], cv_results: dict[str, list[float]]) -> None:
     combined_mean_acc = np.mean(cv_results["fold_best_eval_combined_acc"])
     combined_std_acc = np.std(cv_results["fold_best_eval_combined_acc"])
     chunk_mean_acc = np.mean(cv_results["fold_eval_chunk_acc"])
@@ -964,9 +1116,11 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         "--condition",
         type=str,
         default="EC",
-        help="EEG condition to use (case-insensitive). Options: EC/EO for eyes closed/open "
-        "(both datasets), TASK for MDD task condition (MDD only). "
-        "Examples: --condition ec, --condition EC",
+        help="EEG condition to use (case-insensitive). Options: EC, EO, TASK (MDD only), "
+        "or EC+EO to train on both eyes closed and eyes open together. "
+        "When using EC+EO, subject EC and EO recordings stay in the same fold but are "
+        "evaluated as separate recordings. "
+        "Examples: --condition ec, --condition ec+eo",
     )
     preproc_group.add_argument(
         "--skip-ica",
@@ -976,7 +1130,7 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
     preproc_group.add_argument(
         "--channel",
         type=str,
-        choices=list(MDDDataset.CHANNEL_MAPPING.values()),
+        choices=list(set(MDDDataset.CHANNEL_MAPPING.values()) | set(CANEDataset.CHANNEL_MAPPING.values())),
         default="Fp1",
         help="Single channel to use (e.g., --channel Fp1). "
         "When a single channel is selected, ICA is automatically skipped.",
@@ -1011,7 +1165,12 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     train_parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     train_parser.add_argument("--dropout", type=float, default=0.5, help="Dropout")
-    train_parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay (L2 regularization)")
+    train_parser.add_argument(
+        "--weight-decay",
+        type=float,
+        default=1e-4,
+        help="Weight decay (L2 regularization)",
+    )
     train_parser.add_argument("--val-every", type=int, default=2, help="Validate every N epochs")
     train_parser.add_argument(
         "--save-every", type=int, default=10, help="Save checkpoint every N epochs"

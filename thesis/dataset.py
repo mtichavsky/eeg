@@ -114,7 +114,7 @@ class MDDDataset(Dataset):
                 continue
 
             label, subject_num, cond = match.groups()
-            subject_id = f"{label} S{subject_num}"
+            subject_id = f"{label} S{subject_num} {cond}"
 
             # Filtering
             if condition and cond != condition:
