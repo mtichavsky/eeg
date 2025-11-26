@@ -15,7 +15,7 @@ class CNN_LSTM_DepCap(nn.Module):
         in_channels=1,
         rnn_type="LSTM",
         rnn_hidden=100,
-        dropout=0.6,
+        dropout=0.3,
         num_classes=2,
     ):
         """
@@ -40,9 +40,11 @@ class CNN_LSTM_DepCap(nn.Module):
         # Conv layers
         self.conv1 = nn.Conv2d(in_channels, 64, kernel_size=(10, 10), stride=2, padding=0)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=1)
+        self.dropout2d_1 = nn.Dropout2d(dropout)
         # The paper works with kernel size 15x15, my spectrogram is too small for this
         self.conv2 = nn.Conv2d(64, 32, kernel_size=(5, 5), stride=1, padding=0)
         self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=1)
+        self.dropout2d_2 = nn.Dropout2d(dropout)
         self.relu = nn.ReLU(inplace=True)
 
         # Calculate RNN input size by doing a dummy forward pass through conv layers
@@ -83,8 +85,10 @@ class CNN_LSTM_DepCap(nn.Module):
         """
         x = self.relu(self.conv1(x))
         x = self.pool1(x)
+        x = self.dropout2d_1(x)
         x = self.relu(self.conv2(x))
         x = self.pool2(x)
+        x = self.dropout2d_2(x)
         return x
 
     def forward(self, x):
