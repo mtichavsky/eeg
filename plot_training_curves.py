@@ -17,13 +17,13 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 
 
-def parse_log_file(log_path: Path) -> Dict[int, Dict[str, List[Tuple[int, float]]]]:
+def parse_log_file(log_path: Path) -> Dict[int, Dict[str, any]]:
     """
     Parse training log file and extract loss values per fold.
 
     :param Path log_path: Path to the training log file
-    :return: Dictionary mapping fold number to train/eval losses
-    :rtype: Dict[int, Dict[str, List[Tuple[int, float]]]]
+    :return: Dictionary mapping fold number to train/eval losses and early stopping info
+    :rtype: Dict[int, Dict[str, any]]
     """
     # Pattern for TRAIN CHUNK lines
     train_pattern = re.compile(
@@ -35,11 +35,25 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, List[Tuple[int, float]
         r"EVAL CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+)"
     )
 
-    # Dictionary to store data: fold_num -> {'train': [(epoch, loss)], 'eval': [(epoch, loss)]}
-    data: Dict[int, Dict[str, List[Tuple[int, float]]]] = {}
+    # Pattern for early stopping lines
+    early_stop_pattern = re.compile(
+        r"Early stopping triggered.*Best score: ([\d.]+) at epoch (\d+)"
+    )
+
+    # Dictionary to store data: fold_num -> {'train': [(epoch, loss)], 'eval': [(epoch, loss)], 'best_epoch': int, 'best_loss': float}
+    data: Dict[int, Dict[str, any]] = {}
+    current_fold = None
 
     with open(log_path, "r") as f:
         for line in f:
+            # Check for fold start to track current fold
+            fold_start_match = re.search(r"FOLD (\d+)/\d+", line)
+            if fold_start_match:
+                current_fold = int(fold_start_match.group(1))
+                if current_fold not in data:
+                    data[current_fold] = {"train": [], "eval": [], "best_epoch": None, "best_loss": None}
+                continue
+
             # Try matching TRAIN CHUNK
             train_match = train_pattern.search(line)
             if train_match:
@@ -48,7 +62,7 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, List[Tuple[int, float]
                 loss = float(train_match.group(3))
 
                 if fold_num not in data:
-                    data[fold_num] = {"train": [], "eval": []}
+                    data[fold_num] = {"train": [], "eval": [], "best_epoch": None, "best_loss": None}
 
                 data[fold_num]["train"].append((epoch, loss))
                 continue
@@ -61,9 +75,24 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, List[Tuple[int, float]
                 loss = float(eval_match.group(3))
 
                 if fold_num not in data:
-                    data[fold_num] = {"train": [], "eval": []}
+                    data[fold_num] = {"train": [], "eval": [], "best_epoch": None, "best_loss": None}
 
                 data[fold_num]["eval"].append((epoch, loss))
+                continue
+
+            # Try matching early stopping
+            early_stop_match = early_stop_pattern.search(line)
+            if early_stop_match and current_fold is not None:
+                _best_score = float(early_stop_match.group(1))
+                best_epoch = int(early_stop_match.group(2))
+
+                if current_fold in data:
+                    data[current_fold]["best_epoch"] = best_epoch
+                    # Find the actual eval loss at the best epoch
+                    for epoch, loss in data[current_fold]["eval"]:
+                        if epoch == best_epoch:
+                            data[current_fold]["best_loss"] = loss
+                            break
 
     return data
 
@@ -73,6 +102,8 @@ def plot_fold_losses(
     train_data: List[Tuple[int, float]],
     eval_data: List[Tuple[int, float]],
     output_dir: Path,
+    best_epoch: int = None,
+    best_loss: float = None,
 ) -> None:
     """
     Plot training and evaluation loss curves for a single fold.
@@ -81,6 +112,8 @@ def plot_fold_losses(
     :param List[Tuple[int, float]] train_data: List of (epoch, loss) tuples for training
     :param List[Tuple[int, float]] eval_data: List of (epoch, loss) tuples for evaluation
     :param Path output_dir: Directory to save the plot
+    :param int best_epoch: Best epoch from early stopping (optional)
+    :param float best_loss: Best loss value at early stopping (optional)
     :return: None
     :rtype: None
     """
@@ -105,6 +138,17 @@ def plot_fold_losses(
         markersize=4,
     )
 
+    # Add vertical line at best model epoch if available
+    if best_epoch is not None:
+        plt.axvline(
+            x=best_epoch,
+            color="red",
+            linestyle="--",
+            linewidth=2,
+            alpha=0.7,
+            label=f"Best Model (epoch {best_epoch})",
+        )
+
     plt.xlabel("Epoch", fontsize=12)
     plt.ylabel("Loss", fontsize=12)
     plt.title(f"Training and Evaluation Loss - Fold {fold_num}", fontsize=14)
@@ -123,12 +167,12 @@ def plot_fold_losses(
 
 
 def plot_all_folds_combined(
-    data: Dict[int, Dict[str, List[Tuple[int, float]]]], output_dir: Path
+    data: Dict[int, Dict[str, any]], output_dir: Path
 ) -> None:
     """
     Plot all folds' loss curves in a single figure with subplots.
 
-    :param Dict[int, Dict[str, List[Tuple[int, float]]]] data: Parsed fold data
+    :param Dict[int, Dict[str, any]] data: Parsed fold data
     :param Path output_dir: Directory to save the plot
     :return: None
     :rtype: None
@@ -150,6 +194,8 @@ def plot_all_folds_combined(
 
         train_data = fold_data["train"]
         eval_data = fold_data["eval"]
+        best_epoch = fold_data.get("best_epoch")
+        best_loss = fold_data.get("best_loss")
 
         # Extract epochs and losses
         train_epochs, train_losses = zip(*train_data) if train_data else ([], [])
@@ -167,10 +213,21 @@ def plot_all_folds_combined(
             markersize=3,
         )
 
+        # Add vertical line at best model epoch if available
+        if best_epoch is not None:
+            ax.axvline(
+                x=best_epoch,
+                color="red",
+                linestyle="--",
+                linewidth=1.5,
+                alpha=0.7,
+                label=f"Best (ep {best_epoch})",
+            )
+
         ax.set_xlabel("Epoch", fontsize=10)
         ax.set_ylabel("Loss", fontsize=10)
         ax.set_title(f"Fold {fold_num}", fontsize=11)
-        ax.legend(fontsize=9)
+        ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
 
     # Hide unused subplots
@@ -219,7 +276,12 @@ def main() -> None:
     for fold_num in sorted(data.keys()):
         fold_data = data[fold_num]
         plot_fold_losses(
-            fold_num, fold_data["train"], fold_data["eval"], output_dir
+            fold_num,
+            fold_data["train"],
+            fold_data["eval"],
+            output_dir,
+            fold_data.get("best_epoch"),
+            fold_data.get("best_loss"),
         )
 
     # Plot all folds combined
