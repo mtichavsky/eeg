@@ -1,0 +1,21 @@
+6-Fold Cross-Validation Results
+================================================================================
+
+Dataset: mdd
+Condition: ec
+Batch Size: 32
+Learning Rate: 0.0001
+Dropout: 0.5
+Weight Decay (L2 regularization): 0.0001
+Skip ICA: True
+
+Per-fold best validation accuracy:
+  Fold 1: combined=0.7706, chunk=0.8562, subject=0.9000 (epoch 6, stopped at epoch 26)
+  Fold 2: combined=0.9792, chunk=0.9792, subject=1.0000 (epoch 68, stopped at epoch 88)
+  Fold 3: combined=0.7930, chunk=0.8921, subject=0.8889 (epoch 6, stopped at epoch 26)
+  Fold 4: combined=0.8397, chunk=0.9446, subject=0.8889 (epoch 6, stopped at epoch 26)
+  Fold 5: combined=0.9915, chunk=0.9915, subject=1.0000 (epoch 7, stopped at epoch 27)
+  Fold 6: combined=0.5671, chunk=0.7562, subject=0.7500 (epoch 9, stopped at epoch 29)
+COMBINED Accuracy Mean: 0.8235 ± 0.1427, Min: 0.5671, Max: 0.9915
+CHUNK Accuracy Mean: 0.9033 ± 0.0809, Min: 0.7562, Max: 0.9915
+SUBJECT Accuracy Mean: 0.9046 ± 0.0843, Min: 0.7500, Max: 1.0000

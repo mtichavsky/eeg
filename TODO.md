@@ -10,13 +10,18 @@ python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --chan
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 ```
 
-- [ ] Dropout 0.6 to prevent overfitting: check what [Claude has suggested](https://claude.ai/share/8b2c46f9-19d3-411f-acac-ae3c87e180ba)
-  - seems like not enough
-  - basically look at overfitting and based on that decide what metrics you need to get during training
+- pretraining on all channels, somehow using all channels to get more data? 
+- use smaller k-fold - maybe the eval will be better, but less training data
+- Maybe make sure I'm trainig only on chunk metric, not on the combined, WHEN IT COMES TO ACCURACY
+- if you add eyes open, it's the same as augumentation basically, try it with it too
+
+Held-out Test Set - Critical with small data - keep a completely separate test set that you never tune on. Final performance here is your ground truth
+Data Augmentation Test - If you can augment your data (noise, transformations), does performance stay stable? Good models are robust; overfit models are fragile.
+
+- [ ] Check what [Claude has suggested](https://claude.ai/share/8b2c46f9-19d3-411f-acac-ae3c87e180ba) to fight overfitting=
 - [ ] Explain to me why are there frequencies >70Hz when it should be fitlered
 - [ ] Also, I hope the tensor you provide to the network doesn't contain these frequencies, would be a waste
 - [ ] What is the frequency range of the spectogram? If you cropped it at 70Hz, maybe that's all you should provide
-- [ ] How do you know you over-fitted the model?
 - [ ] Unit/automatic testing of what I have written - what do you test in these ML applications - is it more like you
   see the results of the model /how good it is and that ´s it ? Bcs thats kinda the validation ? Or do you write unit
   tests?
@@ -25,15 +30,12 @@ python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel
 - [ ] finish localizing those channels, so that I have the proper ones
 - How did they work with multi channel? Did they use both eyes open/eyes closed? they don't say
 - choose the right channel when working with one only
-- [ ] batch size
 - [ ] manually remove files and train one epoch
 - [ ] how long recordings do I need for X pct validations? - plot some graph in evaluation
 - [ ] maybe add some augumentations
-- [ ] CANE preprocessing - start by chunking or preprocess over the whole recording / all channels
 - [ ] My preprocessing is still using all channels so the question is if to do the preprocessing on chunk level to get
       closer to online and to one channel or to do multichannel preprocessing
 - [ ] CANE the spectogram goes into higher frequencies then it should -> poor filtering
-- [ ] make run to handle cane dataset too
 
 CANE:
 

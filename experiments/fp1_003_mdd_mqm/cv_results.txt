@@ -1,0 +1,23 @@
+10-Fold Cross-Validation Results
+================================================================================
+
+Dataset: mdd
+Condition: ec
+Batch Size: 32
+Learning Rate: 0.0001
+Skip ICA: True
+
+Per-fold best validation accuracy:
+  Fold 1: combined=0.9247, chunk=0.9247, subject=1.0000 (epoch 18, stopped at epoch 38)
+  Fold 2: combined=0.9500, chunk=0.9500, subject=1.0000 (epoch 20, stopped at epoch 40)
+  Fold 3: combined=0.9763, chunk=0.9763, subject=1.0000 (epoch 58, stopped at epoch 78)
+  Fold 4: combined=0.7004, chunk=0.8404, subject=0.8333 (epoch 4, stopped at epoch 24)
+  Fold 5: combined=0.9278, chunk=0.9278, subject=1.0000 (epoch 24, stopped at epoch 44)
+  Fold 6: combined=1.0000, chunk=1.0000, subject=1.0000 (epoch 6, stopped at epoch 26)
+  Fold 7: combined=1.0000, chunk=1.0000, subject=1.0000 (epoch 2, stopped at epoch 22)
+  Fold 8: combined=0.9669, chunk=0.9669, subject=1.0000 (epoch 46, stopped at epoch 66)
+  Fold 9: combined=0.5764, chunk=0.7686, subject=0.7500 (epoch 2, stopped at epoch 22)
+  Fold 10: combined=0.5702, chunk=0.7603, subject=0.7500 (epoch 12, stopped at epoch 32)
+COMBINED Accuracy Mean: 0.8593 ± 0.1646, Min: 0.5702, Max: 1.0000
+CHUNK Accuracy Mean: 0.9115 ± 0.0855, Min: 0.7603, Max: 1.0000
+SUBJECT Accuracy Mean: 0.9333 ± 0.1041, Min: 0.7500, Max: 1.0000
