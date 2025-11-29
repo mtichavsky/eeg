@@ -1,0 +1,21 @@
+6-Fold Cross-Validation Results
+================================================================================
+
+Dataset: cane
+Condition: ec
+Batch Size: 32
+Learning Rate: 0.0001
+Dropout: 0.5
+Weight Decay (L2 regularization): 0.0001
+Skip ICA: True
+
+Per-fold best validation accuracy:
+  Fold 1: combined=0.3247, chunk=0.5682, subject=0.5714 (epoch 1, stopped at epoch 21)
+  Fold 2: combined=0.4627, chunk=0.6940, subject=0.6667 (epoch 29, stopped at epoch 49)
+  Fold 3: combined=0.2443, chunk=0.4886, subject=0.5000 (epoch 1, stopped at epoch 21)
+  Fold 4: combined=0.4494, chunk=0.6740, subject=0.6667 (epoch 23, stopped at epoch 43)
+  Fold 5: combined=0.2727, chunk=0.5455, subject=0.5000 (epoch 1, stopped at epoch 21)
+  Fold 6: combined=0.4502, chunk=0.6753, subject=0.6667 (epoch 46, stopped at epoch 66)
+COMBINED Accuracy Mean: 0.3673 ± 0.0900, Min: 0.2443, Max: 0.4627
+CHUNK Accuracy Mean: 0.6076 ± 0.0775, Min: 0.4886, Max: 0.6940
+SUBJECT Accuracy Mean: 0.5952 ± 0.0753, Min: 0.5000, Max: 0.6667

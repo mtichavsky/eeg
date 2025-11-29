@@ -1,6 +1,34 @@
 ## Experiments overview:
 
+### Nov 28
+
+#### CANE EC dropout and L2 / T7
+
+```bash
+python main.py train --skip-ica \
+  --channel T7 \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/t7_005_beta_cane_ec \
+  --dataset cane \
+  --condition ec \
+  --n-folds 6 \
+  --dropout 0.5 \
+  --weight-decay 1e-4 \
+  --val-every 1
+```
+
+![loss functions](experiments/t7_005_beta_cane_ec/loss_curves/all_folds_combined_loss_curves.png)
+
 ### Nov 26
+
+Both EC+EO
+I labeled this as beta
+This is the experiment in experiments that's not mentioned here
+python main.py train --skip-ica   --channel Fp1   --batch-size 32   --checkpoint-dir=experiments/fp1_005_mdd_ec   --dataset mdd   --condition ec+eo   --n-folds 6   --dropout 0.5   --weight-decay 1e-4   --val-every 1
+
+I'd do it once again with my current logic, see what it does and consult with CLAUDE
+
+#### MDD EC dropout and L2
 
 ```bash
 python main.py train --skip-ica \
