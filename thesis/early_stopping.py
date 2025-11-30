@@ -19,7 +19,7 @@ class EarlyStopping:
         self.patience = patience
         self.min_delta = min_delta
         self.maximize = maximize
-        self.best_score = None
+        self.best_score: float | None = None
         self.early_stop = False
         self.best_epoch = 0
         self.epochs_without_improvement = 0
