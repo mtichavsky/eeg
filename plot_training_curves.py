@@ -183,7 +183,10 @@ def plot_all_folds_combined(
         return
 
     # Determine grid layout (e.g., 2 rows x 5 cols for 10 folds)
-    ncols = 5
+    if num_folds >= 10:
+        ncols = 5
+    else:
+        ncols = int(num_folds / 2 + num_folds % 2)
     nrows = (num_folds + ncols - 1) // ncols  # Ceiling division
 
     fig, axes = plt.subplots(nrows, ncols, figsize=(20, 4 * nrows))
