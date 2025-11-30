@@ -193,14 +193,14 @@ class MDDDataset(Dataset):
 
         data = preprocessed.get_data()
         n_samples = data.shape[1]
-        chunks = []
+        chunks_list: list[np.ndarray] = []
         for i in range(0, n_samples - MDDDataset.CHUNK_SAMPLES + 1, MDDDataset.CHUNK_SAMPLES):
             chunk = data[:, i : i + MDDDataset.CHUNK_SAMPLES]
             chunk = zscore(chunk, axis=1)
-            chunks.append(chunk)
+            chunks_list.append(chunk)
 
-        chunks = torch.stack([torch.from_numpy(chunk).float() for chunk in chunks])
-        return chunks
+        chunks_tensor = torch.stack([torch.from_numpy(chunk).float() for chunk in chunks_list])
+        return chunks_tensor
 
     def __len__(self) -> int:
         return len(self.files)
@@ -548,7 +548,7 @@ class CANEDataset(Dataset):
 
         # Step 7: Chunk the signal at native sampling rate
         n_samples = len(signal)
-        chunks = []
+        chunks_list: list[torch.Tensor] = []
         chunk_samples = int(CHUNK_DURATION_SEC * CANEDataset.FS)
         logger.info(f"Using sampling rate: {CANEDataset.FS} Hz")
         logger.info(f"Chunk size: {chunk_samples} samples ({CHUNK_DURATION_SEC}s)")
@@ -560,7 +560,7 @@ class CANEDataset(Dataset):
             if skip_extreme_artifacts:
                 chunk_z = np.abs(zscore(chunk))
                 if (chunk_z > artifact_threshold * 0.95).sum() / len(chunk) > 0.1:  # >10% artifacts
-                    logger.warning(f"Skipping chunk {len(chunks)} due to excessive artifacts")
+                    logger.warning(f"Skipping chunk {len(chunks_list)} due to excessive artifacts")
                     continue
 
             # Final z-score normalization per chunk (matching MDD)
@@ -568,12 +568,12 @@ class CANEDataset(Dataset):
 
             # Reshape to (1, samples) to match MDD format (channels, samples)
             chunk = chunk.reshape(1, -1)
-            chunks.append(torch.from_numpy(chunk).float())
+            chunks_list.append(torch.from_numpy(chunk).float())
 
         # Stack into tensor (num_chunks, channels=1, samples)
-        if chunks:
-            chunks_tensor = torch.stack(chunks)
-            logger.info(f"Created {len(chunks)} chunks of shape {chunks_tensor.shape}")
+        if chunks_list:
+            chunks_tensor = torch.stack(chunks_list)
+            logger.info(f"Created {len(chunks_list)} chunks of shape {chunks_tensor.shape}")
             return chunks_tensor
         else:
             logger.error("No valid chunks created!")

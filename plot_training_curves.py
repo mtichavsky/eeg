@@ -114,8 +114,8 @@ def plot_fold_losses(
     train_data: List[Tuple[int, float]],
     eval_data: List[Tuple[int, float]],
     output_dir: Path,
-    best_epoch: int = None,
-    best_loss: float = None,
+    best_epoch: int | None = None,
+    best_loss: float | None = None,
 ) -> None:
     """
     Plot training and evaluation loss curves for a single fold.
