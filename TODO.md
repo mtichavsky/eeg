@@ -1,15 +1,11 @@
-Ve vlaku:
-- [ ] precist Markov - jak resi tyto problemy
-
-## Usage
-
 ```bash
-python main.py train --skip-ica --channel Fp1 --batch-size 4 --checkpoint-dir="checkpoints_fp1_001"
-python main.py train --skip-ica --channel Fp1
 python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 ```
 
+- play with different learning rate and batch size, maybe smaller batch and lr would make it more stable
+- I cannot train both at T7 right?
+- you can do augmentation if you want right?
 - pretraining on all channels, somehow using all channels to get more data? 
 - use smaller k-fold - maybe the eval will be better, but less training data
 - Maybe make sure I'm trainig only on chunk metric, not on the combined, WHEN IT COMES TO ACCURACY
@@ -79,15 +75,6 @@ T5, T6, P3, P4, Pz, O1, O2, C3, C4, and Cz.
 ale v tom co jsem stahnul je jich min nebo co
 
 ---
-
-Model:
-
-
-- I'm doing dropout only on the output from LSTM right? Not on the whole net? Maybe it wouldn't be possible as dimensions
-  would get fucked up
-
-
-The early stopping class is just not ready for patience to work. tell claude
 
 Dataset refactor:
 - og dataset - no preload, no caching - double check 
