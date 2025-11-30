@@ -288,14 +288,14 @@ class CANEDataset(Dataset):
     CHANNELS = [f"d{i}" for i in range(1, 9)]
 
     CHANNEL_MAPPING = {
-      "d1": "Fp1",
-      "d2": "Fp2",
-      "d3": "T7",
-      "d4": "C3",
-      "d5": "Cz",
-      "d6": "C4",
-      "d7": "T8",
-      "d8": "Oz"
+        "d1": "Fp1",
+        "d2": "Fp2",
+        "d3": "T7",
+        "d4": "C3",
+        "d5": "Cz",
+        "d6": "C4",
+        "d7": "T8",
+        "d8": "Oz",
     }
 
     # Reverse mapping: MDD -> CANE (for when user specifies MDD channel name)
@@ -403,7 +403,9 @@ class CANEDataset(Dataset):
 
                     subject_num, _ = match.groups()
                     label = label_map.get(label_dir, label_dir)
-                    subject_id = f"{label} S{subject_num} {condition_map.get(condition_dir, condition_dir)}"
+                    subject_id = (
+                        f"{label} S{subject_num} {condition_map.get(condition_dir, condition_dir)}"
+                    )
 
                     # Filtering by subjects
                     if subjects and subject_id not in subjects:
@@ -495,7 +497,9 @@ class CANEDataset(Dataset):
 
         # Check for NaN/inf values before detrending
         if np.any(np.isnan(signal)) or np.any(np.isinf(signal)):
-            raise NaNValuesError(f"Double check file {file_path}, seems like its standard deviation is 0.")
+            raise NaNValuesError(
+                f"Double check file {file_path}, seems like its standard deviation is 0."
+            )
 
         # Step 3: Detrend to remove slow drifts (before filtering)
         signal = detrend(signal, type="linear")
