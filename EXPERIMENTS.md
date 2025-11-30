@@ -1,3 +1,50 @@
+## Planned experiments
+
+### MDD+CANE EC+EO Fp1
+
+```bash
+python main.py train --skip-ica \
+--channel Fp1 \
+--batch-size 32 \
+--checkpoint-dir=experiments/both_fp1_ec+eo_005 \
+--dataset both \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.5 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+### MDD EC+EO T3 lower batch size
+
+```bash
+python main.py train --skip-ica \
+--channel T3 \
+--batch-size 16 \
+--checkpoint-dir=experiments/mdd_t3_ec+eo_005 \
+--dataset mdd \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.6 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+### CANE EC+EO T7 batch size=8
+
+```bash
+python main.py train --skip-ica \
+--channel T7 \
+--batch-size 8 \
+--checkpoint-dir=experiments/cane_t7_ec+eo_005 \
+--dataset cane \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.6 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
 ## Experiments overview:
 
 ### Nov 28
