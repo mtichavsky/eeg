@@ -533,7 +533,7 @@ def train_one_fold(
                 )
 
             # Early stopping check (based on combined metric)
-            if early_stopping(combined_metric, epoch):
+            if early_stopping(chunk_metrics["accuracy"], epoch):
                 logger.info(f"Early stopping triggered at epoch {epoch}")
                 break
 
