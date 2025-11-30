@@ -471,7 +471,10 @@ class CANEDataset(Dataset):
         :rtype: torch.Tensor
         """
         df = pd.read_csv(file_path)
-        CANEDataset.verify_sampling_rate(df)
+        try:
+            CANEDataset.verify_sampling_rate(df)
+        except ValueError as exc:
+            raise ValueError(f"Error while processing {file_path}") from exc
 
         # Step 1: Initial scaling (z-score normalization of raw ADC values)
         for ch in CANEDataset.CHANNELS:
