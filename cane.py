@@ -79,31 +79,20 @@ if chunks.shape[0] > 0:
         logger.info(f"  Std: {first_spec.std():.4f}")
 
         # Plot and save the spectrogram
-        logger.info("\nSaving spectrogram plot to spectrogram.png")
+        filename ="spectrogram_cane.png"
+        logger.info(f"\nSaving spectrogram plot to {filename}")
 
-        # Get raw signal from first chunk
-        first_chunk = chunks[0, 0, :].numpy()
-
-        # Compute STFT for visualization
-        f_viz, t_viz, Zxx_viz = stft(
-            first_chunk,
-            fs=fs,
-            nperseg=CANEDataset.STFT_NPERSEG,
-            noverlap=CANEDataset.STFT_NOVERLAP,
-            window="hamming",
-        )
-
-        # Convert to absolute magnitude and scale by 5 to match MDD levels
-        magnitude = np.abs(Zxx_viz)
+        # Use the already-computed spectrogram (inverse the log1p transform)
+        magnitude = np.expm1(first_spec[0].numpy())  # expm1 is inverse of log1p
 
         plt.figure(figsize=(10, 6))
         plt.pcolormesh(
-            t_viz,
-            f_viz,
+            np.arange(first_spec.shape[2]),  # time frames
+            np.arange(first_spec.shape[1]),
             magnitude,
             shading="gouraud",
             cmap="viridis",
-            vmax=1,  # Back to 5 since we scaled the signal by 5
+            vmax=1,
         )
         plt.colorbar()
         plt.xlabel("Sec")
@@ -111,7 +100,7 @@ if chunks.shape[0] > 0:
         plt.title(f"CANE Spectrogram ({fs} Hz, Shape: {spec_shape[0]}x{spec_shape[1]})")
         plt.ylim([0, 120])
         plt.tight_layout()
-        plt.savefig("spectrogram_cane.png", dpi=150, bbox_inches="tight")
+        plt.savefig(filename, dpi=150, bbox_inches="tight")
         logger.info("Spectrogram saved successfully!")
         plt.close()
     else:
