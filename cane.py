@@ -6,7 +6,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from scipy.signal import stft
 
 from thesis.dataset import (
     CANEDataset,
@@ -79,7 +78,7 @@ if chunks.shape[0] > 0:
         logger.info(f"  Std: {first_spec.std():.4f}")
 
         # Plot and save the spectrogram
-        filename ="spectrogram_cane.png"
+        filename = "spectrogram_cane.png"
         logger.info(f"\nSaving spectrogram plot to {filename}")
 
         # Use the already-computed spectrogram (inverse the log1p transform)

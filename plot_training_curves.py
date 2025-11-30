@@ -26,14 +26,10 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, any]]:
     :rtype: Dict[int, Dict[str, any]]
     """
     # Pattern for TRAIN CHUNK lines
-    train_pattern = re.compile(
-        r"TRAIN CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+)"
-    )
+    train_pattern = re.compile(r"TRAIN CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+)")
 
     # Pattern for EVAL CHUNK lines
-    eval_pattern = re.compile(
-        r"EVAL CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+)"
-    )
+    eval_pattern = re.compile(r"EVAL CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+)")
 
     # Pattern for early stopping lines
     early_stop_pattern = re.compile(
@@ -51,7 +47,12 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, any]]:
             if fold_start_match:
                 current_fold = int(fold_start_match.group(1))
                 if current_fold not in data:
-                    data[current_fold] = {"train": [], "eval": [], "best_epoch": None, "best_loss": None}
+                    data[current_fold] = {
+                        "train": [],
+                        "eval": [],
+                        "best_epoch": None,
+                        "best_loss": None,
+                    }
                 continue
 
             # Try matching TRAIN CHUNK
@@ -62,7 +63,12 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, any]]:
                 loss = float(train_match.group(3))
 
                 if fold_num not in data:
-                    data[fold_num] = {"train": [], "eval": [], "best_epoch": None, "best_loss": None}
+                    data[fold_num] = {
+                        "train": [],
+                        "eval": [],
+                        "best_epoch": None,
+                        "best_loss": None,
+                    }
 
                 data[fold_num]["train"].append((epoch, loss))
                 continue
@@ -75,7 +81,12 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, any]]:
                 loss = float(eval_match.group(3))
 
                 if fold_num not in data:
-                    data[fold_num] = {"train": [], "eval": [], "best_epoch": None, "best_loss": None}
+                    data[fold_num] = {
+                        "train": [],
+                        "eval": [],
+                        "best_epoch": None,
+                        "best_loss": None,
+                    }
 
                 data[fold_num]["eval"].append((epoch, loss))
                 continue
@@ -166,9 +177,7 @@ def plot_fold_losses(
     print(f"Saved plot for fold {fold_num} to {output_path}")
 
 
-def plot_all_folds_combined(
-    data: Dict[int, Dict[str, any]], output_dir: Path
-) -> None:
+def plot_all_folds_combined(data: Dict[int, Dict[str, any]], output_dir: Path) -> None:
     """
     Plot all folds' loss curves in a single figure with subplots.
 

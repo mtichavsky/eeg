@@ -863,9 +863,8 @@ def get_datasets_for_fold(
 
     return train_dataset, val_dataset
 
-def split_into_folds(
-    subjects: list[tuple[str, str]], n_folds: int
-) -> list[list[tuple[str, str]]]:
+
+def split_into_folds(subjects: list[tuple[str, str]], n_folds: int) -> list[list[tuple[str, str]]]:
     mapping: dict[str, list[tuple[str, str]]] = {}
     for dataset, subject in subjects:
         subject_parts = subject.split()
@@ -1130,7 +1129,9 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
     preproc_group.add_argument(
         "--channel",
         type=str,
-        choices=list(set(MDDDataset.CHANNEL_MAPPING.values()) | set(CANEDataset.CHANNEL_MAPPING.values())),
+        choices=list(
+            set(MDDDataset.CHANNEL_MAPPING.values()) | set(CANEDataset.CHANNEL_MAPPING.values())
+        ),
         default="Fp1",
         help="Single channel to use (e.g., --channel Fp1). "
         "When a single channel is selected, ICA is automatically skipped.",
