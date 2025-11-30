@@ -10,12 +10,15 @@ python main.py train --skip-ica \
 --dataset both \
 --condition ec+eo \
 --n-folds 6 \
---dropout 0.5 \
+--dropout 0.6 \
 --weight-decay 1e-4 \
 --val-every 1
 ```
 
+
 ### MDD EC+EO T3 lower batch size
+
+- **TODO**: try this with batch 128?
 
 ```bash
 python main.py train --skip-ica \
@@ -30,7 +33,17 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
+[results](experiments/mdd_t3_ec+eo_005/cv_results.txt)
+
+![loss curves](experiments/mdd_t3_ec+eo_005/loss_curves/all_folds_combined_loss_curves.png)
+
 ### CANE EC+EO T7 batch size=8
+
+Definitely worse: experiments/cane_t7_ec+eo_005/loss_curves/all_folds_combined_loss_curves.png
+probably large batc hand smaller dropout
+
+why is in results written the combined, i need them separate, otherwise it gives those random values
+also the plot is completely broken
 
 ```bash
 python main.py train --skip-ica \
@@ -41,6 +54,22 @@ python main.py train --skip-ica \
 --condition ec+eo \
 --n-folds 6 \
 --dropout 0.6 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+![losses](experiments/cane_t7_ec+eo_005/loss_curves/all_folds_combined_loss_curves.png)
+
+Second try:
+```bash
+python main.py train --skip-ica \
+--channel T7 \
+--batch-size 64 \
+--checkpoint-dir=experiments/cane_t7_ec+eo_005_2nd \
+--dataset cane \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.3 \
 --weight-decay 1e-4 \
 --val-every 1
 ```
