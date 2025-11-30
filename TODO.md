@@ -3,6 +3,19 @@ python main.py run ../checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --chan
 python main.py run checkpoints/fold_1_best.pth ../MDD/MDD\ S26\ EC.edf --channel Fp1 --skip-ica
 ```
 
+2. Condition-specific metrics calculation (main.py:346-356): The substring matching approach "EC" in subj_id works but is fragile - if
+   subject IDs ever change format, this breaks silently
+
+write some evaluation framework for yourself
+
+
+- Rationale: Chunk-level accuracy provides more stable gradient signal (more samples)
+- Trade-off: Subject-level accuracy is what matters clinically, but has higher variance
+- Risk: A model could overfit to chunks while subject accuracy plateaus or decreases
+
+Recommendation: This change is good, but consider logging both metrics and alerting if they diverge significantly (e.g., chunk acc
+increasing while subject acc decreasing = overfitting to chunk noise).
+
 - play with different learning rate and batch size, maybe smaller batch and lr would make it more stable
 - I cannot train both at T7 right?
 - you can do augmentation if you want right?

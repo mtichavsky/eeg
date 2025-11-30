@@ -24,21 +24,34 @@ For other helpful targets (such as formatting and type checking), see [Makefile]
 
 ## Dataset
 
-The project uses the MDD EEG dataset located at `../MDD/`.
-Files follow the naming pattern: `{H|MDD} S{N} {EC|EO|TASK}.edf`
+The project supports two EEG datasets that can be used independently or combined:
+
+### MDD Dataset
+Located at `../MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {EC|EO|TASK}.edf`
 
 **Dataset Structure:**
 - **H** = Healthy control subjects
 - **MDD** = Major Depressive Disorder subjects
-- **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK
-- **Channels**: 20 channels available, using only some of them 
+- **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
+- **Channels**: 20 channels available, using one of the 6 (Fp1, Fp2, C3, C4, O2, Cz)
 - **Sampling Rate**: 250 Hz (SFREQ = 1000/4)
 - **Segments**: 10-second chunks (2,500 samples each)
 
-**Dataset Statistics (EC condition):**
-- Total: 1,621 chunks from 54 files
-- Healthy: 28 subjects
-- MDD: 26 subjects
+### CANE Dataset
+Located at `../CANE-dataset/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
+
+**Dataset Structure:**
+- **H** = Healthy control subjects
+- **AX** = Anxiety disorder subjects
+- **Conditions**: ec (eyes closed), eo (eyes open) - can train on single or combined (ec+eo)
+- **Channels**: Similar 6 channels as MDD dataset
+- **Sampling Rate**: 500 Hz
+- **Preprocessing**: Uses artifact detection instead of ICA
+
+### Multi-Dataset Training
+- `--dataset mdd`: MDD only (2 classes: normal vs depressed)
+- `--dataset cane`: CANE only (2 classes: normal vs anxious)
+- `--dataset both`: Combined (3 classes: normal vs depressed vs anxious)
 
 ## Usage
 
@@ -56,8 +69,26 @@ poetry run python main.py train --skip-ica
 # Single-channel training (Fp1 channel, automatically skips ICA)
 poetry run python main.py train --channel Fp1
 
-# Custom checkpoint directory and batch size
-poetry run python main.py train --skip-ica --channel Fp1 --batch-size 4 --checkpoint-dir="checkpoints_fp1_001"
+# Full example with all major configuration options
+poetry run python main.py train --skip-ica \
+  --channel Fp1 \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/my_experiment \
+  --dataset mdd \
+  --condition ec \
+  --n-folds 10 \
+  --dropout 0.5 \
+  --weight-decay 1e-4 \
+  --val-every 1
+
+# Train on combined EC+EO conditions
+poetry run python main.py train --skip-ica --channel Fp1 --condition ec+eo
+
+# Train on CANE dataset (anxiety detection)
+poetry run python main.py train --skip-ica --channel Fp1 --dataset cane
+
+# Train on both datasets (3-class: normal/depressed/anxious)
+poetry run python main.py train --skip-ica --channel Fp1 --dataset both
 ```
 
 Training creates checkpoints in the specified directory with the following structure:
@@ -71,8 +102,19 @@ checkpoints/
 └── cv_results.json          # Cross-validation results summary
 ```
 
-You can use `plot_training_curves.py` script to generate directory `loss_curves/` in your `checkpoints_*` dir for
-loss curve analysis.
+### Training Analysis
+
+Visualize training and validation loss curves across folds:
+
+```bash
+# Generate loss curve plots for an experiment
+poetry run python plot_training_curves.py <checkpoint_dir>/<log file>
+```
+
+This creates a `loss_curves/` directory with:
+- Individual plots for each fold
+- Combined overview plot showing all folds
+- Best model epochs clearly marked
 
 ## Model Inference
 
@@ -93,10 +135,12 @@ The inference script outputs:
 **CNN-LSTM-DepCap Model:**
 - Input: STFT spectrograms (129 × 41) from 10-second EEG segments
 - Conv2D layers: 64 filters (10×10), 32 filters (5×5) with MaxPooling
+- Spatial Dropout (`nn.Dropout2d`): Applied after each pooling layer for CNN regularization
 - LSTM/GRU layer: hidden size = 100, treating spectrograms as time sequences
-- Dropout when training
-- Dense classifier: 64 → 32 → 2 classes (Healthy/MDD)
-- Output: Binary classification (0=Healthy, 1=MDD)
+- Standard Dropout: Applied in classifier layers
+- Dense classifier: 64 → 32 → num_classes
+- Output: Classification (2-class: Healthy/MDD or Healthy/Anxious, 3-class: Healthy/MDD/Anxious)
+- Regularization: Configurable dropout (default 0.5) and L2 weight decay (default 1e-4)
 
 ## Preprocessing Pipeline
 
@@ -139,16 +183,20 @@ make typecheck
 
 ### Cross-Validation Strategy
 
-The project uses **subject-level stratified 10-fold cross-validation**:
+The project uses **subject-level stratified K-fold cross-validation** (default K=10):
 - Prevents data leakage (all chunks from same subject stay together)
-- Maintains H/MDD balance across folds
-- Standard approach in EEG depression classification literature
+- Maintains class balance (normal/depressed/anxious) across folds
+- For multi-dataset training, ensures each fold contains subjects from both datasets
+- Standard approach in EEG depression/anxiety classification literature
+- Early stopping based on chunk-level validation accuracy
 
 ## Important Notes
 
-- The MDD dataset path is hardcoded in `thesis/dataset.py` as `MDD_DIR`
+- Dataset paths are hardcoded in `thesis/dataset.py` as `MDD_DIR` and `CANE_DIR`
 - Single-channel mode automatically skips ICA (ICA requires multiple channels)
 - STFT parameters: `nperseg=256`, `noverlap=192` → output shape (129, 41)
 - Model expects preprocessed spectrograms, not raw EEG directly
 - Checkpoint directories are auto-generated with random suffixes if they exist
 - All logging uses Python's `logging` module, not print statements
+- Default regularization: dropout=0.5, weight_decay=1e-4 (L2 penalty)
+- See `EXPERIMENTS.md` for experiment tracking and results
