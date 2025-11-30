@@ -21,7 +21,7 @@ Located at `/home/milan/Documents/diplomka/MDD/`. Files follow the naming patter
 
 - **H** = Healthy control
 - **MDD** = Major Depressive Disorder
-- **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK
+- **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
 - **Channels**: 6 channels used (Fp1, Fp2, C3, C4, O2, Cz)
 - **Sampling**: 250 Hz (SFREQ = 1000/4)
 - **Segments**: 10-second chunks (2500 samples each)
@@ -31,7 +31,7 @@ Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern:
 
 - **H** = Healthy control
 - **AX** = Anxiety disorder
-- **Conditions**: ec (eyes closed), eo (eyes open) - lowercase
+- **Conditions**: ec (eyes closed), eo (eyes open) - lowercase, can train on single or combined (ec+eo)
 - **Channels**: Same 6 channels as MDD
 - **Sampling**: 500 Hz
 - **Preprocessing**: Uses `skip_extreme_artifacts=True` instead of ICA
@@ -64,10 +64,22 @@ make format
 ### Running Training
 ```bash
 # Main training script with cross-validation
-poetry run python main.py train 
+poetry run python main.py train
 
 # Faster, debug run, skipping the ICA
 poetry run python main.py train --skip-ica
+
+# Full example with all major options
+poetry run python main.py train --skip-ica \
+  --channel Fp1 \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/my_experiment \
+  --dataset mdd \
+  --condition ec \
+  --n-folds 10 \
+  --dropout 0.5 \
+  --weight-decay 1e-4 \
+  --val-every 1
 ```
 
 ### Interactive Development
@@ -93,8 +105,9 @@ Run with: `poetry run jupyter notebook`
 2. **`thesis/model.py`** - Neural network architectures
    - `CNN_LSTM_DepCap`: Main model implementing the paper's architecture
      - Conv2D layers (64 filters 10x10, 32 filters 5x5) with MaxPool
+     - Spatial Dropout (nn.Dropout2d) after each pooling layer for better CNN regularization
      - LSTM/GRU layer (hidden=100) treating spectrograms as time sequences
-     - Dense classifier (64 → 32 → 2 classes)
+     - Dense classifier (64 → 32 → num_classes) with standard dropout
 
 ### Training Scripts
 
@@ -102,7 +115,10 @@ Run with: `poetry run jupyter notebook`
 - Contains `SpectrogramDataset` for converting EEG to spectrograms
 - Uses STFT (Short-Time Fourier Transform) for time-frequency representation
 - Implements training/evaluation loops with metrics (accuracy, precision, recall, specificity)
-- Current setup: 10-fold CV on EC condition
+- Supports training on single condition (EC/EO) or combined (EC+EO)
+- Early stopping based on chunk-level accuracy (not combined metric)
+- Configurable hyperparameters: dropout (default 0.5), weight decay/L2 (default 1e-4)
+- Current setup: 10-fold CV (configurable with --n-folds)
 
 **`train_cv_example.py`** - Clean reference implementation
 - Shows proper 10-fold cross-validation pattern
@@ -197,7 +213,8 @@ Sphinx/reStructuredText (reST) style documentation:
 **Why Two-Level Metrics (Chunk + Subject)?**
 - **Chunk-level accuracy**: Measures per-segment classification performance (more samples, lower variance)
 - **Subject-level accuracy**: Aggregates chunks via majority voting (clinical relevance, what matters for diagnosis)
-- **Combined metric**: `chunk_acc × subject_acc` balances both for model selection
+- **Combined metric**: `chunk_acc × subject_acc` was used historically but now early stopping uses chunk accuracy
+- **Early stopping**: Uses chunk-level accuracy as it provides more stable gradient signal during training
 - **Rationale**: A model that's 100% accurate on chunks but only 50% on subjects is overfitting to chunk-level noise
 
 **Why Balanced Fold Stratification?**
@@ -223,6 +240,12 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Multi-condition support**: Can now train on combined EC+EO conditions using `--condition ec+eo`
+- **Spatial Dropout**: Added `nn.Dropout2d` after CNN pooling layers for better feature map regularization
+- **L2 Regularization**: Added weight decay parameter (default 1e-4) for L2 penalty on weights
+- **Early stopping metric**: Changed from combined metric to chunk-level accuracy for more stable training
+- **Configurable hyperparameters**: Dropout and weight decay now exposed as CLI arguments
+- **Training visualization**: Added `plot_training_curves.py` for analyzing fold performance
 - Refactored from single-dataset to multi-dataset support
 - Moved from simple array splits to balanced stratified folding
 - Introduced dataset-aware subject tuples: `(dataset_label, subject_id)`
@@ -242,8 +265,19 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Use logging for prints, not print statements.
 - Add mypy typing to any newly generated code.
 
+## Training Utilities
+
+**`plot_training_curves.py`** - Visualization script for analyzing training results
+- Generates loss curves from checkpoint training history
+- Creates per-fold plots and combined overview
+- Marks best model epochs for easy identification
+- Saves plots to `loss_curves/` directory in checkpoint folder
+- Usage: `poetry run python plot_training_curves.py <checkpoint_dir>/<log file>`
+
 ## Quick Reference Files
 - `context.md` - Detailed recent refactoring history and implementation rationale
 - `DATASET_USAGE.md` - Dataset-specific preprocessing and loading details
+- `EXPERIMENTS.md` - Log of experiment configurations and results
 - `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, SpectrogramDataset)
 - `main.py` - Training orchestration and cross-validation logic
+- `plot_training_curves.py` - Training curve visualization utility
