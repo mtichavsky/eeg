@@ -6,18 +6,18 @@ Usage:
     python plot_training_curves.py <log_file_path>
 
 Example:
-    python plot_training_curves.py checkpoints_fp1_003_mdd_mqm/training_ec_Fp1_noica_20251114_160354.log
+    python plot_training_curves.py checkpoints_fp1_003_mdd_mqm/training.log
 """
 
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 
 
-def parse_log_file(log_path: Path) -> Dict[int, Dict[str, any]]:
+def parse_log_file(log_path: Path) -> Dict[int, Dict[str, Any]]:
     """
     Parse training log file and extract loss values per fold.
 
@@ -36,8 +36,10 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, any]]:
         r"Early stopping triggered.*Best score: ([\d.]+) at epoch (\d+)"
     )
 
-    # Dictionary to store data: fold_num -> {'train': [(epoch, loss)], 'eval': [(epoch, loss)], 'best_epoch': int, 'best_loss': float}
-    data: Dict[int, Dict[str, any]] = {}
+    # Dictionary to store data:
+    # fold_num -> {'train': [(epoch, loss)], 'eval': [(epoch, loss)],
+    #              'best_epoch': int, 'best_loss': float}
+    data: Dict[int, Dict[str, Any]] = {}
     current_fold = None
 
     with open(log_path, "r") as f:
@@ -94,7 +96,6 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, any]]:
             # Try matching early stopping
             early_stop_match = early_stop_pattern.search(line)
             if early_stop_match and current_fold is not None:
-                _best_score = float(early_stop_match.group(1))
                 best_epoch = int(early_stop_match.group(2))
 
                 if current_fold in data:
@@ -177,11 +178,11 @@ def plot_fold_losses(
     print(f"Saved plot for fold {fold_num} to {output_path}")
 
 
-def plot_all_folds_combined(data: Dict[int, Dict[str, any]], output_dir: Path) -> None:
+def plot_all_folds_combined(data: Dict[int, Dict[str, Any]], output_dir: Path) -> None:
     """
     Plot all folds' loss curves in a single figure with subplots.
 
-    :param Dict[int, Dict[str, any]] data: Parsed fold data
+    :param Dict[int, Dict[str, Any]] data: Parsed fold data
     :param Path output_dir: Directory to save the plot
     :return: None
     :rtype: None
@@ -207,7 +208,6 @@ def plot_all_folds_combined(data: Dict[int, Dict[str, any]], output_dir: Path) -
         train_data = fold_data["train"]
         eval_data = fold_data["eval"]
         best_epoch = fold_data.get("best_epoch")
-        best_loss = fold_data.get("best_loss")
 
         # Extract epochs and losses
         train_epochs, train_losses = zip(*train_data) if train_data else ([], [])
@@ -260,7 +260,8 @@ def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python plot_training_curves.py <log_file_path>")
         print(
-            "Example: python plot_training_curves.py checkpoints_fp1_003_mdd_mqm/training_ec_Fp1_noica_20251114_160354.log"
+            "Example: python plot_training_curves.py "
+            "checkpoints_fp1_003_mdd_mqm/training_ec_Fp1_noica_20251114_160354.log"
         )
         sys.exit(1)
 
