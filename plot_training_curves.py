@@ -29,7 +29,9 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, Any]]:
     train_pattern = re.compile(r"TRAIN CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+)")
 
     # Pattern for EVAL CHUNK lines
-    eval_pattern = re.compile(r"EVAL CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+)")
+    eval_pattern = re.compile(
+        r"EVAL CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+) \| Acc: ([\d.]+)"
+    )
 
     # Pattern for early stopping lines
     early_stop_pattern = re.compile(
@@ -81,6 +83,7 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, Any]]:
                 fold_num = int(eval_match.group(1))
                 epoch = int(eval_match.group(2))
                 loss = float(eval_match.group(3))
+                acc = float(eval_match.group(4))
 
                 if fold_num not in data:
                     data[fold_num] = {
@@ -90,7 +93,7 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, Any]]:
                         "best_loss": None,
                     }
 
-                data[fold_num]["eval"].append((epoch, loss))
+                data[fold_num]["eval"].append((epoch, loss, acc))
                 continue
 
             # Try matching early stopping
@@ -101,12 +104,89 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, Any]]:
                 if current_fold in data:
                     data[current_fold]["best_epoch"] = best_epoch
                     # Find the actual eval loss at the best epoch
-                    for epoch, loss in data[current_fold]["eval"]:
+                    for epoch, loss, acc in data[current_fold]["eval"]:
                         if epoch == best_epoch:
                             data[current_fold]["best_loss"] = loss
                             break
 
     return data
+
+
+def plot_axes(
+    ax1,
+    train_epochs,
+    train_losses,
+    eval_epochs,
+    eval_losses,
+    eval_acc,
+    best_epoch=None,
+    fontsize_label=12,
+    fontsize_legend=11,
+    linewidth=2,
+    markersize=4,
+):
+    """
+    Plot training/evaluation loss and accuracy on dual y-axes.
+
+    :param ax1: Primary matplotlib axis for loss
+    :param train_epochs: List of training epoch numbers
+    :param train_losses: List of training loss values
+    :param eval_epochs: List of evaluation epoch numbers
+    :param eval_losses: List of evaluation loss values
+    :param eval_acc: List of evaluation accuracy values
+    :param best_epoch: Best epoch from early stopping (optional)
+    :param int fontsize_label: Font size for axis labels
+    :param int fontsize_legend: Font size for legend
+    :param float linewidth: Line width for plots
+    :param float markersize: Marker size for plots
+    :return: Tuple of (ax1, ax2) - primary and secondary axes
+    :rtype: Tuple[matplotlib.axes.Axes, matplotlib.axes.Axes]
+    """
+    ax1.set_xlabel("Epoch", fontsize=fontsize_label)
+    ax1.set_ylabel("Loss", fontsize=fontsize_label)
+    ax1.plot(
+        train_epochs, train_losses, label="Train Loss", linewidth=linewidth, alpha=0.8, color="blue"
+    )
+    ax1.plot(
+        eval_epochs,
+        eval_losses,
+        label="Eval Loss",
+        linewidth=linewidth,
+        alpha=0.8,
+        color="orange",
+    )
+    ax1.grid(True, alpha=0.3)
+
+    # Create secondary y-axis for accuracy
+    ax2 = ax1.twinx()
+    ax2.set_ylabel("Accuracy", fontsize=fontsize_label)
+    ax2.plot(
+        eval_epochs,
+        eval_acc,
+        label="Eval Accuracy",
+        linewidth=linewidth,
+        alpha=0.8,
+        color="gray",
+    )
+    ax2.set_ylim(0.25, 1)
+
+    # Add vertical line at best model epoch if available
+    if best_epoch is not None:
+        ax1.axvline(
+            x=best_epoch,
+            color="red",
+            linestyle="--",
+            linewidth=linewidth,
+            alpha=0.7,
+            label=f"Best Model (epoch {best_epoch})",
+        )
+
+    # Combine legends from both axes
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, fontsize=fontsize_legend, loc="best")
+
+    return ax1, ax2
 
 
 def plot_fold_losses(
@@ -131,48 +211,29 @@ def plot_fold_losses(
     """
     # Extract epochs and losses
     train_epochs, train_losses = zip(*train_data) if train_data else ([], [])
-    eval_epochs, eval_losses = zip(*eval_data) if eval_data else ([], [])
+    eval_epochs, eval_losses, eval_acc = zip(*eval_data) if eval_data else ([], [], [])
 
-    # Create figure
-    plt.figure(figsize=(10, 6))
+    # Create figure with primary axis
+    fig, ax1 = plt.subplots(figsize=(10, 6))
 
-    # Plot training loss
-    plt.plot(train_epochs, train_losses, label="Train Loss", linewidth=2, alpha=0.8)
-
-    # Plot evaluation loss
-    plt.plot(
+    # Plot using shared function
+    plot_axes(
+        ax1,
+        train_epochs,
+        train_losses,
         eval_epochs,
         eval_losses,
-        label="Eval Loss",
-        linewidth=2,
-        alpha=0.8,
-        marker="o",
-        markersize=4,
+        eval_acc,
+        best_epoch=best_epoch,
     )
 
-    # Add vertical line at best model epoch if available
-    if best_epoch is not None:
-        plt.axvline(
-            x=best_epoch,
-            color="red",
-            linestyle="--",
-            linewidth=2,
-            alpha=0.7,
-            label=f"Best Model (epoch {best_epoch})",
-        )
+    # Title
+    ax1.set_title(f"Training and Evaluation Loss - Fold {fold_num}", fontsize=14)
 
-    plt.xlabel("Epoch", fontsize=12)
-    plt.ylabel("Loss", fontsize=12)
-    plt.title(f"Training and Evaluation Loss - Fold {fold_num}", fontsize=14)
-    plt.legend(fontsize=11)
-    plt.grid(True, alpha=0.3)
-
-    # Tight layout
+    # Tight layout and save
     plt.tight_layout()
-
-    # Save figure
     output_path = output_dir / f"fold_{fold_num}_loss_curves.png"
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
 
     print(f"Saved plot for fold {fold_num} to {output_path}")
@@ -209,38 +270,26 @@ def plot_all_folds_combined(data: Dict[int, Dict[str, Any]], output_dir: Path) -
         eval_data = fold_data["eval"]
         best_epoch = fold_data.get("best_epoch")
 
-        # Extract epochs and losses
+        # Extract epochs, losses, and accuracy
         train_epochs, train_losses = zip(*train_data) if train_data else ([], [])
-        eval_epochs, eval_losses = zip(*eval_data) if eval_data else ([], [])
+        eval_epochs, eval_losses, eval_acc = zip(*eval_data) if eval_data else ([], [], [])
 
-        # Plot
-        ax.plot(train_epochs, train_losses, label="Train", linewidth=1.5, alpha=0.8)
-        ax.plot(
+        # Plot using shared function with smaller fonts for subplot grid
+        plot_axes(
+            ax,
+            train_epochs,
+            train_losses,
             eval_epochs,
             eval_losses,
-            label="Eval",
+            eval_acc,
+            best_epoch=best_epoch,
+            fontsize_label=10,
+            fontsize_legend=8,
             linewidth=1.5,
-            alpha=0.8,
-            marker="o",
             markersize=3,
         )
 
-        # Add vertical line at best model epoch if available
-        if best_epoch is not None:
-            ax.axvline(
-                x=best_epoch,
-                color="red",
-                linestyle="--",
-                linewidth=1.5,
-                alpha=0.7,
-                label=f"Best (ep {best_epoch})",
-            )
-
-        ax.set_xlabel("Epoch", fontsize=10)
-        ax.set_ylabel("Loss", fontsize=10)
         ax.set_title(f"Fold {fold_num}", fontsize=11)
-        ax.legend(fontsize=8)
-        ax.grid(True, alpha=0.3)
 
     # Hide unused subplots
     for idx in range(num_folds, len(axes)):
@@ -250,7 +299,7 @@ def plot_all_folds_combined(data: Dict[int, Dict[str, Any]], output_dir: Path) -
 
     # Save combined figure
     output_path = output_dir / "all_folds_combined_loss_curves.png"
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
 
     print(f"Saved combined plot for all folds to {output_path}")
