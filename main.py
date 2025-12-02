@@ -1067,10 +1067,10 @@ def train_cross_validation(
     logger.info(f"{n_folds}-FOLD CROSS-VALIDATION RESULTS")
     logger.info(f"{'=' * 80}")
 
-    logger.info("\nPer-fold best validation accuracy:")
-    for i, combined_acc in enumerate(cv_results["fold_best_eval_combined_acc"]):
+    logger.info("\nPer-fold best validation accuracy (chunk):")
+    for i, chunk_acc in enumerate(cv_results["fold_best_eval_chunk_acc"]):
         logger.info(
-            f"  Fold {i + 1}: {combined_acc:.4f} (epoch {cv_results['fold_best_epoch'][i]})"
+            f"  Fold {i + 1}: {chunk_acc:.4f} (epoch {cv_results['fold_best_epoch'][i]})"
         )
 
     write_results(logger.info, cv_results)
