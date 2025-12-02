@@ -28,6 +28,7 @@ fs = CANEDataset.FS
 
 logger.info(f"Chunks shape: {chunks.shape}")
 logger.info(f"Detected sampling rate: {fs:.2f} Hz")
+chunk_duration = chunks.shape[2] / fs
 
 # Convert to spectrograms using SpectrogramDataset.convert_to_spectrograms
 if chunks.shape[0] > 0:
@@ -86,7 +87,7 @@ if chunks.shape[0] > 0:
 
         plt.figure(figsize=(10, 6))
         plt.pcolormesh(
-            np.arange(first_spec.shape[2]),  # time frames
+            np.linspace(0, chunk_duration, first_spec.shape[2]),
             np.arange(first_spec.shape[1]),
             magnitude,
             shading="gouraud",
