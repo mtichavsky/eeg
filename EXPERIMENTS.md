@@ -1,6 +1,82 @@
 ## Planned experiments
 
-### MDD+CANE EC+EO Fp1
+## 006 bunch
+
+### MDD Fp1 EC 006
+
+```bash
+python main.py train --skip-ica \
+--channel Fp1 \
+--batch-size 64 \
+--checkpoint-dir=experiments/fp1_006_mdd_ec \
+--dataset mdd \
+--condition ec \
+--n-folds 6 \
+--dropout 0.5 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+CHUNK Accuracy Mean: 0.9125 ± 0.0771, Min: 0.7562, Max: 0.9862
+
+![training](experiments/fp1_006_mdd_ec/loss_curves/all_folds_combined_loss_curves.png)
+
+### MDD T4 EC 006
+
+```bash
+python main.py train --skip-ica \
+--channel T4 \
+--batch-size 64 \
+--checkpoint-dir=experiments/t4_006_mdd_ec \
+--dataset mdd \
+--condition ec \
+--n-folds 6 \
+--dropout 0.5 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+CHUNK Accuracy Mean: 0.8652 ± 0.0518, Min: 0.7562, Max: 0.9101
+
+![training](experiments/t4_006_mdd_ec/loss_curves/all_folds_combined_loss_curves.png)
+
+### MDD T4 EC+EO 006
+
+```bash
+python main.py train --skip-ica \
+--channel T3 \
+--batch-size 64 \
+--checkpoint-dir=experiments/mdd_t4_ec+eo_006 \
+--dataset mdd \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.4 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+CHUNK Accuracy Mean: 0.8828 ± 0.0785, Min: 0.7906, Max: 1.0000
+
+![training](experiments/mdd_t4_ec+eo_006/loss_curves/all_folds_combined_loss_curves.png)
+
+### CANE Fp1 EC 006
+
+```bash
+python main.py train --skip-ica \
+--channel Fp1 \
+--batch-size 64 \
+--checkpoint-dir=experiments/fp1_006_cane_ec \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.5 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+---
+
+### MDD+CANE EC+EO Fp1 005
 
 ```bash
 python main.py train --skip-ica \
@@ -15,6 +91,11 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
+CHUNK Accuracy Mean: 0.7390 ± 0.0794, Min: 0.5881, Max: 0.8328
+
+![training](experiments/both_fp1_ec+eo_005/training_ec+eo_Fp1_noica_20251130_163158.log)
+
+---
 
 ### MDD EC+EO T3 lower batch size
 

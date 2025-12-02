@@ -1,0 +1,1190 @@
+[2025-12-02 09:08:36,461 INFO main.setup_logging] Logging to console and file: experiments/t4_006_mdd_ec/training_ec_T4_noica_20251202_090836.log
+[2025-12-02 09:08:36,461 INFO main.train] Starting EEG Classification Training
+[2025-12-02 09:08:36,461 INFO main.train] Hyperparameters:
+[2025-12-02 09:08:36,461 INFO main.train]   Dataset: mdd
+[2025-12-02 09:08:36,462 INFO main.train]   Condition: ec
+[2025-12-02 09:08:36,462 INFO main.train]   Channel: T4
+[2025-12-02 09:08:36,462 INFO main.train]   N-Fold CV: 6
+[2025-12-02 09:08:36,462 INFO main.train]   Batch Size: 64
+[2025-12-02 09:08:36,462 INFO main.train]   Learning Rate: 0.0001
+[2025-12-02 09:08:36,462 INFO main.train]   Dropout: 0.5
+[2025-12-02 09:08:36,462 INFO main.train]   Weight decay (L2 penalty): 0.0001
+[2025-12-02 09:08:36,462 INFO main.train]   Max Epochs: 100
+[2025-12-02 09:08:36,462 INFO main.train]   Validation Every: 1 epochs
+[2025-12-02 09:08:36,462 INFO main.train]   Save Checkpoint Every: 10 epochs
+[2025-12-02 09:08:36,462 INFO main.train]   Early Stopping Patience: 20 epochs
+[2025-12-02 09:08:36,462 INFO main.train]   Skip ICA: True
+[2025-12-02 09:08:36,463 INFO main.train]   Device: cpu
+[2025-12-02 09:08:36,463 INFO main.train]   Checkpoint Directory: experiments/t4_006_mdd_ec
+[2025-12-02 09:08:36,463 INFO main.train]   Log File: experiments/t4_006_mdd_ec/training_ec_T4_noica_20251202_090836.log
+[2025-12-02 09:08:36,463 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:08:36,463 INFO main.train_cross_validation] Starting 6-Fold Cross-Validation Training
+[2025-12-02 09:08:36,463 INFO main.train_cross_validation] Dataset: mdd, Condition(s): ['EC']
+[2025-12-02 09:08:36,463 INFO main.train_cross_validation] Batch Size: 64, LR: 0.0001
+[2025-12-02 09:08:36,463 INFO main.train_cross_validation] Device: cpu
+[2025-12-02 09:08:36,463 INFO main.train_cross_validation] Skip ICA: True
+[2025-12-02 09:08:36,463 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:08:36,469 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2025-12-02 09:08:37,403 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:37,898 INFO dataset.convert_to_spectrograms] Created 38 spectrograms
+[2025-12-02 09:08:38,236 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:38,565 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:38,884 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:39,207 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:39,508 INFO dataset.convert_to_spectrograms] Created 29 spectrograms
+[2025-12-02 09:08:39,849 INFO dataset.convert_to_spectrograms] Created 31 spectrograms
+[2025-12-02 09:08:40,169 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:40,482 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:40,814 INFO dataset.convert_to_spectrograms] Created 31 spectrograms
+[2025-12-02 09:08:41,140 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:41,477 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:41,806 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:42,118 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:42,435 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:42,779 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:43,094 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:43,427 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:43,752 INFO dataset.convert_to_spectrograms] Created 31 spectrograms
+[2025-12-02 09:08:44,070 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:44,375 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:44,699 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:45,022 INFO dataset.convert_to_spectrograms] Created 31 spectrograms
+[2025-12-02 09:08:45,341 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:45,708 INFO dataset.convert_to_spectrograms] Created 36 spectrograms
+[2025-12-02 09:08:46,035 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:46,379 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:46,711 INFO dataset.convert_to_spectrograms] Created 31 spectrograms
+[2025-12-02 09:08:46,997 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:47,289 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:47,642 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:47,935 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:48,188 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:48,393 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:48,646 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:48,837 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:49,068 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:49,266 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:49,465 INFO dataset.convert_to_spectrograms] Created 31 spectrograms
+[2025-12-02 09:08:49,663 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:49,865 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:50,070 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:50,288 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:50,521 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:50,658 INFO dataset.convert_to_spectrograms] Created 18 spectrograms
+[2025-12-02 09:08:50,897 INFO dataset.convert_to_spectrograms] Created 24 spectrograms
+[2025-12-02 09:08:51,193 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:51,493 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:51,785 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:51,965 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:52,170 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:52,374 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:52,588 INFO dataset.convert_to_spectrograms] Created 30 spectrograms
+[2025-12-02 09:08:52,588 INFO dataset.__init__] Built index with 1621 total chunks
+[2025-12-02 09:08:52,589 INFO main.train_cross_validation] MDD dataset: 28 normal, 26 MDD subjects
+[2025-12-02 09:08:52,589 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:08:52,589 INFO main.train_cross_validation] FOLD 1/6
+[2025-12-02 09:08:52,589 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:08:52,589 INFO main.get_datasets_for_fold] Train subjects (44): ['mdd:H S22 EC', 'mdd:H S27 EC', 'mdd:H S4 EC', 'mdd:H S21 EC', 'mdd:H S23 EC', 'mdd:MDD S17 EC', 'mdd:MDD S3 EC', 'mdd:MDD S1 EC', 'mdd:MDD S14 EC', 'mdd:MDD S10 EC', 'mdd:H S25 EC', 'mdd:H S10 EC', 'mdd:H S14 EC', 'mdd:H S15 EC', 'mdd:H S11 EC', 'mdd:MDD S26 EC', 'mdd:MDD S20 EC', 'mdd:MDD S33 EC', 'mdd:MDD S18 EC', 'mdd:H S26 EC', 'mdd:H S5 EC', 'mdd:H S13 EC', 'mdd:H S8 EC', 'mdd:H S6 EC', 'mdd:MDD S5 EC', 'mdd:MDD S15 EC', 'mdd:MDD S13 EC', 'mdd:MDD S9 EC', 'mdd:H S28 EC', 'mdd:H S9 EC', 'mdd:H S3 EC', 'mdd:H S17 EC', 'mdd:MDD S30 EC', 'mdd:MDD S32 EC', 'mdd:MDD S27 EC', 'mdd:MDD S28 EC', 'mdd:H S20 EC', 'mdd:H S24 EC', 'mdd:H S29 EC', 'mdd:H S16 EC', 'mdd:MDD S21 EC', 'mdd:MDD S29 EC', 'mdd:MDD S6 EC', 'mdd:MDD S23 EC']...
+[2025-12-02 09:08:52,589 INFO main.get_datasets_for_fold] Val subjects (10): ['mdd:H S2 EC', 'mdd:H S7 EC', 'mdd:H S19 EC', 'mdd:H S30 EC', 'mdd:H S1 EC', 'mdd:MDD S31 EC', 'mdd:MDD S22 EC', 'mdd:MDD S19 EC', 'mdd:MDD S25 EC', 'mdd:MDD S34 EC']
+[2025-12-02 09:08:52,590 INFO main.get_datasets_for_fold] Training chunks: 1315
+[2025-12-02 09:08:52,590 INFO main.get_datasets_for_fold] Validation chunks: 306
+[2025-12-02 09:08:52,678 INFO model.__init__] Initialized LSTM with input_size=1728, hidden_size=100, batch_first=True
+[2025-12-02 09:08:54,503 INFO main.train_one_fold] Starting training for fold 1
+[2025-12-02 09:09:02,544 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 001/100 | Loss: 0.7078 | Acc: 0.4669 | Prec: 0.4669 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:09:03,236 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 001/100 | Loss: 0.7004 | Acc: 0.4902 | Prec: 0.4902 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:09:03,236 INFO main.train_one_fold]   Confusion: TP=150, TN=0, FP=156, FN=0
+[2025-12-02 09:09:03,236 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 001/100 | Loss: 0.7004 | Acc: 0.5000 | Prec: 0.5000 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:09:03,236 INFO main.train_one_fold]   Confusion: TP=5, TN=0, FP=5, FN=0
+[2025-12-02 09:09:03,254 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.2451, chunk=0.4902, subject=0.5000)
+[2025-12-02 09:09:03,255 INFO early_stopping.__call__] Early stopping initialized: best score 0.4902 at epoch 1
+[2025-12-02 09:09:11,318 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 002/100 | Loss: 0.7036 | Acc: 0.4669 | Prec: 0.4669 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:09:11,895 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 002/100 | Loss: 0.6975 | Acc: 0.4902 | Prec: 0.4902 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:09:11,895 INFO main.train_one_fold]   Confusion: TP=150, TN=0, FP=156, FN=0
+[2025-12-02 09:09:11,895 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 002/100 | Loss: 0.6975 | Acc: 0.5000 | Prec: 0.5000 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:09:11,895 INFO main.train_one_fold]   Confusion: TP=5, TN=0, FP=5, FN=0
+[2025-12-02 09:09:20,088 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 003/100 | Loss: 0.6982 | Acc: 0.4715 | Prec: 0.4690 | Recall: 0.9984 | Spec: 0.0100
+[2025-12-02 09:09:20,764 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 003/100 | Loss: 0.6928 | Acc: 0.4902 | Prec: 0.4902 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:09:20,764 INFO main.train_one_fold]   Confusion: TP=150, TN=0, FP=156, FN=0
+[2025-12-02 09:09:20,764 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 003/100 | Loss: 0.6928 | Acc: 0.5000 | Prec: 0.5000 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:09:20,764 INFO main.train_one_fold]   Confusion: TP=5, TN=0, FP=5, FN=0
+[2025-12-02 09:09:34,158 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 004/100 | Loss: 0.6878 | Acc: 0.5490 | Prec: 0.5172 | Recall: 0.5130 | Spec: 0.5806
+[2025-12-02 09:09:35,103 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 004/100 | Loss: 0.6874 | Acc: 0.5098 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:09:35,103 INFO main.train_one_fold]   Confusion: TP=0, TN=156, FP=0, FN=150
+[2025-12-02 09:09:35,103 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 004/100 | Loss: 0.6874 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:09:35,103 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=5
+[2025-12-02 09:09:35,134 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.2549, chunk=0.5098, subject=0.5000)
+[2025-12-02 09:09:35,134 INFO early_stopping.__call__] Validation improved from 0.4902 to 0.5098 (+0.0196) at epoch 4
+[2025-12-02 09:09:44,472 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 005/100 | Loss: 0.6681 | Acc: 0.6418 | Prec: 0.6829 | Recall: 0.4349 | Spec: 0.8231
+[2025-12-02 09:09:45,499 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 005/100 | Loss: 0.6372 | Acc: 0.7549 | Prec: 1.0000 | Recall: 0.5000 | Spec: 1.0000
+[2025-12-02 09:09:45,499 INFO main.train_one_fold]   Confusion: TP=75, TN=156, FP=0, FN=75
+[2025-12-02 09:09:45,499 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 005/100 | Loss: 0.6372 | Acc: 0.8000 | Prec: 1.0000 | Recall: 0.6000 | Spec: 1.0000
+[2025-12-02 09:09:45,499 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=2
+[2025-12-02 09:09:45,531 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.6039, chunk=0.7549, subject=0.8000)
+[2025-12-02 09:09:45,531 INFO early_stopping.__call__] Validation improved from 0.5098 to 0.7549 (+0.2451) at epoch 5
+[2025-12-02 09:09:55,964 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 006/100 | Loss: 0.6133 | Acc: 0.7468 | Prec: 0.7666 | Recall: 0.6580 | Spec: 0.8245
+[2025-12-02 09:09:56,761 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 006/100 | Loss: 0.5403 | Acc: 0.8235 | Prec: 0.9444 | Recall: 0.6800 | Spec: 0.9615
+[2025-12-02 09:09:56,761 INFO main.train_one_fold]   Confusion: TP=102, TN=150, FP=6, FN=48
+[2025-12-02 09:09:56,762 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 006/100 | Loss: 0.5403 | Acc: 0.9000 | Prec: 1.0000 | Recall: 0.8000 | Spec: 1.0000
+[2025-12-02 09:09:56,762 INFO main.train_one_fold]   Confusion: TP=4, TN=5, FP=0, FN=1
+[2025-12-02 09:09:56,789 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.7412, chunk=0.8235, subject=0.9000)
+[2025-12-02 09:09:56,789 INFO early_stopping.__call__] Validation improved from 0.7549 to 0.8235 (+0.0686) at epoch 6
+[2025-12-02 09:10:09,199 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 007/100 | Loss: 0.5333 | Acc: 0.7939 | Prec: 0.8057 | Recall: 0.7362 | Spec: 0.8445
+[2025-12-02 09:10:10,444 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 007/100 | Loss: 0.5035 | Acc: 0.7712 | Prec: 0.8030 | Recall: 0.7067 | Spec: 0.8333
+[2025-12-02 09:10:10,444 INFO main.train_one_fold]   Confusion: TP=106, TN=130, FP=26, FN=44
+[2025-12-02 09:10:10,444 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 007/100 | Loss: 0.5035 | Acc: 0.8000 | Prec: 0.8000 | Recall: 0.8000 | Spec: 0.8000
+[2025-12-02 09:10:10,445 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=1
+[2025-12-02 09:10:26,942 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 008/100 | Loss: 0.4465 | Acc: 0.8350 | Prec: 0.7976 | Recall: 0.8664 | Spec: 0.8074
+[2025-12-02 09:10:28,083 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 008/100 | Loss: 0.5461 | Acc: 0.7647 | Prec: 0.7868 | Recall: 0.7133 | Spec: 0.8141
+[2025-12-02 09:10:28,084 INFO main.train_one_fold]   Confusion: TP=107, TN=127, FP=29, FN=43
+[2025-12-02 09:10:28,086 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 008/100 | Loss: 0.5461 | Acc: 0.8000 | Prec: 0.8000 | Recall: 0.8000 | Spec: 0.8000
+[2025-12-02 09:10:28,086 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=1
+[2025-12-02 09:10:43,421 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 009/100 | Loss: 0.4057 | Acc: 0.8380 | Prec: 0.7970 | Recall: 0.8762 | Spec: 0.8046
+[2025-12-02 09:10:44,739 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 009/100 | Loss: 0.4356 | Acc: 0.8301 | Prec: 0.7952 | Recall: 0.8800 | Spec: 0.7821
+[2025-12-02 09:10:44,739 INFO main.train_one_fold]   Confusion: TP=132, TN=122, FP=34, FN=18
+[2025-12-02 09:10:44,739 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 009/100 | Loss: 0.4356 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:10:44,739 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:10:44,779 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.7471, chunk=0.8301, subject=0.9000)
+[2025-12-02 09:10:44,779 INFO early_stopping.__call__] Validation improved from 0.8235 to 0.8301 (+0.0065) at epoch 9
+[2025-12-02 09:11:00,375 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 010/100 | Loss: 0.3669 | Acc: 0.8624 | Prec: 0.8179 | Recall: 0.9072 | Spec: 0.8231
+[2025-12-02 09:11:01,536 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 010/100 | Loss: 0.4741 | Acc: 0.8072 | Prec: 0.8013 | Recall: 0.8067 | Spec: 0.8077
+[2025-12-02 09:11:01,536 INFO main.train_one_fold]   Confusion: TP=121, TN=126, FP=30, FN=29
+[2025-12-02 09:11:01,536 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 010/100 | Loss: 0.4741 | Acc: 0.8000 | Prec: 0.8000 | Recall: 0.8000 | Spec: 0.8000
+[2025-12-02 09:11:01,536 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=1
+[2025-12-02 09:11:01,580 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_1_epoch_010.pth
+[2025-12-02 09:11:16,780 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 011/100 | Loss: 0.3591 | Acc: 0.8624 | Prec: 0.8124 | Recall: 0.9169 | Spec: 0.8146
+[2025-12-02 09:11:17,780 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 011/100 | Loss: 0.4513 | Acc: 0.8431 | Prec: 0.8148 | Recall: 0.8800 | Spec: 0.8077
+[2025-12-02 09:11:17,780 INFO main.train_one_fold]   Confusion: TP=132, TN=126, FP=30, FN=18
+[2025-12-02 09:11:17,780 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 011/100 | Loss: 0.4513 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:11:17,781 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:11:17,812 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.7588, chunk=0.8431, subject=0.9000)
+[2025-12-02 09:11:17,813 INFO early_stopping.__call__] Validation improved from 0.8301 to 0.8431 (+0.0131) at epoch 11
+[2025-12-02 09:11:30,970 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 012/100 | Loss: 0.3574 | Acc: 0.8677 | Prec: 0.8125 | Recall: 0.9316 | Spec: 0.8117
+[2025-12-02 09:11:32,191 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 012/100 | Loss: 0.4509 | Acc: 0.8497 | Prec: 0.8133 | Recall: 0.9000 | Spec: 0.8013
+[2025-12-02 09:11:32,194 INFO main.train_one_fold]   Confusion: TP=135, TN=125, FP=31, FN=15
+[2025-12-02 09:11:32,194 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 012/100 | Loss: 0.4509 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:11:32,194 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:11:32,248 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.7647, chunk=0.8497, subject=0.9000)
+[2025-12-02 09:11:32,248 INFO early_stopping.__call__] Validation improved from 0.8431 to 0.8497 (+0.0065) at epoch 12
+[2025-12-02 09:11:44,404 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 013/100 | Loss: 0.3567 | Acc: 0.8616 | Prec: 0.8068 | Recall: 0.9251 | Spec: 0.8060
+[2025-12-02 09:11:45,544 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 013/100 | Loss: 0.4390 | Acc: 0.8529 | Prec: 0.8144 | Recall: 0.9067 | Spec: 0.8013
+[2025-12-02 09:11:45,551 INFO main.train_one_fold]   Confusion: TP=136, TN=125, FP=31, FN=14
+[2025-12-02 09:11:45,552 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 013/100 | Loss: 0.4390 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:11:45,552 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:11:45,588 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.7676, chunk=0.8529, subject=0.9000)
+[2025-12-02 09:11:45,588 INFO early_stopping.__call__] Validation improved from 0.8497 to 0.8529 (+0.0033) at epoch 13
+[2025-12-02 09:11:59,572 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 014/100 | Loss: 0.3448 | Acc: 0.8692 | Prec: 0.8121 | Recall: 0.9365 | Spec: 0.8103
+[2025-12-02 09:12:00,802 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 014/100 | Loss: 0.4402 | Acc: 0.8464 | Prec: 0.8160 | Recall: 0.8867 | Spec: 0.8077
+[2025-12-02 09:12:00,802 INFO main.train_one_fold]   Confusion: TP=133, TN=126, FP=30, FN=17
+[2025-12-02 09:12:00,802 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 014/100 | Loss: 0.4402 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:12:00,802 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:12:14,913 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 015/100 | Loss: 0.3523 | Acc: 0.8692 | Prec: 0.8121 | Recall: 0.9365 | Spec: 0.8103
+[2025-12-02 09:12:15,900 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 015/100 | Loss: 0.4426 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:12:15,910 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:12:15,910 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 015/100 | Loss: 0.4426 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:12:15,910 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:12:28,445 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 016/100 | Loss: 0.3421 | Acc: 0.8745 | Prec: 0.8203 | Recall: 0.9365 | Spec: 0.8203
+[2025-12-02 09:12:29,548 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 016/100 | Loss: 0.4401 | Acc: 0.8464 | Prec: 0.8047 | Recall: 0.9067 | Spec: 0.7885
+[2025-12-02 09:12:29,557 INFO main.train_one_fold]   Confusion: TP=136, TN=123, FP=33, FN=14
+[2025-12-02 09:12:29,557 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 016/100 | Loss: 0.4401 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:12:29,557 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:12:43,206 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 017/100 | Loss: 0.3450 | Acc: 0.8715 | Prec: 0.8129 | Recall: 0.9414 | Spec: 0.8103
+[2025-12-02 09:12:44,247 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 017/100 | Loss: 0.4507 | Acc: 0.8497 | Prec: 0.8133 | Recall: 0.9000 | Spec: 0.8013
+[2025-12-02 09:12:44,248 INFO main.train_one_fold]   Confusion: TP=135, TN=125, FP=31, FN=15
+[2025-12-02 09:12:44,248 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 017/100 | Loss: 0.4507 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:12:44,248 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:12:59,690 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 018/100 | Loss: 0.3418 | Acc: 0.8738 | Prec: 0.8191 | Recall: 0.9365 | Spec: 0.8188
+[2025-12-02 09:13:00,760 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 018/100 | Loss: 0.4535 | Acc: 0.8529 | Prec: 0.8144 | Recall: 0.9067 | Spec: 0.8013
+[2025-12-02 09:13:00,760 INFO main.train_one_fold]   Confusion: TP=136, TN=125, FP=31, FN=14
+[2025-12-02 09:13:00,760 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 018/100 | Loss: 0.4535 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:13:00,760 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:13:16,432 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 019/100 | Loss: 0.3516 | Acc: 0.8700 | Prec: 0.8133 | Recall: 0.9365 | Spec: 0.8117
+[2025-12-02 09:13:17,505 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 019/100 | Loss: 0.4356 | Acc: 0.8464 | Prec: 0.8047 | Recall: 0.9067 | Spec: 0.7885
+[2025-12-02 09:13:17,505 INFO main.train_one_fold]   Confusion: TP=136, TN=123, FP=33, FN=14
+[2025-12-02 09:13:17,505 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 019/100 | Loss: 0.4356 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:13:17,505 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:13:33,022 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 020/100 | Loss: 0.3468 | Acc: 0.8662 | Prec: 0.8111 | Recall: 0.9300 | Spec: 0.8103
+[2025-12-02 09:13:34,314 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 020/100 | Loss: 0.4305 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:13:34,314 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:13:34,314 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 020/100 | Loss: 0.4305 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:13:34,314 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:13:34,334 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_1_epoch_020.pth
+[2025-12-02 09:13:49,470 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 021/100 | Loss: 0.3408 | Acc: 0.8730 | Prec: 0.8179 | Recall: 0.9365 | Spec: 0.8174
+[2025-12-02 09:13:50,680 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 021/100 | Loss: 0.4389 | Acc: 0.8529 | Prec: 0.8144 | Recall: 0.9067 | Spec: 0.8013
+[2025-12-02 09:13:50,680 INFO main.train_one_fold]   Confusion: TP=136, TN=125, FP=31, FN=14
+[2025-12-02 09:13:50,680 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 021/100 | Loss: 0.4389 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:13:50,680 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:14:07,101 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 022/100 | Loss: 0.3404 | Acc: 0.8753 | Prec: 0.8160 | Recall: 0.9463 | Spec: 0.8131
+[2025-12-02 09:14:08,174 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 022/100 | Loss: 0.4372 | Acc: 0.8562 | Prec: 0.8193 | Recall: 0.9067 | Spec: 0.8077
+[2025-12-02 09:14:08,174 INFO main.train_one_fold]   Confusion: TP=136, TN=126, FP=30, FN=14
+[2025-12-02 09:14:08,174 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 022/100 | Loss: 0.4372 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:14:08,174 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:14:08,206 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_1_best.pth (combined=0.7706, chunk=0.8562, subject=0.9000)
+[2025-12-02 09:14:08,207 INFO early_stopping.__call__] Validation improved from 0.8529 to 0.8562 (+0.0033) at epoch 22
+[2025-12-02 09:14:20,624 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 023/100 | Loss: 0.3371 | Acc: 0.8730 | Prec: 0.8188 | Recall: 0.9349 | Spec: 0.8188
+[2025-12-02 09:14:21,506 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 023/100 | Loss: 0.4413 | Acc: 0.8529 | Prec: 0.8144 | Recall: 0.9067 | Spec: 0.8013
+[2025-12-02 09:14:21,508 INFO main.train_one_fold]   Confusion: TP=136, TN=125, FP=31, FN=14
+[2025-12-02 09:14:21,508 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 023/100 | Loss: 0.4413 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:14:21,508 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:14:34,738 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 024/100 | Loss: 0.3376 | Acc: 0.8722 | Prec: 0.8177 | Recall: 0.9349 | Spec: 0.8174
+[2025-12-02 09:14:35,919 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 024/100 | Loss: 0.4332 | Acc: 0.8464 | Prec: 0.8047 | Recall: 0.9067 | Spec: 0.7885
+[2025-12-02 09:14:35,919 INFO main.train_one_fold]   Confusion: TP=136, TN=123, FP=33, FN=14
+[2025-12-02 09:14:35,919 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 024/100 | Loss: 0.4332 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:14:35,919 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:14:48,090 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 025/100 | Loss: 0.3363 | Acc: 0.8798 | Prec: 0.8211 | Recall: 0.9495 | Spec: 0.8188
+[2025-12-02 09:14:48,945 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 025/100 | Loss: 0.4389 | Acc: 0.8529 | Prec: 0.8144 | Recall: 0.9067 | Spec: 0.8013
+[2025-12-02 09:14:48,955 INFO main.train_one_fold]   Confusion: TP=136, TN=125, FP=31, FN=14
+[2025-12-02 09:14:48,956 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 025/100 | Loss: 0.4389 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:14:48,956 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:15:00,237 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 026/100 | Loss: 0.3326 | Acc: 0.8783 | Prec: 0.8188 | Recall: 0.9495 | Spec: 0.8160
+[2025-12-02 09:15:01,326 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 026/100 | Loss: 0.4306 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:15:01,328 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:15:01,328 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 026/100 | Loss: 0.4306 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:15:01,328 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:15:15,223 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 027/100 | Loss: 0.3365 | Acc: 0.8798 | Prec: 0.8295 | Recall: 0.9349 | Spec: 0.8317
+[2025-12-02 09:15:16,616 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 027/100 | Loss: 0.4291 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:15:16,628 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:15:16,628 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 027/100 | Loss: 0.4291 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:15:16,628 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:15:31,436 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 028/100 | Loss: 0.3266 | Acc: 0.8791 | Prec: 0.8236 | Recall: 0.9430 | Spec: 0.8231
+[2025-12-02 09:15:32,733 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 028/100 | Loss: 0.4308 | Acc: 0.8529 | Prec: 0.8144 | Recall: 0.9067 | Spec: 0.8013
+[2025-12-02 09:15:32,734 INFO main.train_one_fold]   Confusion: TP=136, TN=125, FP=31, FN=14
+[2025-12-02 09:15:32,734 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 028/100 | Loss: 0.4308 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:15:32,734 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:15:48,229 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 029/100 | Loss: 0.3270 | Acc: 0.8798 | Prec: 0.8211 | Recall: 0.9495 | Spec: 0.8188
+[2025-12-02 09:15:49,319 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 029/100 | Loss: 0.4405 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:15:49,329 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:15:49,329 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 029/100 | Loss: 0.4405 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:15:49,329 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:16:05,454 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 030/100 | Loss: 0.3213 | Acc: 0.8806 | Prec: 0.8223 | Recall: 0.9495 | Spec: 0.8203
+[2025-12-02 09:16:06,879 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 030/100 | Loss: 0.4539 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:16:06,879 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:16:06,879 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 030/100 | Loss: 0.4539 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:16:06,879 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:16:06,928 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_1_epoch_030.pth
+[2025-12-02 09:16:21,673 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 031/100 | Loss: 0.3315 | Acc: 0.8768 | Prec: 0.8201 | Recall: 0.9430 | Spec: 0.8188
+[2025-12-02 09:16:23,027 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 031/100 | Loss: 0.4539 | Acc: 0.8431 | Prec: 0.8000 | Recall: 0.9067 | Spec: 0.7821
+[2025-12-02 09:16:23,027 INFO main.train_one_fold]   Confusion: TP=136, TN=122, FP=34, FN=14
+[2025-12-02 09:16:23,028 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 031/100 | Loss: 0.4539 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:16:23,028 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:16:38,470 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 032/100 | Loss: 0.3308 | Acc: 0.8821 | Prec: 0.8219 | Recall: 0.9544 | Spec: 0.8188
+[2025-12-02 09:16:39,723 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 032/100 | Loss: 0.4499 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:16:39,724 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:16:39,724 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 032/100 | Loss: 0.4499 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:16:39,724 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:16:55,918 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 033/100 | Loss: 0.3217 | Acc: 0.8859 | Prec: 0.8277 | Recall: 0.9544 | Spec: 0.8260
+[2025-12-02 09:16:57,288 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 033/100 | Loss: 0.4380 | Acc: 0.8431 | Prec: 0.8000 | Recall: 0.9067 | Spec: 0.7821
+[2025-12-02 09:16:57,291 INFO main.train_one_fold]   Confusion: TP=136, TN=122, FP=34, FN=14
+[2025-12-02 09:16:57,291 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 033/100 | Loss: 0.4380 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:16:57,291 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:17:09,725 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 034/100 | Loss: 0.3290 | Acc: 0.8806 | Prec: 0.8232 | Recall: 0.9479 | Spec: 0.8217
+[2025-12-02 09:17:10,754 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 034/100 | Loss: 0.4560 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:17:10,760 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:17:10,761 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 034/100 | Loss: 0.4560 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:17:10,761 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:17:24,327 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 035/100 | Loss: 0.3199 | Acc: 0.8837 | Prec: 0.8251 | Recall: 0.9528 | Spec: 0.8231
+[2025-12-02 09:17:25,416 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 035/100 | Loss: 0.4620 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:17:25,416 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:17:25,420 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 035/100 | Loss: 0.4620 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:17:25,420 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:17:38,613 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 036/100 | Loss: 0.3254 | Acc: 0.8806 | Prec: 0.8241 | Recall: 0.9463 | Spec: 0.8231
+[2025-12-02 09:17:39,576 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 036/100 | Loss: 0.4606 | Acc: 0.8301 | Prec: 0.7816 | Recall: 0.9067 | Spec: 0.7564
+[2025-12-02 09:17:39,583 INFO main.train_one_fold]   Confusion: TP=136, TN=118, FP=38, FN=14
+[2025-12-02 09:17:39,583 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 036/100 | Loss: 0.4606 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:17:39,583 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:17:53,534 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 037/100 | Loss: 0.3261 | Acc: 0.8814 | Prec: 0.8225 | Recall: 0.9511 | Spec: 0.8203
+[2025-12-02 09:17:54,680 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 037/100 | Loss: 0.4559 | Acc: 0.8399 | Prec: 0.7953 | Recall: 0.9067 | Spec: 0.7756
+[2025-12-02 09:17:54,684 INFO main.train_one_fold]   Confusion: TP=136, TN=121, FP=35, FN=14
+[2025-12-02 09:17:54,684 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 037/100 | Loss: 0.4559 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:17:54,684 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:18:09,391 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 038/100 | Loss: 0.3238 | Acc: 0.8814 | Prec: 0.8198 | Recall: 0.9560 | Spec: 0.8160
+[2025-12-02 09:18:10,868 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 038/100 | Loss: 0.4492 | Acc: 0.8464 | Prec: 0.8121 | Recall: 0.8933 | Spec: 0.8013
+[2025-12-02 09:18:10,869 INFO main.train_one_fold]   Confusion: TP=134, TN=125, FP=31, FN=16
+[2025-12-02 09:18:10,869 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 038/100 | Loss: 0.4492 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:18:10,869 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:18:27,478 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 039/100 | Loss: 0.3273 | Acc: 0.8798 | Prec: 0.8248 | Recall: 0.9430 | Spec: 0.8245
+[2025-12-02 09:18:28,833 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 039/100 | Loss: 0.4505 | Acc: 0.8497 | Prec: 0.8095 | Recall: 0.9067 | Spec: 0.7949
+[2025-12-02 09:18:28,836 INFO main.train_one_fold]   Confusion: TP=136, TN=124, FP=32, FN=14
+[2025-12-02 09:18:28,836 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 039/100 | Loss: 0.4505 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:18:28,836 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:18:43,965 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 040/100 | Loss: 0.3176 | Acc: 0.8783 | Prec: 0.8206 | Recall: 0.9463 | Spec: 0.8188
+[2025-12-02 09:18:45,348 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 040/100 | Loss: 0.4563 | Acc: 0.8431 | Prec: 0.8000 | Recall: 0.9067 | Spec: 0.7821
+[2025-12-02 09:18:45,352 INFO main.train_one_fold]   Confusion: TP=136, TN=122, FP=34, FN=14
+[2025-12-02 09:18:45,352 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 040/100 | Loss: 0.4563 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:18:45,352 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:18:45,387 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_1_epoch_040.pth
+[2025-12-02 09:19:00,606 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 041/100 | Loss: 0.3189 | Acc: 0.8837 | Prec: 0.8242 | Recall: 0.9544 | Spec: 0.8217
+[2025-12-02 09:19:01,901 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 041/100 | Loss: 0.4733 | Acc: 0.8431 | Prec: 0.8072 | Recall: 0.8933 | Spec: 0.7949
+[2025-12-02 09:19:01,901 INFO main.train_one_fold]   Confusion: TP=134, TN=124, FP=32, FN=16
+[2025-12-02 09:19:01,901 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 041/100 | Loss: 0.4733 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:19:01,901 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:19:16,078 INFO main.train_one_fold] TRAIN CHUNK | Fold 1 | Epoch 042/100 | Loss: 0.3171 | Acc: 0.8859 | Prec: 0.8258 | Recall: 0.9577 | Spec: 0.8231
+[2025-12-02 09:19:17,438 INFO main.train_one_fold] EVAL CHUNK | Fold 1 | Epoch 042/100 | Loss: 0.4642 | Acc: 0.8464 | Prec: 0.8047 | Recall: 0.9067 | Spec: 0.7885
+[2025-12-02 09:19:17,450 INFO main.train_one_fold]   Confusion: TP=136, TN=123, FP=33, FN=14
+[2025-12-02 09:19:17,450 INFO main.train_one_fold] EVAL SUBJECT | Fold 1 | Epoch 042/100 | Loss: 0.4642 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:19:17,450 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:19:17,450 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8562 at epoch 22
+[2025-12-02 09:19:17,451 INFO main.train_one_fold] Early stopping triggered at epoch 42
+[2025-12-02 09:19:17,451 INFO main.train_one_fold] 
+Fold 1 training completed. Best Combined Val Acc: 0.7706 at epoch 22
+[2025-12-02 09:19:17,451 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:19:17,451 INFO main.train_cross_validation] FOLD 2/6
+[2025-12-02 09:19:17,451 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:19:17,452 INFO main.get_datasets_for_fold] Train subjects (44): ['mdd:H S2 EC', 'mdd:H S7 EC', 'mdd:H S19 EC', 'mdd:H S30 EC', 'mdd:H S1 EC', 'mdd:MDD S31 EC', 'mdd:MDD S22 EC', 'mdd:MDD S19 EC', 'mdd:MDD S25 EC', 'mdd:MDD S34 EC', 'mdd:H S25 EC', 'mdd:H S10 EC', 'mdd:H S14 EC', 'mdd:H S15 EC', 'mdd:H S11 EC', 'mdd:MDD S26 EC', 'mdd:MDD S20 EC', 'mdd:MDD S33 EC', 'mdd:MDD S18 EC', 'mdd:H S26 EC', 'mdd:H S5 EC', 'mdd:H S13 EC', 'mdd:H S8 EC', 'mdd:H S6 EC', 'mdd:MDD S5 EC', 'mdd:MDD S15 EC', 'mdd:MDD S13 EC', 'mdd:MDD S9 EC', 'mdd:H S28 EC', 'mdd:H S9 EC', 'mdd:H S3 EC', 'mdd:H S17 EC', 'mdd:MDD S30 EC', 'mdd:MDD S32 EC', 'mdd:MDD S27 EC', 'mdd:MDD S28 EC', 'mdd:H S20 EC', 'mdd:H S24 EC', 'mdd:H S29 EC', 'mdd:H S16 EC', 'mdd:MDD S21 EC', 'mdd:MDD S29 EC', 'mdd:MDD S6 EC', 'mdd:MDD S23 EC']...
+[2025-12-02 09:19:17,452 INFO main.get_datasets_for_fold] Val subjects (10): ['mdd:H S22 EC', 'mdd:H S27 EC', 'mdd:H S4 EC', 'mdd:H S21 EC', 'mdd:H S23 EC', 'mdd:MDD S17 EC', 'mdd:MDD S3 EC', 'mdd:MDD S1 EC', 'mdd:MDD S14 EC', 'mdd:MDD S10 EC']
+[2025-12-02 09:19:17,453 INFO main.get_datasets_for_fold] Training chunks: 1332
+[2025-12-02 09:19:17,453 INFO main.get_datasets_for_fold] Validation chunks: 289
+[2025-12-02 09:19:17,513 INFO model.__init__] Initialized LSTM with input_size=1728, hidden_size=100, batch_first=True
+[2025-12-02 09:19:17,529 INFO main.train_one_fold] Starting training for fold 2
+[2025-12-02 09:19:33,567 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 001/100 | Loss: 0.6943 | Acc: 0.4707 | Prec: 0.4664 | Recall: 0.8880 | Spec: 0.1018
+[2025-12-02 09:19:35,082 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 001/100 | Loss: 0.6928 | Acc: 0.4810 | Prec: 0.4810 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:19:35,082 INFO main.train_one_fold]   Confusion: TP=139, TN=0, FP=150, FN=0
+[2025-12-02 09:19:35,082 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 001/100 | Loss: 0.6928 | Acc: 0.5000 | Prec: 0.5000 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:19:35,082 INFO main.train_one_fold]   Confusion: TP=5, TN=0, FP=5, FN=0
+[2025-12-02 09:19:35,131 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_2_best.pth (combined=0.2405, chunk=0.4810, subject=0.5000)
+[2025-12-02 09:19:35,131 INFO early_stopping.__call__] Early stopping initialized: best score 0.4810 at epoch 1
+[2025-12-02 09:19:50,259 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 002/100 | Loss: 0.6922 | Acc: 0.5383 | Prec: 0.5084 | Recall: 0.4848 | Spec: 0.5856
+[2025-12-02 09:19:51,205 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 002/100 | Loss: 0.6910 | Acc: 0.5190 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:19:51,216 INFO main.train_one_fold]   Confusion: TP=0, TN=150, FP=0, FN=139
+[2025-12-02 09:19:51,216 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 002/100 | Loss: 0.6910 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:19:51,216 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=5
+[2025-12-02 09:19:51,272 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_2_best.pth (combined=0.2595, chunk=0.5190, subject=0.5000)
+[2025-12-02 09:19:51,272 INFO early_stopping.__call__] Validation improved from 0.4810 to 0.5190 (+0.0381) at epoch 2
+[2025-12-02 09:20:07,699 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 003/100 | Loss: 0.6899 | Acc: 0.5435 | Prec: 0.6308 | Recall: 0.0656 | Spec: 0.9661
+[2025-12-02 09:20:09,103 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 003/100 | Loss: 0.6872 | Acc: 0.5190 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:20:09,104 INFO main.train_one_fold]   Confusion: TP=0, TN=150, FP=0, FN=139
+[2025-12-02 09:20:09,104 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 003/100 | Loss: 0.6872 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:20:09,104 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=5
+[2025-12-02 09:20:21,987 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 004/100 | Loss: 0.6861 | Acc: 0.5345 | Prec: 0.6923 | Recall: 0.0144 | Spec: 0.9943
+[2025-12-02 09:20:23,249 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 004/100 | Loss: 0.6742 | Acc: 0.5190 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:20:23,249 INFO main.train_one_fold]   Confusion: TP=0, TN=150, FP=0, FN=139
+[2025-12-02 09:20:23,249 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 004/100 | Loss: 0.6742 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:20:23,249 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=5
+[2025-12-02 09:20:36,570 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 005/100 | Loss: 0.6731 | Acc: 0.5713 | Prec: 0.7872 | Recall: 0.1184 | Spec: 0.9717
+[2025-12-02 09:20:37,808 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 005/100 | Loss: 0.6197 | Acc: 0.5744 | Prec: 1.0000 | Recall: 0.1151 | Spec: 1.0000
+[2025-12-02 09:20:37,809 INFO main.train_one_fold]   Confusion: TP=16, TN=150, FP=0, FN=123
+[2025-12-02 09:20:37,809 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 005/100 | Loss: 0.6197 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:20:37,809 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=5
+[2025-12-02 09:20:37,856 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_2_best.pth (combined=0.2872, chunk=0.5744, subject=0.5000)
+[2025-12-02 09:20:37,856 INFO early_stopping.__call__] Validation improved from 0.5190 to 0.5744 (+0.0554) at epoch 5
+[2025-12-02 09:20:51,470 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 006/100 | Loss: 0.6321 | Acc: 0.6532 | Prec: 0.8382 | Recall: 0.3232 | Spec: 0.9448
+[2025-12-02 09:20:52,255 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 006/100 | Loss: 0.4817 | Acc: 0.9031 | Prec: 0.8881 | Recall: 0.9137 | Spec: 0.8933
+[2025-12-02 09:20:52,267 INFO main.train_one_fold]   Confusion: TP=127, TN=134, FP=16, FN=12
+[2025-12-02 09:20:52,267 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 006/100 | Loss: 0.4817 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:20:52,267 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:20:52,309 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_2_best.pth (combined=0.8128, chunk=0.9031, subject=0.9000)
+[2025-12-02 09:20:52,309 INFO early_stopping.__call__] Validation improved from 0.5744 to 0.9031 (+0.3287) at epoch 6
+[2025-12-02 09:21:06,456 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 007/100 | Loss: 0.5556 | Acc: 0.7650 | Prec: 0.8319 | Recall: 0.6256 | Spec: 0.8883
+[2025-12-02 09:21:07,762 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 007/100 | Loss: 0.3795 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:21:07,775 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:21:07,775 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 007/100 | Loss: 0.3795 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:21:07,775 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:21:22,180 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 008/100 | Loss: 0.4750 | Acc: 0.8221 | Prec: 0.8031 | Recall: 0.8224 | Spec: 0.8218
+[2025-12-02 09:21:23,522 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 008/100 | Loss: 0.3170 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:21:23,522 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:21:23,522 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 008/100 | Loss: 0.3170 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:21:23,523 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:21:38,679 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 009/100 | Loss: 0.4170 | Acc: 0.8423 | Prec: 0.8003 | Recall: 0.8848 | Spec: 0.8048
+[2025-12-02 09:21:39,744 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 009/100 | Loss: 0.2819 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:21:39,754 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:21:39,754 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 009/100 | Loss: 0.2819 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:21:39,754 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:21:56,375 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 010/100 | Loss: 0.3998 | Acc: 0.8506 | Prec: 0.8078 | Recall: 0.8944 | Spec: 0.8119
+[2025-12-02 09:21:58,045 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 010/100 | Loss: 0.2762 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:21:58,045 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:21:58,046 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 010/100 | Loss: 0.2762 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:21:58,046 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:21:58,087 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_2_epoch_010.pth
+[2025-12-02 09:22:13,742 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 011/100 | Loss: 0.3899 | Acc: 0.8551 | Prec: 0.8034 | Recall: 0.9152 | Spec: 0.8020
+[2025-12-02 09:22:15,112 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 011/100 | Loss: 0.2763 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:22:15,112 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:22:15,112 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 011/100 | Loss: 0.2763 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:22:15,112 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:22:30,599 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 012/100 | Loss: 0.3860 | Acc: 0.8589 | Prec: 0.8117 | Recall: 0.9104 | Spec: 0.8133
+[2025-12-02 09:22:31,866 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 012/100 | Loss: 0.2759 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:22:31,866 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:22:31,866 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 012/100 | Loss: 0.2759 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:22:31,866 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:22:46,924 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 013/100 | Loss: 0.3810 | Acc: 0.8604 | Prec: 0.8053 | Recall: 0.9264 | Spec: 0.8020
+[2025-12-02 09:22:47,756 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 013/100 | Loss: 0.2767 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:22:47,756 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:22:47,756 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 013/100 | Loss: 0.2767 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:22:47,756 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:23:03,942 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 014/100 | Loss: 0.3768 | Acc: 0.8596 | Prec: 0.8156 | Recall: 0.9056 | Spec: 0.8190
+[2025-12-02 09:23:05,326 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 014/100 | Loss: 0.2792 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:23:05,326 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:23:05,326 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 014/100 | Loss: 0.2792 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:23:05,326 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:23:18,264 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 015/100 | Loss: 0.3733 | Acc: 0.8649 | Prec: 0.8174 | Recall: 0.9168 | Spec: 0.8190
+[2025-12-02 09:23:19,211 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 015/100 | Loss: 0.2772 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:23:19,211 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:23:19,211 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 015/100 | Loss: 0.2772 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:23:19,212 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:23:32,472 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 016/100 | Loss: 0.3856 | Acc: 0.8634 | Prec: 0.8178 | Recall: 0.9120 | Spec: 0.8204
+[2025-12-02 09:23:33,481 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 016/100 | Loss: 0.2773 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:23:33,492 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:23:33,493 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 016/100 | Loss: 0.2773 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:23:33,493 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:23:46,275 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 017/100 | Loss: 0.3747 | Acc: 0.8656 | Prec: 0.8141 | Recall: 0.9248 | Spec: 0.8133
+[2025-12-02 09:23:47,589 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 017/100 | Loss: 0.2780 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:23:47,596 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:23:47,596 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 017/100 | Loss: 0.2780 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:23:47,596 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:24:00,030 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 018/100 | Loss: 0.3734 | Acc: 0.8634 | Prec: 0.8215 | Recall: 0.9056 | Spec: 0.8260
+[2025-12-02 09:24:00,964 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 018/100 | Loss: 0.2770 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:24:00,972 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:24:00,972 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 018/100 | Loss: 0.2770 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:24:00,972 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:24:14,520 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 019/100 | Loss: 0.3733 | Acc: 0.8679 | Prec: 0.8158 | Recall: 0.9280 | Spec: 0.8147
+[2025-12-02 09:24:15,743 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 019/100 | Loss: 0.2783 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:24:15,756 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:24:15,756 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 019/100 | Loss: 0.2783 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:24:15,756 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:24:33,498 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 020/100 | Loss: 0.3708 | Acc: 0.8694 | Prec: 0.8235 | Recall: 0.9184 | Spec: 0.8260
+[2025-12-02 09:24:34,929 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 020/100 | Loss: 0.2794 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:24:34,942 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:24:34,943 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 020/100 | Loss: 0.2794 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:24:34,943 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:24:34,964 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_2_epoch_020.pth
+[2025-12-02 09:24:51,788 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 021/100 | Loss: 0.3756 | Acc: 0.8649 | Prec: 0.8129 | Recall: 0.9248 | Spec: 0.8119
+[2025-12-02 09:24:52,989 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 021/100 | Loss: 0.2790 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:24:52,989 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:24:52,989 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 021/100 | Loss: 0.2790 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:24:52,989 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:25:09,359 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 022/100 | Loss: 0.3790 | Acc: 0.8694 | Prec: 0.8245 | Recall: 0.9168 | Spec: 0.8274
+[2025-12-02 09:25:10,469 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 022/100 | Loss: 0.2791 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:25:10,469 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:25:10,470 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 022/100 | Loss: 0.2791 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:25:10,470 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:25:25,828 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 023/100 | Loss: 0.3661 | Acc: 0.8716 | Prec: 0.8234 | Recall: 0.9248 | Spec: 0.8246
+[2025-12-02 09:25:27,001 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 023/100 | Loss: 0.2804 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:25:27,004 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:25:27,004 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 023/100 | Loss: 0.2804 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:25:27,004 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:25:42,608 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 024/100 | Loss: 0.3689 | Acc: 0.8686 | Prec: 0.8205 | Recall: 0.9216 | Spec: 0.8218
+[2025-12-02 09:25:43,896 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 024/100 | Loss: 0.2790 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:25:43,896 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:25:43,896 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 024/100 | Loss: 0.2790 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:25:43,896 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:25:59,616 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 025/100 | Loss: 0.3718 | Acc: 0.8686 | Prec: 0.8160 | Recall: 0.9296 | Spec: 0.8147
+[2025-12-02 09:26:00,646 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 025/100 | Loss: 0.2793 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:26:00,646 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:26:00,646 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 025/100 | Loss: 0.2793 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:26:00,647 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:26:13,404 INFO main.train_one_fold] TRAIN CHUNK | Fold 2 | Epoch 026/100 | Loss: 0.3778 | Acc: 0.8694 | Prec: 0.8235 | Recall: 0.9184 | Spec: 0.8260
+[2025-12-02 09:26:14,280 INFO main.train_one_fold] EVAL CHUNK | Fold 2 | Epoch 026/100 | Loss: 0.2795 | Acc: 0.8962 | Prec: 0.8225 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:26:14,280 INFO main.train_one_fold]   Confusion: TP=139, TN=120, FP=30, FN=0
+[2025-12-02 09:26:14,280 INFO main.train_one_fold] EVAL SUBJECT | Fold 2 | Epoch 026/100 | Loss: 0.2795 | Acc: 0.9000 | Prec: 0.8333 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:26:14,280 INFO main.train_one_fold]   Confusion: TP=5, TN=4, FP=1, FN=0
+[2025-12-02 09:26:14,280 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.9031 at epoch 6
+[2025-12-02 09:26:14,280 INFO main.train_one_fold] Early stopping triggered at epoch 26
+[2025-12-02 09:26:14,281 INFO main.train_one_fold] 
+Fold 2 training completed. Best Combined Val Acc: 0.8128 at epoch 6
+[2025-12-02 09:26:14,281 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:26:14,281 INFO main.train_cross_validation] FOLD 3/6
+[2025-12-02 09:26:14,281 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:26:14,281 INFO main.get_datasets_for_fold] Train subjects (45): ['mdd:H S2 EC', 'mdd:H S7 EC', 'mdd:H S19 EC', 'mdd:H S30 EC', 'mdd:H S1 EC', 'mdd:MDD S31 EC', 'mdd:MDD S22 EC', 'mdd:MDD S19 EC', 'mdd:MDD S25 EC', 'mdd:MDD S34 EC', 'mdd:H S22 EC', 'mdd:H S27 EC', 'mdd:H S4 EC', 'mdd:H S21 EC', 'mdd:H S23 EC', 'mdd:MDD S17 EC', 'mdd:MDD S3 EC', 'mdd:MDD S1 EC', 'mdd:MDD S14 EC', 'mdd:MDD S10 EC', 'mdd:H S26 EC', 'mdd:H S5 EC', 'mdd:H S13 EC', 'mdd:H S8 EC', 'mdd:H S6 EC', 'mdd:MDD S5 EC', 'mdd:MDD S15 EC', 'mdd:MDD S13 EC', 'mdd:MDD S9 EC', 'mdd:H S28 EC', 'mdd:H S9 EC', 'mdd:H S3 EC', 'mdd:H S17 EC', 'mdd:MDD S30 EC', 'mdd:MDD S32 EC', 'mdd:MDD S27 EC', 'mdd:MDD S28 EC', 'mdd:H S20 EC', 'mdd:H S24 EC', 'mdd:H S29 EC', 'mdd:H S16 EC', 'mdd:MDD S21 EC', 'mdd:MDD S29 EC', 'mdd:MDD S6 EC', 'mdd:MDD S23 EC']...
+[2025-12-02 09:26:14,281 INFO main.get_datasets_for_fold] Val subjects (9): ['mdd:H S25 EC', 'mdd:H S10 EC', 'mdd:H S14 EC', 'mdd:H S15 EC', 'mdd:H S11 EC', 'mdd:MDD S26 EC', 'mdd:MDD S20 EC', 'mdd:MDD S33 EC', 'mdd:MDD S18 EC']
+[2025-12-02 09:26:14,282 INFO main.get_datasets_for_fold] Training chunks: 1343
+[2025-12-02 09:26:14,282 INFO main.get_datasets_for_fold] Validation chunks: 278
+[2025-12-02 09:26:14,351 INFO model.__init__] Initialized LSTM with input_size=1728, hidden_size=100, batch_first=True
+[2025-12-02 09:26:14,360 INFO main.train_one_fold] Starting training for fold 3
+[2025-12-02 09:26:26,872 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 001/100 | Loss: 0.6935 | Acc: 0.5205 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:27,753 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 001/100 | Loss: 0.6838 | Acc: 0.5683 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:27,753 INFO main.train_one_fold]   Confusion: TP=0, TN=158, FP=0, FN=120
+[2025-12-02 09:26:27,753 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 001/100 | Loss: 0.6838 | Acc: 0.5556 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:27,753 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=4
+[2025-12-02 09:26:27,771 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_3_best.pth (combined=0.3157, chunk=0.5683, subject=0.5556)
+[2025-12-02 09:26:27,771 INFO early_stopping.__call__] Early stopping initialized: best score 0.5683 at epoch 1
+[2025-12-02 09:26:40,368 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 002/100 | Loss: 0.6925 | Acc: 0.5205 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:41,499 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 002/100 | Loss: 0.6823 | Acc: 0.5683 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:41,500 INFO main.train_one_fold]   Confusion: TP=0, TN=158, FP=0, FN=120
+[2025-12-02 09:26:41,500 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 002/100 | Loss: 0.6823 | Acc: 0.5556 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:41,500 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=4
+[2025-12-02 09:26:54,023 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 003/100 | Loss: 0.6894 | Acc: 0.5205 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:55,005 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 003/100 | Loss: 0.6766 | Acc: 0.5683 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:55,005 INFO main.train_one_fold]   Confusion: TP=0, TN=158, FP=0, FN=120
+[2025-12-02 09:26:55,005 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 003/100 | Loss: 0.6766 | Acc: 0.5556 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:26:55,005 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=4
+[2025-12-02 09:27:06,577 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 004/100 | Loss: 0.6807 | Acc: 0.5450 | Prec: 0.8511 | Recall: 0.0621 | Spec: 0.9900
+[2025-12-02 09:27:07,670 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 004/100 | Loss: 0.6458 | Acc: 0.9101 | Prec: 0.9897 | Recall: 0.8000 | Spec: 0.9937
+[2025-12-02 09:27:07,670 INFO main.train_one_fold]   Confusion: TP=96, TN=157, FP=1, FN=24
+[2025-12-02 09:27:07,671 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 004/100 | Loss: 0.6458 | Acc: 1.0000 | Prec: 1.0000 | Recall: 1.0000 | Spec: 1.0000
+[2025-12-02 09:27:07,671 INFO main.train_one_fold]   Confusion: TP=4, TN=5, FP=0, FN=0
+[2025-12-02 09:27:07,705 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_3_best.pth (combined=0.9101, chunk=0.9101, subject=1.0000)
+[2025-12-02 09:27:07,705 INFO early_stopping.__call__] Validation improved from 0.5683 to 0.9101 (+0.3417) at epoch 4
+[2025-12-02 09:27:20,790 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 005/100 | Loss: 0.6496 | Acc: 0.6694 | Prec: 0.7907 | Recall: 0.4224 | Spec: 0.8970
+[2025-12-02 09:27:21,725 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 005/100 | Loss: 0.5397 | Acc: 0.8669 | Prec: 0.7943 | Recall: 0.9333 | Spec: 0.8165
+[2025-12-02 09:27:21,725 INFO main.train_one_fold]   Confusion: TP=112, TN=129, FP=29, FN=8
+[2025-12-02 09:27:21,725 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 005/100 | Loss: 0.5397 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:27:21,725 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:27:34,055 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 006/100 | Loss: 0.5761 | Acc: 0.7833 | Prec: 0.7788 | Recall: 0.7655 | Spec: 0.7997
+[2025-12-02 09:27:34,902 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 006/100 | Loss: 0.4074 | Acc: 0.8777 | Prec: 0.7945 | Recall: 0.9667 | Spec: 0.8101
+[2025-12-02 09:27:34,903 INFO main.train_one_fold]   Confusion: TP=116, TN=128, FP=30, FN=4
+[2025-12-02 09:27:34,903 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 006/100 | Loss: 0.4074 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:27:34,903 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:27:46,859 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 007/100 | Loss: 0.4859 | Acc: 0.8191 | Prec: 0.7893 | Recall: 0.8494 | Spec: 0.7911
+[2025-12-02 09:27:47,525 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 007/100 | Loss: 0.3266 | Acc: 0.8741 | Prec: 0.7972 | Recall: 0.9500 | Spec: 0.8165
+[2025-12-02 09:27:47,526 INFO main.train_one_fold]   Confusion: TP=114, TN=129, FP=29, FN=6
+[2025-12-02 09:27:47,526 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 007/100 | Loss: 0.3266 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:27:47,526 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:28:01,026 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 008/100 | Loss: 0.4240 | Acc: 0.8459 | Prec: 0.8073 | Recall: 0.8913 | Spec: 0.8040
+[2025-12-02 09:28:01,778 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 008/100 | Loss: 0.3209 | Acc: 0.8813 | Prec: 0.7959 | Recall: 0.9750 | Spec: 0.8101
+[2025-12-02 09:28:01,778 INFO main.train_one_fold]   Confusion: TP=117, TN=128, FP=30, FN=3
+[2025-12-02 09:28:01,778 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 008/100 | Loss: 0.3209 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:28:01,778 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:28:14,425 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 009/100 | Loss: 0.4004 | Acc: 0.8503 | Prec: 0.8089 | Recall: 0.9006 | Spec: 0.8040
+[2025-12-02 09:28:15,370 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 009/100 | Loss: 0.3165 | Acc: 0.8849 | Prec: 0.7933 | Recall: 0.9917 | Spec: 0.8038
+[2025-12-02 09:28:15,370 INFO main.train_one_fold]   Confusion: TP=119, TN=127, FP=31, FN=1
+[2025-12-02 09:28:15,370 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 009/100 | Loss: 0.3165 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:28:15,370 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:28:29,706 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 010/100 | Loss: 0.3989 | Acc: 0.8600 | Prec: 0.8193 | Recall: 0.9084 | Spec: 0.8155
+[2025-12-02 09:28:30,542 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 010/100 | Loss: 0.3035 | Acc: 0.8849 | Prec: 0.7973 | Recall: 0.9833 | Spec: 0.8101
+[2025-12-02 09:28:30,543 INFO main.train_one_fold]   Confusion: TP=118, TN=128, FP=30, FN=2
+[2025-12-02 09:28:30,543 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 010/100 | Loss: 0.3035 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:28:30,543 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:28:30,558 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_3_epoch_010.pth
+[2025-12-02 09:28:44,238 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 011/100 | Loss: 0.3867 | Acc: 0.8563 | Prec: 0.8119 | Recall: 0.9115 | Spec: 0.8054
+[2025-12-02 09:28:45,358 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 011/100 | Loss: 0.3054 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:28:45,359 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:28:45,359 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 011/100 | Loss: 0.3054 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:28:45,359 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:28:58,459 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 012/100 | Loss: 0.3776 | Acc: 0.8652 | Prec: 0.8256 | Recall: 0.9115 | Spec: 0.8226
+[2025-12-02 09:28:59,334 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 012/100 | Loss: 0.3027 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:28:59,334 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:28:59,334 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 012/100 | Loss: 0.3027 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:28:59,334 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:29:11,573 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 013/100 | Loss: 0.3771 | Acc: 0.8652 | Prec: 0.8220 | Recall: 0.9177 | Spec: 0.8169
+[2025-12-02 09:29:12,615 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 013/100 | Loss: 0.3025 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:29:12,615 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:29:12,615 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 013/100 | Loss: 0.3025 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:29:12,615 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:29:25,461 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 014/100 | Loss: 0.3748 | Acc: 0.8682 | Prec: 0.8203 | Recall: 0.9286 | Spec: 0.8126
+[2025-12-02 09:29:26,678 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 014/100 | Loss: 0.2968 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:29:26,681 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:29:26,681 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 014/100 | Loss: 0.2968 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:29:26,681 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:29:45,922 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 015/100 | Loss: 0.3716 | Acc: 0.8712 | Prec: 0.8312 | Recall: 0.9177 | Spec: 0.8283
+[2025-12-02 09:29:47,654 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 015/100 | Loss: 0.2959 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:29:47,654 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:29:47,654 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 015/100 | Loss: 0.2959 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:29:47,655 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:30:05,575 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 016/100 | Loss: 0.3715 | Acc: 0.8690 | Prec: 0.8250 | Recall: 0.9224 | Spec: 0.8197
+[2025-12-02 09:30:06,718 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 016/100 | Loss: 0.2947 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:30:06,718 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:30:06,718 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 016/100 | Loss: 0.2947 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:30:06,718 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:30:22,129 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 017/100 | Loss: 0.3720 | Acc: 0.8727 | Prec: 0.8280 | Recall: 0.9270 | Spec: 0.8226
+[2025-12-02 09:30:23,509 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 017/100 | Loss: 0.2937 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:30:23,509 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:30:23,509 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 017/100 | Loss: 0.2937 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:30:23,510 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:30:38,307 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 018/100 | Loss: 0.3648 | Acc: 0.8719 | Prec: 0.8278 | Recall: 0.9255 | Spec: 0.8226
+[2025-12-02 09:30:39,539 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 018/100 | Loss: 0.2933 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:30:39,539 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:30:39,539 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 018/100 | Loss: 0.2933 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:30:39,539 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:30:54,748 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 019/100 | Loss: 0.3687 | Acc: 0.8719 | Prec: 0.8251 | Recall: 0.9301 | Spec: 0.8183
+[2025-12-02 09:30:55,766 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 019/100 | Loss: 0.2923 | Acc: 0.8849 | Prec: 0.7933 | Recall: 0.9917 | Spec: 0.8038
+[2025-12-02 09:30:55,767 INFO main.train_one_fold]   Confusion: TP=119, TN=127, FP=31, FN=1
+[2025-12-02 09:30:55,767 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 019/100 | Loss: 0.2923 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:30:55,767 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:31:09,076 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 020/100 | Loss: 0.3618 | Acc: 0.8727 | Prec: 0.8289 | Recall: 0.9255 | Spec: 0.8240
+[2025-12-02 09:31:09,651 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 020/100 | Loss: 0.2930 | Acc: 0.8849 | Prec: 0.7933 | Recall: 0.9917 | Spec: 0.8038
+[2025-12-02 09:31:09,651 INFO main.train_one_fold]   Confusion: TP=119, TN=127, FP=31, FN=1
+[2025-12-02 09:31:09,651 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 020/100 | Loss: 0.2930 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:31:09,651 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:31:09,666 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_3_epoch_020.pth
+[2025-12-02 09:31:23,206 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 021/100 | Loss: 0.3705 | Acc: 0.8727 | Prec: 0.8298 | Recall: 0.9239 | Spec: 0.8255
+[2025-12-02 09:31:24,697 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 021/100 | Loss: 0.2922 | Acc: 0.8885 | Prec: 0.7987 | Recall: 0.9917 | Spec: 0.8101
+[2025-12-02 09:31:24,697 INFO main.train_one_fold]   Confusion: TP=119, TN=128, FP=30, FN=1
+[2025-12-02 09:31:24,697 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 021/100 | Loss: 0.2922 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:31:24,697 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:31:39,941 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 022/100 | Loss: 0.3637 | Acc: 0.8704 | Prec: 0.8255 | Recall: 0.9255 | Spec: 0.8197
+[2025-12-02 09:31:40,993 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 022/100 | Loss: 0.2955 | Acc: 0.8849 | Prec: 0.7933 | Recall: 0.9917 | Spec: 0.8038
+[2025-12-02 09:31:40,994 INFO main.train_one_fold]   Confusion: TP=119, TN=127, FP=31, FN=1
+[2025-12-02 09:31:40,994 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 022/100 | Loss: 0.2955 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:31:40,994 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:31:55,068 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 023/100 | Loss: 0.3684 | Acc: 0.8697 | Prec: 0.8280 | Recall: 0.9193 | Spec: 0.8240
+[2025-12-02 09:31:55,660 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 023/100 | Loss: 0.2922 | Acc: 0.8849 | Prec: 0.7933 | Recall: 0.9917 | Spec: 0.8038
+[2025-12-02 09:31:55,660 INFO main.train_one_fold]   Confusion: TP=119, TN=127, FP=31, FN=1
+[2025-12-02 09:31:55,660 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 023/100 | Loss: 0.2922 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:31:55,660 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:32:10,924 INFO main.train_one_fold] TRAIN CHUNK | Fold 3 | Epoch 024/100 | Loss: 0.3654 | Acc: 0.8749 | Prec: 0.8296 | Recall: 0.9301 | Spec: 0.8240
+[2025-12-02 09:32:12,568 INFO main.train_one_fold] EVAL CHUNK | Fold 3 | Epoch 024/100 | Loss: 0.2967 | Acc: 0.8849 | Prec: 0.7933 | Recall: 0.9917 | Spec: 0.8038
+[2025-12-02 09:32:12,569 INFO main.train_one_fold]   Confusion: TP=119, TN=127, FP=31, FN=1
+[2025-12-02 09:32:12,569 INFO main.train_one_fold] EVAL SUBJECT | Fold 3 | Epoch 024/100 | Loss: 0.2967 | Acc: 0.8889 | Prec: 0.8000 | Recall: 1.0000 | Spec: 0.8000
+[2025-12-02 09:32:12,569 INFO main.train_one_fold]   Confusion: TP=4, TN=4, FP=1, FN=0
+[2025-12-02 09:32:12,569 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.9101 at epoch 4
+[2025-12-02 09:32:12,569 INFO main.train_one_fold] Early stopping triggered at epoch 24
+[2025-12-02 09:32:12,569 INFO main.train_one_fold] 
+Fold 3 training completed. Best Combined Val Acc: 0.9101 at epoch 4
+[2025-12-02 09:32:12,569 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:32:12,569 INFO main.train_cross_validation] FOLD 4/6
+[2025-12-02 09:32:12,569 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:32:12,570 INFO main.get_datasets_for_fold] Train subjects (45): ['mdd:H S2 EC', 'mdd:H S7 EC', 'mdd:H S19 EC', 'mdd:H S30 EC', 'mdd:H S1 EC', 'mdd:MDD S31 EC', 'mdd:MDD S22 EC', 'mdd:MDD S19 EC', 'mdd:MDD S25 EC', 'mdd:MDD S34 EC', 'mdd:H S22 EC', 'mdd:H S27 EC', 'mdd:H S4 EC', 'mdd:H S21 EC', 'mdd:H S23 EC', 'mdd:MDD S17 EC', 'mdd:MDD S3 EC', 'mdd:MDD S1 EC', 'mdd:MDD S14 EC', 'mdd:MDD S10 EC', 'mdd:H S25 EC', 'mdd:H S10 EC', 'mdd:H S14 EC', 'mdd:H S15 EC', 'mdd:H S11 EC', 'mdd:MDD S26 EC', 'mdd:MDD S20 EC', 'mdd:MDD S33 EC', 'mdd:MDD S18 EC', 'mdd:H S28 EC', 'mdd:H S9 EC', 'mdd:H S3 EC', 'mdd:H S17 EC', 'mdd:MDD S30 EC', 'mdd:MDD S32 EC', 'mdd:MDD S27 EC', 'mdd:MDD S28 EC', 'mdd:H S20 EC', 'mdd:H S24 EC', 'mdd:H S29 EC', 'mdd:H S16 EC', 'mdd:MDD S21 EC', 'mdd:MDD S29 EC', 'mdd:MDD S6 EC', 'mdd:MDD S23 EC']...
+[2025-12-02 09:32:12,570 INFO main.get_datasets_for_fold] Val subjects (9): ['mdd:H S26 EC', 'mdd:H S5 EC', 'mdd:H S13 EC', 'mdd:H S8 EC', 'mdd:H S6 EC', 'mdd:MDD S5 EC', 'mdd:MDD S15 EC', 'mdd:MDD S13 EC', 'mdd:MDD S9 EC']
+[2025-12-02 09:32:12,570 INFO main.get_datasets_for_fold] Training chunks: 1350
+[2025-12-02 09:32:12,571 INFO main.get_datasets_for_fold] Validation chunks: 271
+[2025-12-02 09:32:12,631 INFO model.__init__] Initialized LSTM with input_size=1728, hidden_size=100, batch_first=True
+[2025-12-02 09:32:12,633 INFO main.train_one_fold] Starting training for fold 4
+[2025-12-02 09:32:27,814 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 001/100 | Loss: 0.6997 | Acc: 0.4770 | Prec: 0.4770 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:32:28,888 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 001/100 | Loss: 0.7018 | Acc: 0.4428 | Prec: 0.4428 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:32:28,889 INFO main.train_one_fold]   Confusion: TP=120, TN=0, FP=151, FN=0
+[2025-12-02 09:32:28,889 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 001/100 | Loss: 0.7018 | Acc: 0.4444 | Prec: 0.4444 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:32:28,889 INFO main.train_one_fold]   Confusion: TP=4, TN=0, FP=5, FN=0
+[2025-12-02 09:32:28,904 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_4_best.pth (combined=0.1968, chunk=0.4428, subject=0.4444)
+[2025-12-02 09:32:28,904 INFO early_stopping.__call__] Early stopping initialized: best score 0.4428 at epoch 1
+[2025-12-02 09:32:42,502 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 002/100 | Loss: 0.6970 | Acc: 0.4770 | Prec: 0.4770 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:32:43,789 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 002/100 | Loss: 0.6969 | Acc: 0.4428 | Prec: 0.4428 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:32:43,789 INFO main.train_one_fold]   Confusion: TP=120, TN=0, FP=151, FN=0
+[2025-12-02 09:32:43,789 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 002/100 | Loss: 0.6969 | Acc: 0.4444 | Prec: 0.4444 | Recall: 1.0000 | Spec: 0.0000
+[2025-12-02 09:32:43,789 INFO main.train_one_fold]   Confusion: TP=4, TN=0, FP=5, FN=0
+[2025-12-02 09:32:59,641 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 003/100 | Loss: 0.6931 | Acc: 0.4956 | Prec: 0.4852 | Recall: 0.9425 | Spec: 0.0878
+[2025-12-02 09:33:00,808 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 003/100 | Loss: 0.6888 | Acc: 0.8118 | Prec: 1.0000 | Recall: 0.5750 | Spec: 1.0000
+[2025-12-02 09:33:00,809 INFO main.train_one_fold]   Confusion: TP=69, TN=151, FP=0, FN=51
+[2025-12-02 09:33:00,809 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 003/100 | Loss: 0.6888 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:33:00,809 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:33:00,850 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_4_best.pth (combined=0.7216, chunk=0.8118, subject=0.8889)
+[2025-12-02 09:33:00,850 INFO early_stopping.__call__] Validation improved from 0.4428 to 0.8118 (+0.3690) at epoch 3
+[2025-12-02 09:33:14,902 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 004/100 | Loss: 0.6875 | Acc: 0.5711 | Prec: 0.5480 | Recall: 0.5761 | Spec: 0.5666
+[2025-12-02 09:33:16,292 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 004/100 | Loss: 0.6722 | Acc: 0.5572 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:33:16,293 INFO main.train_one_fold]   Confusion: TP=0, TN=151, FP=0, FN=120
+[2025-12-02 09:33:16,293 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 004/100 | Loss: 0.6722 | Acc: 0.5556 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:33:16,293 INFO main.train_one_fold]   Confusion: TP=0, TN=5, FP=0, FN=4
+[2025-12-02 09:33:31,616 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 005/100 | Loss: 0.6717 | Acc: 0.6585 | Prec: 0.6887 | Recall: 0.5186 | Spec: 0.7861
+[2025-12-02 09:33:32,373 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 005/100 | Loss: 0.6046 | Acc: 0.8524 | Prec: 1.0000 | Recall: 0.6667 | Spec: 1.0000
+[2025-12-02 09:33:32,373 INFO main.train_one_fold]   Confusion: TP=80, TN=151, FP=0, FN=40
+[2025-12-02 09:33:32,373 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 005/100 | Loss: 0.6046 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:33:32,373 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:33:32,406 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_4_best.pth (combined=0.7577, chunk=0.8524, subject=0.8889)
+[2025-12-02 09:33:32,406 INFO early_stopping.__call__] Validation improved from 0.8118 to 0.8524 (+0.0406) at epoch 5
+[2025-12-02 09:33:47,637 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 006/100 | Loss: 0.6271 | Acc: 0.7541 | Prec: 0.7609 | Recall: 0.7065 | Spec: 0.7975
+[2025-12-02 09:33:48,708 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 006/100 | Loss: 0.4603 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:33:48,708 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:33:48,708 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 006/100 | Loss: 0.4603 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:33:48,708 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:33:48,752 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_4_best.pth (combined=0.7905, chunk=0.8893, subject=0.8889)
+[2025-12-02 09:33:48,752 INFO early_stopping.__call__] Validation improved from 0.8524 to 0.8893 (+0.0369) at epoch 6
+[2025-12-02 09:34:05,115 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 007/100 | Loss: 0.5561 | Acc: 0.7763 | Prec: 0.7794 | Recall: 0.7407 | Spec: 0.8088
+[2025-12-02 09:34:07,180 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 007/100 | Loss: 0.4056 | Acc: 0.8856 | Prec: 1.0000 | Recall: 0.7417 | Spec: 1.0000
+[2025-12-02 09:34:07,180 INFO main.train_one_fold]   Confusion: TP=89, TN=151, FP=0, FN=31
+[2025-12-02 09:34:07,180 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 007/100 | Loss: 0.4056 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:34:07,180 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:34:28,505 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 008/100 | Loss: 0.4759 | Acc: 0.8141 | Prec: 0.7911 | Recall: 0.8292 | Spec: 0.8003
+[2025-12-02 09:34:30,049 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 008/100 | Loss: 0.3734 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:34:30,050 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:34:30,050 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 008/100 | Loss: 0.3734 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:34:30,050 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:34:45,255 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 009/100 | Loss: 0.4251 | Acc: 0.8356 | Prec: 0.7914 | Recall: 0.8898 | Spec: 0.7861
+[2025-12-02 09:34:46,662 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 009/100 | Loss: 0.3779 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:34:46,663 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:34:46,663 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 009/100 | Loss: 0.3779 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:34:46,663 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:35:02,605 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 010/100 | Loss: 0.3991 | Acc: 0.8333 | Prec: 0.7858 | Recall: 0.8944 | Spec: 0.7776
+[2025-12-02 09:35:03,634 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 010/100 | Loss: 0.4131 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:35:03,638 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:35:03,638 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 010/100 | Loss: 0.4131 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:35:03,638 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:35:03,685 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_4_epoch_010.pth
+[2025-12-02 09:35:19,974 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 011/100 | Loss: 0.3775 | Acc: 0.8600 | Prec: 0.7920 | Recall: 0.9581 | Spec: 0.7705
+[2025-12-02 09:35:20,982 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 011/100 | Loss: 0.4502 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:35:20,982 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:35:20,984 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 011/100 | Loss: 0.4502 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:35:20,984 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:35:34,117 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 012/100 | Loss: 0.3830 | Acc: 0.8481 | Prec: 0.7962 | Recall: 0.9161 | Spec: 0.7861
+[2025-12-02 09:35:35,136 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 012/100 | Loss: 0.4525 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:35:35,136 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:35:35,136 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 012/100 | Loss: 0.4525 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:35:35,136 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:35:49,806 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 013/100 | Loss: 0.3675 | Acc: 0.8593 | Prec: 0.8011 | Recall: 0.9379 | Spec: 0.7875
+[2025-12-02 09:35:50,851 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 013/100 | Loss: 0.4802 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:35:50,852 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:35:50,852 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 013/100 | Loss: 0.4802 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:35:50,852 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:36:06,177 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 014/100 | Loss: 0.3651 | Acc: 0.8585 | Prec: 0.7969 | Recall: 0.9441 | Spec: 0.7805
+[2025-12-02 09:36:06,947 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 014/100 | Loss: 0.4803 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:36:06,947 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:36:06,947 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 014/100 | Loss: 0.4803 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:36:06,948 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:36:19,933 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 015/100 | Loss: 0.3591 | Acc: 0.8719 | Prec: 0.8039 | Recall: 0.9674 | Spec: 0.7847
+[2025-12-02 09:36:20,898 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 015/100 | Loss: 0.4974 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:36:20,898 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:36:20,899 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 015/100 | Loss: 0.4974 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:36:20,899 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:36:34,645 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 016/100 | Loss: 0.3637 | Acc: 0.8681 | Prec: 0.8058 | Recall: 0.9534 | Spec: 0.7904
+[2025-12-02 09:36:36,023 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 016/100 | Loss: 0.4985 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:36:36,024 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:36:36,024 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 016/100 | Loss: 0.4985 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:36:36,024 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:36:49,493 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 017/100 | Loss: 0.3440 | Acc: 0.8674 | Prec: 0.8023 | Recall: 0.9581 | Spec: 0.7847
+[2025-12-02 09:36:50,244 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 017/100 | Loss: 0.5111 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:36:50,244 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:36:50,244 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 017/100 | Loss: 0.5111 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:36:50,244 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:37:06,769 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 018/100 | Loss: 0.3502 | Acc: 0.8756 | Prec: 0.8059 | Recall: 0.9736 | Spec: 0.7861
+[2025-12-02 09:37:07,703 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 018/100 | Loss: 0.5131 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:37:07,703 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:37:07,703 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 018/100 | Loss: 0.5131 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:37:07,703 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:37:26,578 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 019/100 | Loss: 0.3467 | Acc: 0.8756 | Prec: 0.8075 | Recall: 0.9705 | Spec: 0.7890
+[2025-12-02 09:37:27,896 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 019/100 | Loss: 0.5076 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:37:27,896 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:37:27,896 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 019/100 | Loss: 0.5076 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:37:27,897 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:37:43,226 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 020/100 | Loss: 0.3432 | Acc: 0.8741 | Prec: 0.8054 | Recall: 0.9705 | Spec: 0.7861
+[2025-12-02 09:37:44,377 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 020/100 | Loss: 0.5130 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:37:44,377 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:37:44,378 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 020/100 | Loss: 0.5130 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:37:44,378 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:37:44,406 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_4_epoch_020.pth
+[2025-12-02 09:38:01,818 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 021/100 | Loss: 0.3403 | Acc: 0.8741 | Prec: 0.8062 | Recall: 0.9689 | Spec: 0.7875
+[2025-12-02 09:38:03,462 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 021/100 | Loss: 0.5135 | Acc: 0.8856 | Prec: 0.9890 | Recall: 0.7500 | Spec: 0.9934
+[2025-12-02 09:38:03,464 INFO main.train_one_fold]   Confusion: TP=90, TN=150, FP=1, FN=30
+[2025-12-02 09:38:03,464 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 021/100 | Loss: 0.5135 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:38:03,464 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:38:17,105 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 022/100 | Loss: 0.3408 | Acc: 0.8748 | Prec: 0.8049 | Recall: 0.9736 | Spec: 0.7847
+[2025-12-02 09:38:17,685 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 022/100 | Loss: 0.5119 | Acc: 0.8856 | Prec: 0.9890 | Recall: 0.7500 | Spec: 0.9934
+[2025-12-02 09:38:17,685 INFO main.train_one_fold]   Confusion: TP=90, TN=150, FP=1, FN=30
+[2025-12-02 09:38:17,685 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 022/100 | Loss: 0.5119 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:38:17,685 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:38:32,072 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 023/100 | Loss: 0.3346 | Acc: 0.8748 | Prec: 0.8065 | Recall: 0.9705 | Spec: 0.7875
+[2025-12-02 09:38:33,316 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 023/100 | Loss: 0.5193 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:38:33,320 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:38:33,320 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 023/100 | Loss: 0.5193 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:38:33,320 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:38:47,514 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 024/100 | Loss: 0.3436 | Acc: 0.8748 | Prec: 0.8065 | Recall: 0.9705 | Spec: 0.7875
+[2025-12-02 09:38:48,458 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 024/100 | Loss: 0.5116 | Acc: 0.8893 | Prec: 0.9891 | Recall: 0.7583 | Spec: 0.9934
+[2025-12-02 09:38:48,459 INFO main.train_one_fold]   Confusion: TP=91, TN=150, FP=1, FN=29
+[2025-12-02 09:38:48,459 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 024/100 | Loss: 0.5116 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:38:48,459 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:39:01,718 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 025/100 | Loss: 0.3408 | Acc: 0.8756 | Prec: 0.8059 | Recall: 0.9736 | Spec: 0.7861
+[2025-12-02 09:39:03,309 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 025/100 | Loss: 0.5191 | Acc: 0.8893 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:39:03,309 INFO main.train_one_fold]   Confusion: TP=90, TN=151, FP=0, FN=30
+[2025-12-02 09:39:03,309 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 025/100 | Loss: 0.5191 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:39:03,309 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:39:19,051 INFO main.train_one_fold] TRAIN CHUNK | Fold 4 | Epoch 026/100 | Loss: 0.3444 | Acc: 0.8733 | Prec: 0.8044 | Recall: 0.9705 | Spec: 0.7847
+[2025-12-02 09:39:20,447 INFO main.train_one_fold] EVAL CHUNK | Fold 4 | Epoch 026/100 | Loss: 0.5196 | Acc: 0.8856 | Prec: 0.9890 | Recall: 0.7500 | Spec: 0.9934
+[2025-12-02 09:39:20,450 INFO main.train_one_fold]   Confusion: TP=90, TN=150, FP=1, FN=30
+[2025-12-02 09:39:20,450 INFO main.train_one_fold] EVAL SUBJECT | Fold 4 | Epoch 026/100 | Loss: 0.5196 | Acc: 0.8889 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:39:20,450 INFO main.train_one_fold]   Confusion: TP=3, TN=5, FP=0, FN=1
+[2025-12-02 09:39:20,450 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8893 at epoch 6
+[2025-12-02 09:39:20,450 INFO main.train_one_fold] Early stopping triggered at epoch 26
+[2025-12-02 09:39:20,450 INFO main.train_one_fold] 
+Fold 4 training completed. Best Combined Val Acc: 0.7905 at epoch 6
+[2025-12-02 09:39:20,452 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:39:20,452 INFO main.train_cross_validation] FOLD 5/6
+[2025-12-02 09:39:20,453 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:39:20,453 INFO main.get_datasets_for_fold] Train subjects (46): ['mdd:H S2 EC', 'mdd:H S7 EC', 'mdd:H S19 EC', 'mdd:H S30 EC', 'mdd:H S1 EC', 'mdd:MDD S31 EC', 'mdd:MDD S22 EC', 'mdd:MDD S19 EC', 'mdd:MDD S25 EC', 'mdd:MDD S34 EC', 'mdd:H S22 EC', 'mdd:H S27 EC', 'mdd:H S4 EC', 'mdd:H S21 EC', 'mdd:H S23 EC', 'mdd:MDD S17 EC', 'mdd:MDD S3 EC', 'mdd:MDD S1 EC', 'mdd:MDD S14 EC', 'mdd:MDD S10 EC', 'mdd:H S25 EC', 'mdd:H S10 EC', 'mdd:H S14 EC', 'mdd:H S15 EC', 'mdd:H S11 EC', 'mdd:MDD S26 EC', 'mdd:MDD S20 EC', 'mdd:MDD S33 EC', 'mdd:MDD S18 EC', 'mdd:H S26 EC', 'mdd:H S5 EC', 'mdd:H S13 EC', 'mdd:H S8 EC', 'mdd:H S6 EC', 'mdd:MDD S5 EC', 'mdd:MDD S15 EC', 'mdd:MDD S13 EC', 'mdd:MDD S9 EC', 'mdd:H S20 EC', 'mdd:H S24 EC', 'mdd:H S29 EC', 'mdd:H S16 EC', 'mdd:MDD S21 EC', 'mdd:MDD S29 EC', 'mdd:MDD S6 EC', 'mdd:MDD S23 EC']...
+[2025-12-02 09:39:20,453 INFO main.get_datasets_for_fold] Val subjects (8): ['mdd:H S28 EC', 'mdd:H S9 EC', 'mdd:H S3 EC', 'mdd:H S17 EC', 'mdd:MDD S30 EC', 'mdd:MDD S32 EC', 'mdd:MDD S27 EC', 'mdd:MDD S28 EC']
+[2025-12-02 09:39:20,454 INFO main.get_datasets_for_fold] Training chunks: 1386
+[2025-12-02 09:39:20,454 INFO main.get_datasets_for_fold] Validation chunks: 235
+[2025-12-02 09:39:20,520 INFO model.__init__] Initialized LSTM with input_size=1728, hidden_size=100, batch_first=True
+[2025-12-02 09:39:20,522 INFO main.train_one_fold] Starting training for fold 5
+[2025-12-02 09:39:38,689 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 001/100 | Loss: 0.6976 | Acc: 0.5310 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:39:39,928 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 001/100 | Loss: 0.7020 | Acc: 0.5149 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:39:39,928 INFO main.train_one_fold]   Confusion: TP=0, TN=121, FP=0, FN=114
+[2025-12-02 09:39:39,928 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 001/100 | Loss: 0.7020 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:39:39,928 INFO main.train_one_fold]   Confusion: TP=0, TN=4, FP=0, FN=4
+[2025-12-02 09:39:39,954 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_5_best.pth (combined=0.2574, chunk=0.5149, subject=0.5000)
+[2025-12-02 09:39:39,954 INFO early_stopping.__call__] Early stopping initialized: best score 0.5149 at epoch 1
+[2025-12-02 09:39:59,666 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 002/100 | Loss: 0.6934 | Acc: 0.5310 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:40:00,906 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 002/100 | Loss: 0.6968 | Acc: 0.5149 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:40:00,907 INFO main.train_one_fold]   Confusion: TP=0, TN=121, FP=0, FN=114
+[2025-12-02 09:40:00,908 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 002/100 | Loss: 0.6968 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:40:00,908 INFO main.train_one_fold]   Confusion: TP=0, TN=4, FP=0, FN=4
+[2025-12-02 09:40:18,509 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 003/100 | Loss: 0.6864 | Acc: 0.5310 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:40:19,599 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 003/100 | Loss: 0.6916 | Acc: 0.5149 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:40:19,600 INFO main.train_one_fold]   Confusion: TP=0, TN=121, FP=0, FN=114
+[2025-12-02 09:40:19,600 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 003/100 | Loss: 0.6916 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:40:19,600 INFO main.train_one_fold]   Confusion: TP=0, TN=4, FP=0, FN=4
+[2025-12-02 09:40:35,514 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 004/100 | Loss: 0.6702 | Acc: 0.5916 | Prec: 0.8559 | Recall: 0.1554 | Spec: 0.9769
+[2025-12-02 09:40:36,643 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 004/100 | Loss: 0.6638 | Acc: 0.7319 | Prec: 0.9636 | Recall: 0.4649 | Spec: 0.9835
+[2025-12-02 09:40:36,643 INFO main.train_one_fold]   Confusion: TP=53, TN=119, FP=2, FN=61
+[2025-12-02 09:40:36,643 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 004/100 | Loss: 0.6638 | Acc: 0.7500 | Prec: 1.0000 | Recall: 0.5000 | Spec: 1.0000
+[2025-12-02 09:40:36,643 INFO main.train_one_fold]   Confusion: TP=2, TN=4, FP=0, FN=2
+[2025-12-02 09:40:36,679 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_5_best.pth (combined=0.5489, chunk=0.7319, subject=0.7500)
+[2025-12-02 09:40:36,680 INFO early_stopping.__call__] Validation improved from 0.5149 to 0.7319 (+0.2170) at epoch 4
+[2025-12-02 09:40:51,620 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 005/100 | Loss: 0.6222 | Acc: 0.7395 | Prec: 0.7979 | Recall: 0.5954 | Spec: 0.8668
+[2025-12-02 09:40:52,480 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 005/100 | Loss: 0.5648 | Acc: 0.8255 | Prec: 0.8763 | Recall: 0.7456 | Spec: 0.9008
+[2025-12-02 09:40:52,481 INFO main.train_one_fold]   Confusion: TP=85, TN=109, FP=12, FN=29
+[2025-12-02 09:40:52,481 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 005/100 | Loss: 0.5648 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:40:52,481 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:40:52,510 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_5_best.pth (combined=0.7223, chunk=0.8255, subject=0.8750)
+[2025-12-02 09:40:52,512 INFO early_stopping.__call__] Validation improved from 0.7319 to 0.8255 (+0.0936) at epoch 5
+[2025-12-02 09:41:04,764 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 006/100 | Loss: 0.5567 | Acc: 0.8045 | Prec: 0.7758 | Recall: 0.8200 | Spec: 0.7908
+[2025-12-02 09:41:05,879 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 006/100 | Loss: 0.4624 | Acc: 0.8340 | Prec: 0.9747 | Recall: 0.6754 | Spec: 0.9835
+[2025-12-02 09:41:05,879 INFO main.train_one_fold]   Confusion: TP=77, TN=119, FP=2, FN=37
+[2025-12-02 09:41:05,879 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 006/100 | Loss: 0.4624 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:41:05,879 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:41:05,911 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_5_best.pth (combined=0.7298, chunk=0.8340, subject=0.8750)
+[2025-12-02 09:41:05,911 INFO early_stopping.__call__] Validation improved from 0.8255 to 0.8340 (+0.0085) at epoch 6
+[2025-12-02 09:41:20,528 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 007/100 | Loss: 0.4925 | Acc: 0.8326 | Prec: 0.8074 | Recall: 0.8446 | Spec: 0.8220
+[2025-12-02 09:41:21,575 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 007/100 | Loss: 0.4229 | Acc: 0.8340 | Prec: 1.0000 | Recall: 0.6579 | Spec: 1.0000
+[2025-12-02 09:41:21,575 INFO main.train_one_fold]   Confusion: TP=75, TN=121, FP=0, FN=39
+[2025-12-02 09:41:21,575 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 007/100 | Loss: 0.4229 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:41:21,579 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:41:36,974 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 008/100 | Loss: 0.4482 | Acc: 0.8391 | Prec: 0.8011 | Recall: 0.8738 | Spec: 0.8084
+[2025-12-02 09:41:37,958 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 008/100 | Loss: 0.4080 | Acc: 0.8255 | Prec: 1.0000 | Recall: 0.6404 | Spec: 1.0000
+[2025-12-02 09:41:37,958 INFO main.train_one_fold]   Confusion: TP=73, TN=121, FP=0, FN=41
+[2025-12-02 09:41:37,959 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 008/100 | Loss: 0.4080 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:41:37,959 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:41:52,883 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 009/100 | Loss: 0.4101 | Acc: 0.8456 | Prec: 0.8019 | Recall: 0.8908 | Spec: 0.8057
+[2025-12-02 09:41:53,604 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 009/100 | Loss: 0.3688 | Acc: 0.8468 | Prec: 0.9875 | Recall: 0.6930 | Spec: 0.9917
+[2025-12-02 09:41:53,604 INFO main.train_one_fold]   Confusion: TP=79, TN=120, FP=1, FN=35
+[2025-12-02 09:41:53,604 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 009/100 | Loss: 0.3688 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:41:53,605 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:41:53,644 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_5_best.pth (combined=0.7410, chunk=0.8468, subject=0.8750)
+[2025-12-02 09:41:53,644 INFO early_stopping.__call__] Validation improved from 0.8340 to 0.8468 (+0.0128) at epoch 9
+[2025-12-02 09:42:08,780 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 010/100 | Loss: 0.3970 | Acc: 0.8427 | Prec: 0.8149 | Recall: 0.8600 | Spec: 0.8274
+[2025-12-02 09:42:09,787 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 010/100 | Loss: 0.3335 | Acc: 0.8468 | Prec: 0.9643 | Recall: 0.7105 | Spec: 0.9752
+[2025-12-02 09:42:09,791 INFO main.train_one_fold]   Confusion: TP=81, TN=118, FP=3, FN=33
+[2025-12-02 09:42:09,791 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 010/100 | Loss: 0.3335 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:42:09,791 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:42:09,825 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_5_epoch_010.pth
+[2025-12-02 09:42:27,068 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 011/100 | Loss: 0.3784 | Acc: 0.8456 | Prec: 0.8028 | Recall: 0.8892 | Spec: 0.8071
+[2025-12-02 09:42:28,327 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 011/100 | Loss: 0.3349 | Acc: 0.8426 | Prec: 1.0000 | Recall: 0.6754 | Spec: 1.0000
+[2025-12-02 09:42:28,328 INFO main.train_one_fold]   Confusion: TP=77, TN=121, FP=0, FN=37
+[2025-12-02 09:42:28,328 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 011/100 | Loss: 0.3349 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:42:28,328 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:42:44,921 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 012/100 | Loss: 0.3792 | Acc: 0.8470 | Prec: 0.8017 | Recall: 0.8954 | Spec: 0.8043
+[2025-12-02 09:42:45,952 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 012/100 | Loss: 0.3174 | Acc: 0.8511 | Prec: 0.9877 | Recall: 0.7018 | Spec: 0.9917
+[2025-12-02 09:42:45,953 INFO main.train_one_fold]   Confusion: TP=80, TN=120, FP=1, FN=34
+[2025-12-02 09:42:45,953 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 012/100 | Loss: 0.3174 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:42:45,953 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:42:46,008 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_5_best.pth (combined=0.7447, chunk=0.8511, subject=0.8750)
+[2025-12-02 09:42:46,008 INFO early_stopping.__call__] Validation improved from 0.8468 to 0.8511 (+0.0043) at epoch 12
+[2025-12-02 09:43:04,274 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 013/100 | Loss: 0.3818 | Acc: 0.8420 | Prec: 0.8092 | Recall: 0.8677 | Spec: 0.8193
+[2025-12-02 09:43:05,398 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 013/100 | Loss: 0.3077 | Acc: 0.8766 | Prec: 0.9885 | Recall: 0.7544 | Spec: 0.9917
+[2025-12-02 09:43:05,398 INFO main.train_one_fold]   Confusion: TP=86, TN=120, FP=1, FN=28
+[2025-12-02 09:43:05,399 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 013/100 | Loss: 0.3077 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:43:05,399 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:43:05,454 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_5_best.pth (combined=0.7670, chunk=0.8766, subject=0.8750)
+[2025-12-02 09:43:05,454 INFO early_stopping.__call__] Validation improved from 0.8511 to 0.8766 (+0.0255) at epoch 13
+[2025-12-02 09:43:24,371 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 014/100 | Loss: 0.3662 | Acc: 0.8550 | Prec: 0.8054 | Recall: 0.9108 | Spec: 0.8057
+[2025-12-02 09:43:25,095 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 014/100 | Loss: 0.4019 | Acc: 0.8000 | Prec: 1.0000 | Recall: 0.5877 | Spec: 1.0000
+[2025-12-02 09:43:25,096 INFO main.train_one_fold]   Confusion: TP=67, TN=121, FP=0, FN=47
+[2025-12-02 09:43:25,096 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 014/100 | Loss: 0.4019 | Acc: 0.7500 | Prec: 1.0000 | Recall: 0.5000 | Spec: 1.0000
+[2025-12-02 09:43:25,096 INFO main.train_one_fold]   Confusion: TP=2, TN=4, FP=0, FN=2
+[2025-12-02 09:43:38,582 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 015/100 | Loss: 0.3743 | Acc: 0.8485 | Prec: 0.8134 | Recall: 0.8785 | Spec: 0.8220
+[2025-12-02 09:43:39,403 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 015/100 | Loss: 0.3259 | Acc: 0.8468 | Prec: 1.0000 | Recall: 0.6842 | Spec: 1.0000
+[2025-12-02 09:43:39,410 INFO main.train_one_fold]   Confusion: TP=78, TN=121, FP=0, FN=36
+[2025-12-02 09:43:39,410 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 015/100 | Loss: 0.3259 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:43:39,410 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:43:53,416 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 016/100 | Loss: 0.3613 | Acc: 0.8608 | Prec: 0.8187 | Recall: 0.9031 | Spec: 0.8234
+[2025-12-02 09:43:54,499 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 016/100 | Loss: 0.3141 | Acc: 0.8638 | Prec: 0.9881 | Recall: 0.7281 | Spec: 0.9917
+[2025-12-02 09:43:54,500 INFO main.train_one_fold]   Confusion: TP=83, TN=120, FP=1, FN=31
+[2025-12-02 09:43:54,500 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 016/100 | Loss: 0.3141 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:43:54,500 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:44:08,128 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 017/100 | Loss: 0.3664 | Acc: 0.8427 | Prec: 0.7888 | Recall: 0.9077 | Spec: 0.7853
+[2025-12-02 09:44:08,741 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 017/100 | Loss: 0.3529 | Acc: 0.8085 | Prec: 1.0000 | Recall: 0.6053 | Spec: 1.0000
+[2025-12-02 09:44:08,742 INFO main.train_one_fold]   Confusion: TP=69, TN=121, FP=0, FN=45
+[2025-12-02 09:44:08,742 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 017/100 | Loss: 0.3529 | Acc: 0.7500 | Prec: 1.0000 | Recall: 0.5000 | Spec: 1.0000
+[2025-12-02 09:44:08,742 INFO main.train_one_fold]   Confusion: TP=2, TN=4, FP=0, FN=2
+[2025-12-02 09:44:23,638 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 018/100 | Loss: 0.3588 | Acc: 0.8456 | Prec: 0.8150 | Recall: 0.8677 | Spec: 0.8261
+[2025-12-02 09:44:24,172 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 018/100 | Loss: 0.3470 | Acc: 0.8426 | Prec: 0.9873 | Recall: 0.6842 | Spec: 0.9917
+[2025-12-02 09:44:24,172 INFO main.train_one_fold]   Confusion: TP=78, TN=120, FP=1, FN=36
+[2025-12-02 09:44:24,173 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 018/100 | Loss: 0.3470 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:44:24,173 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:44:43,020 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 019/100 | Loss: 0.3519 | Acc: 0.8557 | Prec: 0.8041 | Recall: 0.9154 | Spec: 0.8030
+[2025-12-02 09:44:44,689 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 019/100 | Loss: 0.3589 | Acc: 0.8426 | Prec: 0.9873 | Recall: 0.6842 | Spec: 0.9917
+[2025-12-02 09:44:44,690 INFO main.train_one_fold]   Confusion: TP=78, TN=120, FP=1, FN=36
+[2025-12-02 09:44:44,690 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 019/100 | Loss: 0.3589 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:44:44,690 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:45:00,552 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 020/100 | Loss: 0.3531 | Acc: 0.8514 | Prec: 0.8153 | Recall: 0.8831 | Spec: 0.8234
+[2025-12-02 09:45:01,535 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 020/100 | Loss: 0.3602 | Acc: 0.8468 | Prec: 0.9432 | Recall: 0.7281 | Spec: 0.9587
+[2025-12-02 09:45:01,535 INFO main.train_one_fold]   Confusion: TP=83, TN=116, FP=5, FN=31
+[2025-12-02 09:45:01,536 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 020/100 | Loss: 0.3602 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:45:01,536 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:45:01,563 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_5_epoch_020.pth
+[2025-12-02 09:45:18,976 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 021/100 | Loss: 0.3457 | Acc: 0.8535 | Prec: 0.8074 | Recall: 0.9031 | Spec: 0.8098
+[2025-12-02 09:45:19,914 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 021/100 | Loss: 0.4016 | Acc: 0.8298 | Prec: 1.0000 | Recall: 0.6491 | Spec: 1.0000
+[2025-12-02 09:45:19,918 INFO main.train_one_fold]   Confusion: TP=74, TN=121, FP=0, FN=40
+[2025-12-02 09:45:19,918 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 021/100 | Loss: 0.4016 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:45:19,918 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:45:36,231 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 022/100 | Loss: 0.3495 | Acc: 0.8651 | Prec: 0.8158 | Recall: 0.9200 | Spec: 0.8166
+[2025-12-02 09:45:37,412 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 022/100 | Loss: 0.4112 | Acc: 0.8255 | Prec: 1.0000 | Recall: 0.6404 | Spec: 1.0000
+[2025-12-02 09:45:37,413 INFO main.train_one_fold]   Confusion: TP=73, TN=121, FP=0, FN=41
+[2025-12-02 09:45:37,413 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 022/100 | Loss: 0.4112 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:45:37,413 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:45:54,006 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 023/100 | Loss: 0.3363 | Acc: 0.8557 | Prec: 0.8261 | Recall: 0.8769 | Spec: 0.8370
+[2025-12-02 09:45:55,003 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 023/100 | Loss: 0.4162 | Acc: 0.8340 | Prec: 0.9310 | Recall: 0.7105 | Spec: 0.9504
+[2025-12-02 09:45:55,003 INFO main.train_one_fold]   Confusion: TP=81, TN=115, FP=6, FN=33
+[2025-12-02 09:45:55,003 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 023/100 | Loss: 0.4162 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:45:55,003 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:46:09,733 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 024/100 | Loss: 0.3440 | Acc: 0.8608 | Prec: 0.8169 | Recall: 0.9062 | Spec: 0.8207
+[2025-12-02 09:46:10,557 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 024/100 | Loss: 0.4674 | Acc: 0.8213 | Prec: 1.0000 | Recall: 0.6316 | Spec: 1.0000
+[2025-12-02 09:46:10,557 INFO main.train_one_fold]   Confusion: TP=72, TN=121, FP=0, FN=42
+[2025-12-02 09:46:10,557 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 024/100 | Loss: 0.4674 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:46:10,557 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:46:23,434 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 025/100 | Loss: 0.3375 | Acc: 0.8586 | Prec: 0.8170 | Recall: 0.9000 | Spec: 0.8220
+[2025-12-02 09:46:24,339 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 025/100 | Loss: 0.4810 | Acc: 0.8298 | Prec: 0.9868 | Recall: 0.6579 | Spec: 0.9917
+[2025-12-02 09:46:24,339 INFO main.train_one_fold]   Confusion: TP=75, TN=120, FP=1, FN=39
+[2025-12-02 09:46:24,339 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 025/100 | Loss: 0.4810 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:46:24,339 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:46:38,265 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 026/100 | Loss: 0.3339 | Acc: 0.8651 | Prec: 0.8247 | Recall: 0.9046 | Spec: 0.8302
+[2025-12-02 09:46:39,132 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 026/100 | Loss: 0.4632 | Acc: 0.8340 | Prec: 0.9870 | Recall: 0.6667 | Spec: 0.9917
+[2025-12-02 09:46:39,132 INFO main.train_one_fold]   Confusion: TP=76, TN=120, FP=1, FN=38
+[2025-12-02 09:46:39,132 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 026/100 | Loss: 0.4632 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:46:39,132 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:46:51,317 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 027/100 | Loss: 0.3284 | Acc: 0.8651 | Prec: 0.8211 | Recall: 0.9108 | Spec: 0.8247
+[2025-12-02 09:46:52,124 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 027/100 | Loss: 0.5265 | Acc: 0.8213 | Prec: 1.0000 | Recall: 0.6316 | Spec: 1.0000
+[2025-12-02 09:46:52,124 INFO main.train_one_fold]   Confusion: TP=72, TN=121, FP=0, FN=42
+[2025-12-02 09:46:52,124 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 027/100 | Loss: 0.5265 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:46:52,124 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:47:05,881 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 028/100 | Loss: 0.3283 | Acc: 0.8658 | Prec: 0.8305 | Recall: 0.8969 | Spec: 0.8383
+[2025-12-02 09:47:06,807 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 028/100 | Loss: 0.4837 | Acc: 0.8085 | Prec: 0.9157 | Recall: 0.6667 | Spec: 0.9421
+[2025-12-02 09:47:06,807 INFO main.train_one_fold]   Confusion: TP=76, TN=114, FP=7, FN=38
+[2025-12-02 09:47:06,807 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 028/100 | Loss: 0.4837 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:47:06,807 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:47:23,519 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 029/100 | Loss: 0.3329 | Acc: 0.8622 | Prec: 0.8321 | Recall: 0.8846 | Spec: 0.8424
+[2025-12-02 09:47:24,499 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 029/100 | Loss: 0.4904 | Acc: 0.8043 | Prec: 0.8953 | Recall: 0.6754 | Spec: 0.9256
+[2025-12-02 09:47:24,499 INFO main.train_one_fold]   Confusion: TP=77, TN=112, FP=9, FN=37
+[2025-12-02 09:47:24,499 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 029/100 | Loss: 0.4904 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:47:24,499 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:47:41,430 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 030/100 | Loss: 0.3277 | Acc: 0.8636 | Prec: 0.8251 | Recall: 0.9000 | Spec: 0.8315
+[2025-12-02 09:47:42,316 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 030/100 | Loss: 0.4924 | Acc: 0.8170 | Prec: 0.9494 | Recall: 0.6579 | Spec: 0.9669
+[2025-12-02 09:47:42,316 INFO main.train_one_fold]   Confusion: TP=75, TN=117, FP=4, FN=39
+[2025-12-02 09:47:42,317 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 030/100 | Loss: 0.4924 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:47:42,317 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:47:42,350 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_5_epoch_030.pth
+[2025-12-02 09:47:58,191 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 031/100 | Loss: 0.3358 | Acc: 0.8608 | Prec: 0.8260 | Recall: 0.8908 | Spec: 0.8342
+[2025-12-02 09:47:58,837 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 031/100 | Loss: 0.4678 | Acc: 0.8043 | Prec: 0.8469 | Recall: 0.7281 | Spec: 0.8760
+[2025-12-02 09:47:58,837 INFO main.train_one_fold]   Confusion: TP=83, TN=106, FP=15, FN=31
+[2025-12-02 09:47:58,837 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 031/100 | Loss: 0.4678 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:47:58,837 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:48:14,096 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 032/100 | Loss: 0.3248 | Acc: 0.8680 | Prec: 0.8303 | Recall: 0.9031 | Spec: 0.8370
+[2025-12-02 09:48:15,297 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 032/100 | Loss: 0.4866 | Acc: 0.7957 | Prec: 0.8750 | Recall: 0.6754 | Spec: 0.9091
+[2025-12-02 09:48:15,298 INFO main.train_one_fold]   Confusion: TP=77, TN=110, FP=11, FN=37
+[2025-12-02 09:48:15,298 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 032/100 | Loss: 0.4866 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:48:15,298 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:48:32,164 INFO main.train_one_fold] TRAIN CHUNK | Fold 5 | Epoch 033/100 | Loss: 0.3100 | Acc: 0.8766 | Prec: 0.8426 | Recall: 0.9062 | Spec: 0.8505
+[2025-12-02 09:48:33,019 INFO main.train_one_fold] EVAL CHUNK | Fold 5 | Epoch 033/100 | Loss: 0.5569 | Acc: 0.7915 | Prec: 0.8571 | Recall: 0.6842 | Spec: 0.8926
+[2025-12-02 09:48:33,020 INFO main.train_one_fold]   Confusion: TP=78, TN=108, FP=13, FN=36
+[2025-12-02 09:48:33,020 INFO main.train_one_fold] EVAL SUBJECT | Fold 5 | Epoch 033/100 | Loss: 0.5569 | Acc: 0.8750 | Prec: 1.0000 | Recall: 0.7500 | Spec: 1.0000
+[2025-12-02 09:48:33,020 INFO main.train_one_fold]   Confusion: TP=3, TN=4, FP=0, FN=1
+[2025-12-02 09:48:33,020 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8766 at epoch 13
+[2025-12-02 09:48:33,020 INFO main.train_one_fold] Early stopping triggered at epoch 33
+[2025-12-02 09:48:33,021 INFO main.train_one_fold] 
+Fold 5 training completed. Best Combined Val Acc: 0.7670 at epoch 13
+[2025-12-02 09:48:33,021 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:48:33,021 INFO main.train_cross_validation] FOLD 6/6
+[2025-12-02 09:48:33,021 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:48:33,021 INFO main.get_datasets_for_fold] Train subjects (46): ['mdd:H S2 EC', 'mdd:H S7 EC', 'mdd:H S19 EC', 'mdd:H S30 EC', 'mdd:H S1 EC', 'mdd:MDD S31 EC', 'mdd:MDD S22 EC', 'mdd:MDD S19 EC', 'mdd:MDD S25 EC', 'mdd:MDD S34 EC', 'mdd:H S22 EC', 'mdd:H S27 EC', 'mdd:H S4 EC', 'mdd:H S21 EC', 'mdd:H S23 EC', 'mdd:MDD S17 EC', 'mdd:MDD S3 EC', 'mdd:MDD S1 EC', 'mdd:MDD S14 EC', 'mdd:MDD S10 EC', 'mdd:H S25 EC', 'mdd:H S10 EC', 'mdd:H S14 EC', 'mdd:H S15 EC', 'mdd:H S11 EC', 'mdd:MDD S26 EC', 'mdd:MDD S20 EC', 'mdd:MDD S33 EC', 'mdd:MDD S18 EC', 'mdd:H S26 EC', 'mdd:H S5 EC', 'mdd:H S13 EC', 'mdd:H S8 EC', 'mdd:H S6 EC', 'mdd:MDD S5 EC', 'mdd:MDD S15 EC', 'mdd:MDD S13 EC', 'mdd:MDD S9 EC', 'mdd:H S28 EC', 'mdd:H S9 EC', 'mdd:H S3 EC', 'mdd:H S17 EC', 'mdd:MDD S30 EC', 'mdd:MDD S32 EC', 'mdd:MDD S27 EC', 'mdd:MDD S28 EC']...
+[2025-12-02 09:48:33,022 INFO main.get_datasets_for_fold] Val subjects (8): ['mdd:H S20 EC', 'mdd:H S24 EC', 'mdd:H S29 EC', 'mdd:H S16 EC', 'mdd:MDD S21 EC', 'mdd:MDD S29 EC', 'mdd:MDD S6 EC', 'mdd:MDD S23 EC']
+[2025-12-02 09:48:33,023 INFO main.get_datasets_for_fold] Training chunks: 1379
+[2025-12-02 09:48:33,023 INFO main.get_datasets_for_fold] Validation chunks: 242
+[2025-12-02 09:48:33,041 INFO model.__init__] Initialized LSTM with input_size=1728, hidden_size=100, batch_first=True
+[2025-12-02 09:48:33,043 INFO main.train_one_fold] Starting training for fold 6
+[2025-12-02 09:48:48,058 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 001/100 | Loss: 0.6912 | Acc: 0.5337 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:48:49,161 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 001/100 | Loss: 0.6943 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:48:49,161 INFO main.train_one_fold]   Confusion: TP=0, TN=121, FP=0, FN=121
+[2025-12-02 09:48:49,161 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 001/100 | Loss: 0.6943 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:48:49,161 INFO main.train_one_fold]   Confusion: TP=0, TN=4, FP=0, FN=4
+[2025-12-02 09:48:49,181 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_6_best.pth (combined=0.2500, chunk=0.5000, subject=0.5000)
+[2025-12-02 09:48:49,182 INFO early_stopping.__call__] Early stopping initialized: best score 0.5000 at epoch 1
+[2025-12-02 09:49:06,195 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 002/100 | Loss: 0.6904 | Acc: 0.5337 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:49:07,496 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 002/100 | Loss: 0.6942 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:49:07,496 INFO main.train_one_fold]   Confusion: TP=0, TN=121, FP=0, FN=121
+[2025-12-02 09:49:07,497 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 002/100 | Loss: 0.6942 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:49:07,497 INFO main.train_one_fold]   Confusion: TP=0, TN=4, FP=0, FN=4
+[2025-12-02 09:49:22,964 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 003/100 | Loss: 0.6886 | Acc: 0.5337 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:49:23,559 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 003/100 | Loss: 0.6940 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:49:23,559 INFO main.train_one_fold]   Confusion: TP=0, TN=121, FP=0, FN=121
+[2025-12-02 09:49:23,559 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 003/100 | Loss: 0.6940 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:49:23,559 INFO main.train_one_fold]   Confusion: TP=0, TN=4, FP=0, FN=4
+[2025-12-02 09:49:37,086 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 004/100 | Loss: 0.6824 | Acc: 0.5402 | Prec: 1.0000 | Recall: 0.0140 | Spec: 1.0000
+[2025-12-02 09:49:37,916 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 004/100 | Loss: 0.6910 | Acc: 0.4876 | Prec: 0.3333 | Recall: 0.0248 | Spec: 0.9504
+[2025-12-02 09:49:37,916 INFO main.train_one_fold]   Confusion: TP=3, TN=115, FP=6, FN=118
+[2025-12-02 09:49:37,917 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 004/100 | Loss: 0.6910 | Acc: 0.5000 | Prec: 0.0000 | Recall: 0.0000 | Spec: 1.0000
+[2025-12-02 09:49:37,917 INFO main.train_one_fold]   Confusion: TP=0, TN=4, FP=0, FN=4
+[2025-12-02 09:49:51,281 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 005/100 | Loss: 0.6548 | Acc: 0.6737 | Prec: 0.9406 | Recall: 0.3204 | Spec: 0.9823
+[2025-12-02 09:49:51,986 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 005/100 | Loss: 0.6610 | Acc: 0.6074 | Prec: 0.5903 | Recall: 0.7025 | Spec: 0.5124
+[2025-12-02 09:49:51,986 INFO main.train_one_fold]   Confusion: TP=85, TN=62, FP=59, FN=36
+[2025-12-02 09:49:51,987 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 005/100 | Loss: 0.6610 | Acc: 0.6250 | Prec: 0.6000 | Recall: 0.7500 | Spec: 0.5000
+[2025-12-02 09:49:51,987 INFO main.train_one_fold]   Confusion: TP=3, TN=2, FP=2, FN=1
+[2025-12-02 09:49:52,019 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_6_best.pth (combined=0.3796, chunk=0.6074, subject=0.6250)
+[2025-12-02 09:49:52,019 INFO early_stopping.__call__] Validation improved from 0.5000 to 0.6074 (+0.1074) at epoch 5
+[2025-12-02 09:50:04,976 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 006/100 | Loss: 0.5734 | Acc: 0.8020 | Prec: 0.8642 | Recall: 0.6827 | Spec: 0.9062
+[2025-12-02 09:50:05,945 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 006/100 | Loss: 0.6076 | Acc: 0.6860 | Prec: 0.6380 | Recall: 0.8595 | Spec: 0.5124
+[2025-12-02 09:50:05,946 INFO main.train_one_fold]   Confusion: TP=104, TN=62, FP=59, FN=17
+[2025-12-02 09:50:05,946 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 006/100 | Loss: 0.6076 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:50:05,946 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:50:05,980 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_6_best.pth (combined=0.5145, chunk=0.6860, subject=0.7500)
+[2025-12-02 09:50:05,980 INFO early_stopping.__call__] Validation improved from 0.6074 to 0.6860 (+0.0785) at epoch 6
+[2025-12-02 09:50:19,595 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 007/100 | Loss: 0.4555 | Acc: 0.8470 | Prec: 0.8661 | Recall: 0.7947 | Spec: 0.8927
+[2025-12-02 09:50:20,343 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 007/100 | Loss: 0.5945 | Acc: 0.7355 | Prec: 0.6629 | Recall: 0.9587 | Spec: 0.5124
+[2025-12-02 09:50:20,343 INFO main.train_one_fold]   Confusion: TP=116, TN=62, FP=59, FN=5
+[2025-12-02 09:50:20,343 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 007/100 | Loss: 0.5945 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:50:20,343 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:50:20,398 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_6_best.pth (combined=0.5517, chunk=0.7355, subject=0.7500)
+[2025-12-02 09:50:20,398 INFO early_stopping.__call__] Validation improved from 0.6860 to 0.7355 (+0.0496) at epoch 7
+[2025-12-02 09:50:36,578 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 008/100 | Loss: 0.3796 | Acc: 0.8564 | Prec: 0.8397 | Recall: 0.8554 | Spec: 0.8573
+[2025-12-02 09:50:37,677 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 008/100 | Loss: 0.6523 | Acc: 0.7355 | Prec: 0.6629 | Recall: 0.9587 | Spec: 0.5124
+[2025-12-02 09:50:37,677 INFO main.train_one_fold]   Confusion: TP=116, TN=62, FP=59, FN=5
+[2025-12-02 09:50:37,677 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 008/100 | Loss: 0.6523 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:50:37,678 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:50:52,709 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 009/100 | Loss: 0.3471 | Acc: 0.8702 | Prec: 0.8473 | Recall: 0.8802 | Spec: 0.8614
+[2025-12-02 09:50:53,477 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 009/100 | Loss: 0.6877 | Acc: 0.7438 | Prec: 0.6667 | Recall: 0.9752 | Spec: 0.5124
+[2025-12-02 09:50:53,477 INFO main.train_one_fold]   Confusion: TP=118, TN=62, FP=59, FN=3
+[2025-12-02 09:50:53,477 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 009/100 | Loss: 0.6877 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:50:53,477 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:50:53,519 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_6_best.pth (combined=0.5579, chunk=0.7438, subject=0.7500)
+[2025-12-02 09:50:53,520 INFO early_stopping.__call__] Validation improved from 0.7355 to 0.7438 (+0.0083) at epoch 9
+[2025-12-02 09:51:11,475 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 010/100 | Loss: 0.3416 | Acc: 0.8600 | Prec: 0.8594 | Recall: 0.8367 | Spec: 0.8804
+[2025-12-02 09:51:12,460 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 010/100 | Loss: 0.7240 | Acc: 0.7521 | Prec: 0.6704 | Recall: 0.9917 | Spec: 0.5124
+[2025-12-02 09:51:12,461 INFO main.train_one_fold]   Confusion: TP=120, TN=62, FP=59, FN=1
+[2025-12-02 09:51:12,461 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 010/100 | Loss: 0.7240 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:51:12,461 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:51:12,495 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_6_best.pth (combined=0.5640, chunk=0.7521, subject=0.7500)
+[2025-12-02 09:51:12,496 INFO early_stopping.__call__] Validation improved from 0.7438 to 0.7521 (+0.0083) at epoch 10
+[2025-12-02 09:51:12,517 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_6_epoch_010.pth
+[2025-12-02 09:51:27,851 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 011/100 | Loss: 0.3181 | Acc: 0.8738 | Prec: 0.8681 | Recall: 0.8600 | Spec: 0.8859
+[2025-12-02 09:51:29,023 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 011/100 | Loss: 0.7777 | Acc: 0.7479 | Prec: 0.6685 | Recall: 0.9835 | Spec: 0.5124
+[2025-12-02 09:51:29,023 INFO main.train_one_fold]   Confusion: TP=119, TN=62, FP=59, FN=2
+[2025-12-02 09:51:29,023 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 011/100 | Loss: 0.7777 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:51:29,023 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:51:44,865 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 012/100 | Loss: 0.2999 | Acc: 0.8745 | Prec: 0.8529 | Recall: 0.8834 | Spec: 0.8668
+[2025-12-02 09:51:45,992 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 012/100 | Loss: 0.8318 | Acc: 0.7479 | Prec: 0.6685 | Recall: 0.9835 | Spec: 0.5124
+[2025-12-02 09:51:45,994 INFO main.train_one_fold]   Confusion: TP=119, TN=62, FP=59, FN=2
+[2025-12-02 09:51:45,994 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 012/100 | Loss: 0.8318 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:51:45,994 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:52:02,522 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 013/100 | Loss: 0.2970 | Acc: 0.8753 | Prec: 0.8709 | Recall: 0.8600 | Spec: 0.8886
+[2025-12-02 09:52:03,492 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 013/100 | Loss: 0.9012 | Acc: 0.7479 | Prec: 0.6685 | Recall: 0.9835 | Spec: 0.5124
+[2025-12-02 09:52:03,492 INFO main.train_one_fold]   Confusion: TP=119, TN=62, FP=59, FN=2
+[2025-12-02 09:52:03,492 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 013/100 | Loss: 0.9012 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:52:03,492 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:52:20,049 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 014/100 | Loss: 0.2996 | Acc: 0.8658 | Prec: 0.8512 | Recall: 0.8631 | Spec: 0.8682
+[2025-12-02 09:52:21,038 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 014/100 | Loss: 0.9226 | Acc: 0.7562 | Prec: 0.6722 | Recall: 1.0000 | Spec: 0.5124
+[2025-12-02 09:52:21,040 INFO main.train_one_fold]   Confusion: TP=121, TN=62, FP=59, FN=0
+[2025-12-02 09:52:21,040 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 014/100 | Loss: 0.9226 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:52:21,040 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:52:21,123 INFO main.train_one_fold] ✓ Saved best model: experiments/t4_006_mdd_ec/fold_6_best.pth (combined=0.5671, chunk=0.7562, subject=0.7500)
+[2025-12-02 09:52:21,127 INFO early_stopping.__call__] Validation improved from 0.7521 to 0.7562 (+0.0041) at epoch 14
+[2025-12-02 09:52:36,288 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 015/100 | Loss: 0.2852 | Acc: 0.8760 | Prec: 0.8699 | Recall: 0.8631 | Spec: 0.8872
+[2025-12-02 09:52:37,285 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 015/100 | Loss: 0.9605 | Acc: 0.7562 | Prec: 0.6722 | Recall: 1.0000 | Spec: 0.5124
+[2025-12-02 09:52:37,285 INFO main.train_one_fold]   Confusion: TP=121, TN=62, FP=59, FN=0
+[2025-12-02 09:52:37,285 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 015/100 | Loss: 0.9605 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:52:37,285 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:52:50,542 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 016/100 | Loss: 0.2839 | Acc: 0.8811 | Prec: 0.8725 | Recall: 0.8725 | Spec: 0.8886
+[2025-12-02 09:52:51,275 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 016/100 | Loss: 1.0152 | Acc: 0.7521 | Prec: 0.6704 | Recall: 0.9917 | Spec: 0.5124
+[2025-12-02 09:52:51,275 INFO main.train_one_fold]   Confusion: TP=120, TN=62, FP=59, FN=1
+[2025-12-02 09:52:51,275 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 016/100 | Loss: 1.0152 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:52:51,275 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:53:04,229 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 017/100 | Loss: 0.2898 | Acc: 0.8789 | Prec: 0.8889 | Recall: 0.8460 | Spec: 0.9076
+[2025-12-02 09:53:05,152 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 017/100 | Loss: 1.0379 | Acc: 0.7562 | Prec: 0.6722 | Recall: 1.0000 | Spec: 0.5124
+[2025-12-02 09:53:05,155 INFO main.train_one_fold]   Confusion: TP=121, TN=62, FP=59, FN=0
+[2025-12-02 09:53:05,155 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 017/100 | Loss: 1.0379 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:53:05,155 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:53:17,929 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 018/100 | Loss: 0.2812 | Acc: 0.8745 | Prec: 0.8742 | Recall: 0.8538 | Spec: 0.8927
+[2025-12-02 09:53:18,766 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 018/100 | Loss: 1.0694 | Acc: 0.7521 | Prec: 0.6704 | Recall: 0.9917 | Spec: 0.5124
+[2025-12-02 09:53:18,767 INFO main.train_one_fold]   Confusion: TP=120, TN=62, FP=59, FN=1
+[2025-12-02 09:53:18,767 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 018/100 | Loss: 1.0694 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:53:18,767 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:53:31,487 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 019/100 | Loss: 0.2715 | Acc: 0.8760 | Prec: 0.8711 | Recall: 0.8616 | Spec: 0.8886
+[2025-12-02 09:53:32,362 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 019/100 | Loss: 1.1005 | Acc: 0.7521 | Prec: 0.6704 | Recall: 0.9917 | Spec: 0.5124
+[2025-12-02 09:53:32,363 INFO main.train_one_fold]   Confusion: TP=120, TN=62, FP=59, FN=1
+[2025-12-02 09:53:32,363 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 019/100 | Loss: 1.1005 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:53:32,363 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:53:44,815 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 020/100 | Loss: 0.2769 | Acc: 0.8760 | Prec: 0.8631 | Recall: 0.8725 | Spec: 0.8791
+[2025-12-02 09:53:45,721 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 020/100 | Loss: 1.1484 | Acc: 0.7438 | Prec: 0.6667 | Recall: 0.9752 | Spec: 0.5124
+[2025-12-02 09:53:45,721 INFO main.train_one_fold]   Confusion: TP=118, TN=62, FP=59, FN=3
+[2025-12-02 09:53:45,721 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 020/100 | Loss: 1.1484 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:53:45,721 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:53:45,739 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_6_epoch_020.pth
+[2025-12-02 09:54:01,858 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 021/100 | Loss: 0.2668 | Acc: 0.8825 | Prec: 0.8824 | Recall: 0.8631 | Spec: 0.8995
+[2025-12-02 09:54:03,163 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 021/100 | Loss: 1.1885 | Acc: 0.7521 | Prec: 0.6704 | Recall: 0.9917 | Spec: 0.5124
+[2025-12-02 09:54:03,163 INFO main.train_one_fold]   Confusion: TP=120, TN=62, FP=59, FN=1
+[2025-12-02 09:54:03,163 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 021/100 | Loss: 1.1885 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:54:03,163 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:54:19,888 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 022/100 | Loss: 0.2715 | Acc: 0.8716 | Prec: 0.8675 | Recall: 0.8554 | Spec: 0.8859
+[2025-12-02 09:54:20,720 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 022/100 | Loss: 1.2445 | Acc: 0.7025 | Prec: 0.6467 | Recall: 0.8926 | Spec: 0.5124
+[2025-12-02 09:54:20,720 INFO main.train_one_fold]   Confusion: TP=108, TN=62, FP=59, FN=13
+[2025-12-02 09:54:20,720 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 022/100 | Loss: 1.2445 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:54:20,720 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:54:36,439 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 023/100 | Loss: 0.2609 | Acc: 0.8803 | Prec: 0.8782 | Recall: 0.8631 | Spec: 0.8954
+[2025-12-02 09:54:37,759 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 023/100 | Loss: 1.2392 | Acc: 0.7521 | Prec: 0.6704 | Recall: 0.9917 | Spec: 0.5124
+[2025-12-02 09:54:37,759 INFO main.train_one_fold]   Confusion: TP=120, TN=62, FP=59, FN=1
+[2025-12-02 09:54:37,759 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 023/100 | Loss: 1.2392 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:54:37,759 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:54:53,746 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 024/100 | Loss: 0.2702 | Acc: 0.8760 | Prec: 0.8794 | Recall: 0.8507 | Spec: 0.8981
+[2025-12-02 09:54:55,002 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 024/100 | Loss: 1.2562 | Acc: 0.7231 | Prec: 0.6570 | Recall: 0.9339 | Spec: 0.5124
+[2025-12-02 09:54:55,002 INFO main.train_one_fold]   Confusion: TP=113, TN=62, FP=59, FN=8
+[2025-12-02 09:54:55,003 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 024/100 | Loss: 1.2562 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:54:55,003 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:55:11,293 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 025/100 | Loss: 0.2500 | Acc: 0.8832 | Prec: 0.8838 | Recall: 0.8631 | Spec: 0.9008
+[2025-12-02 09:55:12,501 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 025/100 | Loss: 1.2823 | Acc: 0.7355 | Prec: 0.6629 | Recall: 0.9587 | Spec: 0.5124
+[2025-12-02 09:55:12,504 INFO main.train_one_fold]   Confusion: TP=116, TN=62, FP=59, FN=5
+[2025-12-02 09:55:12,504 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 025/100 | Loss: 1.2823 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:55:12,504 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:55:28,391 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 026/100 | Loss: 0.2661 | Acc: 0.8702 | Prec: 0.8803 | Recall: 0.8351 | Spec: 0.9008
+[2025-12-02 09:55:29,485 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 026/100 | Loss: 1.3161 | Acc: 0.7314 | Prec: 0.6609 | Recall: 0.9504 | Spec: 0.5124
+[2025-12-02 09:55:29,485 INFO main.train_one_fold]   Confusion: TP=115, TN=62, FP=59, FN=6
+[2025-12-02 09:55:29,485 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 026/100 | Loss: 1.3161 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:55:29,485 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:55:44,557 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 027/100 | Loss: 0.2466 | Acc: 0.8825 | Prec: 0.8962 | Recall: 0.8460 | Spec: 0.9144
+[2025-12-02 09:55:45,575 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 027/100 | Loss: 1.3449 | Acc: 0.7438 | Prec: 0.6667 | Recall: 0.9752 | Spec: 0.5124
+[2025-12-02 09:55:45,575 INFO main.train_one_fold]   Confusion: TP=118, TN=62, FP=59, FN=3
+[2025-12-02 09:55:45,575 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 027/100 | Loss: 1.3449 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:55:45,576 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:56:02,473 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 028/100 | Loss: 0.2520 | Acc: 0.8789 | Prec: 0.8876 | Recall: 0.8476 | Spec: 0.9062
+[2025-12-02 09:56:03,496 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 028/100 | Loss: 1.3659 | Acc: 0.7521 | Prec: 0.6704 | Recall: 0.9917 | Spec: 0.5124
+[2025-12-02 09:56:03,496 INFO main.train_one_fold]   Confusion: TP=120, TN=62, FP=59, FN=1
+[2025-12-02 09:56:03,496 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 028/100 | Loss: 1.3659 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:56:03,497 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:56:19,394 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 029/100 | Loss: 0.2516 | Acc: 0.8666 | Prec: 0.8684 | Recall: 0.8414 | Spec: 0.8886
+[2025-12-02 09:56:20,089 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 029/100 | Loss: 1.4169 | Acc: 0.7273 | Prec: 0.6590 | Recall: 0.9421 | Spec: 0.5124
+[2025-12-02 09:56:20,090 INFO main.train_one_fold]   Confusion: TP=114, TN=62, FP=59, FN=7
+[2025-12-02 09:56:20,090 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 029/100 | Loss: 1.4169 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:56:20,090 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:56:32,696 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 030/100 | Loss: 0.2344 | Acc: 0.8927 | Prec: 0.8998 | Recall: 0.8663 | Spec: 0.9158
+[2025-12-02 09:56:33,460 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 030/100 | Loss: 1.4265 | Acc: 0.7397 | Prec: 0.6648 | Recall: 0.9669 | Spec: 0.5124
+[2025-12-02 09:56:33,461 INFO main.train_one_fold]   Confusion: TP=117, TN=62, FP=59, FN=4
+[2025-12-02 09:56:33,461 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 030/100 | Loss: 1.4265 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:56:33,461 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:56:33,481 INFO main.train_one_fold] Saved checkpoint: experiments/t4_006_mdd_ec/fold_6_epoch_030.pth
+[2025-12-02 09:56:48,352 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 031/100 | Loss: 0.2380 | Acc: 0.8898 | Prec: 0.9031 | Recall: 0.8554 | Spec: 0.9198
+[2025-12-02 09:56:49,149 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 031/100 | Loss: 1.4346 | Acc: 0.7355 | Prec: 0.6629 | Recall: 0.9587 | Spec: 0.5124
+[2025-12-02 09:56:49,149 INFO main.train_one_fold]   Confusion: TP=116, TN=62, FP=59, FN=5
+[2025-12-02 09:56:49,149 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 031/100 | Loss: 1.4346 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:56:49,149 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:57:03,319 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 032/100 | Loss: 0.2338 | Acc: 0.8869 | Prec: 0.8884 | Recall: 0.8663 | Spec: 0.9049
+[2025-12-02 09:57:04,375 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 032/100 | Loss: 1.4567 | Acc: 0.7190 | Prec: 0.6550 | Recall: 0.9256 | Spec: 0.5124
+[2025-12-02 09:57:04,375 INFO main.train_one_fold]   Confusion: TP=112, TN=62, FP=59, FN=9
+[2025-12-02 09:57:04,375 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 032/100 | Loss: 1.4567 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:57:04,375 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:57:17,228 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 033/100 | Loss: 0.2331 | Acc: 0.8811 | Prec: 0.8920 | Recall: 0.8476 | Spec: 0.9103
+[2025-12-02 09:57:18,121 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 033/100 | Loss: 1.4517 | Acc: 0.7273 | Prec: 0.6590 | Recall: 0.9421 | Spec: 0.5124
+[2025-12-02 09:57:18,121 INFO main.train_one_fold]   Confusion: TP=114, TN=62, FP=59, FN=7
+[2025-12-02 09:57:18,122 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 033/100 | Loss: 1.4517 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:57:18,122 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:57:35,330 INFO main.train_one_fold] TRAIN CHUNK | Fold 6 | Epoch 034/100 | Loss: 0.2261 | Acc: 0.8912 | Prec: 0.9008 | Recall: 0.8616 | Spec: 0.9171
+[2025-12-02 09:57:36,181 INFO main.train_one_fold] EVAL CHUNK | Fold 6 | Epoch 034/100 | Loss: 1.5132 | Acc: 0.7066 | Prec: 0.6488 | Recall: 0.9008 | Spec: 0.5124
+[2025-12-02 09:57:36,181 INFO main.train_one_fold]   Confusion: TP=109, TN=62, FP=59, FN=12
+[2025-12-02 09:57:36,182 INFO main.train_one_fold] EVAL SUBJECT | Fold 6 | Epoch 034/100 | Loss: 1.5132 | Acc: 0.7500 | Prec: 0.6667 | Recall: 1.0000 | Spec: 0.5000
+[2025-12-02 09:57:36,182 INFO main.train_one_fold]   Confusion: TP=4, TN=2, FP=2, FN=0
+[2025-12-02 09:57:36,182 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.7562 at epoch 14
+[2025-12-02 09:57:36,182 INFO main.train_one_fold] Early stopping triggered at epoch 34
+[2025-12-02 09:57:36,182 INFO main.train_one_fold] 
+Fold 6 training completed. Best Combined Val Acc: 0.5671 at epoch 14
+[2025-12-02 09:57:36,182 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:57:36,182 INFO main.train_cross_validation] 6-FOLD CROSS-VALIDATION RESULTS
+[2025-12-02 09:57:36,183 INFO main.train_cross_validation] ================================================================================
+[2025-12-02 09:57:36,183 INFO main.train_cross_validation] 
+Per-fold best validation accuracy:
+[2025-12-02 09:57:36,183 INFO main.train_cross_validation]   Fold 1: 0.7706 (epoch 22)
+[2025-12-02 09:57:36,183 INFO main.train_cross_validation]   Fold 2: 0.8128 (epoch 6)
+[2025-12-02 09:57:36,183 INFO main.train_cross_validation]   Fold 3: 0.9101 (epoch 4)
+[2025-12-02 09:57:36,183 INFO main.train_cross_validation]   Fold 4: 0.7905 (epoch 6)
+[2025-12-02 09:57:36,183 INFO main.train_cross_validation]   Fold 5: 0.7670 (epoch 13)
+[2025-12-02 09:57:36,183 INFO main.train_cross_validation]   Fold 6: 0.5671 (epoch 14)
+[2025-12-02 09:57:36,184 INFO main.write_results] COMBINED Accuracy Mean: 0.7697 ± 0.1025, Min: 0.5671, Max: 0.9101
+
+[2025-12-02 09:57:36,184 INFO main.write_results] CHUNK Accuracy Mean: 0.8652 ± 0.0518, Min: 0.7562, Max: 0.9101
+
+[2025-12-02 09:57:36,184 INFO main.write_results] SUBJECT Accuracy Mean: 0.8856 ± 0.0730, Min: 0.7500, Max: 1.0000
+
+[2025-12-02 09:57:36,184 INFO main.train_cross_validation] ================================================================================
+
+[2025-12-02 09:57:36,186 INFO main.train] 
+Results saved to experiments/t4_006_mdd_ec/cv_results.txt
+[2025-12-02 09:57:36,186 INFO main.train] Training completed!
