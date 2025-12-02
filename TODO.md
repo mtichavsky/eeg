@@ -1,4 +1,6 @@
 
+- [ ] Convert to chunk accuracy
+- 
 Evaluation:
 
 - make sure imbalanced classes don't cause you any problems
