@@ -27,18 +27,20 @@ For other helpful targets (such as formatting and type checking), see [Makefile]
 The project supports two EEG datasets that can be used independently or combined:
 
 ### MDD Dataset
-Located at `../MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {EC|EO|TASK}.edf`
+
+Expected location at `../MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {EC|EO|TASK}.edf`
 
 **Dataset Structure:**
 - **H** = Healthy control subjects
 - **MDD** = Major Depressive Disorder subjects
 - **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
-- **Channels**: 20 channels available, using one of the 6 (Fp1, Fp2, C3, C4, O2, Cz)
+- **Channels**: 20 channels available, using only some of them 
 - **Sampling Rate**: 250 Hz (SFREQ = 1000/4)
 - **Segments**: 10-second chunks (2,500 samples each)
 
 ### CANE Dataset
-Located at `../CANE-dataset/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
+
+Expected location at `../CANE/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
 
 **Dataset Structure:**
 - **H** = Healthy control subjects
@@ -49,13 +51,14 @@ Located at `../CANE-dataset/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
 - **Preprocessing**: Uses artifact detection instead of ICA
 
 ### Multi-Dataset Training
+
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
 - `--dataset both`: Combined (3 classes: normal vs depressed vs anxious)
 
 ## Usage
 
-### Basic Training
+### Train
 
 Train the CNN-LSTM model using 10-fold cross-validation on the Eyes Closed (EC) condition:
 
@@ -80,15 +83,6 @@ poetry run python main.py train --skip-ica \
   --dropout 0.5 \
   --weight-decay 1e-4 \
   --val-every 1
-
-# Train on combined EC+EO conditions
-poetry run python main.py train --skip-ica --channel Fp1 --condition ec+eo
-
-# Train on CANE dataset (anxiety detection)
-poetry run python main.py train --skip-ica --channel Fp1 --dataset cane
-
-# Train on both datasets (3-class: normal/depressed/anxious)
-poetry run python main.py train --skip-ica --channel Fp1 --dataset both
 ```
 
 Training creates checkpoints in the specified directory with the following structure:
@@ -111,12 +105,9 @@ Visualize training and validation loss curves across folds:
 poetry run python plot_training_curves.py <checkpoint_dir>/<log file>
 ```
 
-This creates a `loss_curves/` directory with:
-- Individual plots for each fold
-- Combined overview plot showing all folds
-- Best model epochs clearly marked
+This creates a `loss_curves/` directory with individual plots for each fold and combined overview plot. 
 
-## Model Inference
+### Model Inference
 
 Run inference on a single EDF file using a trained model:
 
@@ -158,19 +149,6 @@ Each EDF file undergoes the following preprocessing (see `thesis/dataset.py`):
 
 ## Development
 
-### Viewing Spectrograms
-
-You can visualize the spectrograms generated from preprocessed EEG data using the test scripts:
-
-```bash
-# View MDD dataset spectrograms
-poetry run python mdd.py
-# View CANE dataset spectrograms
-poetry run python cane.py
-```
-
-Spectrograms will be saved into `spectogram_(mdd|cane).png` files.
-
 ### Formatting and Linting
 
 ```bash
@@ -180,6 +158,19 @@ make format
 # Run type checking with mypy
 make typecheck
 ```
+
+
+### Viewing Spectrograms
+
+You can visualize the spectrograms generated from preprocessed EEG data using the test scripts:
+
+```bash
+# View MDD/CANE dataset spectrograms
+poetry run python mdd.py
+poetry run python cane.py
+```
+
+Spectrograms will be saved into `spectogram_(mdd|cane).png` files.
 
 ### Cross-Validation Strategy
 
