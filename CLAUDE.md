@@ -69,11 +69,11 @@ poetry run python main.py train
 # Faster, debug run, skipping the ICA
 poetry run python main.py train --skip-ica
 
-# Full example with all major options
+# Full example with all major options (following naming convention)
 poetry run python main.py train --skip-ica \
   --channel Fp1 \
   --batch-size 32 \
-  --checkpoint-dir=experiments/my_experiment \
+  --checkpoint-dir=experiments/mdd_007_fp1_ec \
   --dataset mdd \
   --condition ec \
   --n-folds 10 \
@@ -81,6 +81,37 @@ poetry run python main.py train --skip-ica \
   --weight-decay 1e-4 \
   --val-every 1
 ```
+
+### Experiment Organization
+
+**IMPORTANT: Experiment Directory Naming Convention**
+
+All experiment directories **MUST** follow this naming pattern:
+```
+<dataset>_<version>_<channel>_<condition>
+```
+
+**Components:**
+- `<dataset>`: Dataset identifier (`mdd`, `cane`, or `both`)
+- `<version>`: Experiment version/iteration (e.g., `006`, `007`)
+- `<channel>`: EEG channel used (e.g., `fp1`, `t4`, `t3`, `t7`)
+- `<condition>`: Recording condition (`ec`, `eo`, or `ec+eo`)
+
+**Examples:**
+- `experiments/mdd_006_fp1_ec` - MDD dataset, version 006, Fp1 channel, eyes closed
+- `experiments/cane_006_t7_ec+eo` - CANE dataset, version 006, T7 channel, combined conditions
+- `experiments/both_007_fp1_ec` - Both datasets, version 007, Fp1 channel, eyes closed
+
+**Why this matters:**
+- Ensures consistent organization across all experiments
+- Makes it easy to identify experiment parameters from directory name
+- Prevents confusion between channel names and directory names
+- Facilitates automated analysis and result aggregation
+
+**When creating new experiments:**
+1. Always use this naming pattern for the `--checkpoint-dir` argument
+2. Ensure the channel in the directory name matches the `--channel` argument
+3. Document experiments in `EXPERIMENTS.md` following the established format
 
 ### Interactive Development
 Jupyter notebooks are available for prototyping:

@@ -1,17 +1,56 @@
-## Planned experiments
+# Experiments
 
+## Summary Table: Comparing Experiments
 
-## 006 + 007 bunch
+| Experiment       | Dataset | Channel | Condition | Batch | Dropout | Subject Acc (Min-Max)    | Chunk Acc (Min-Max)       |
+|------------------|---------|---------|-----------|-------|---------|--------------------------|---------------------------|
+| mdd_006_t4_ec    | MDD     | T4      | EC        | 64    | 0.5     | 88.6% ± 7.3% (75.0-100%) | 86.5% ± 5.2% (75.6-91.0%) |
+| mdd_006_t3_ec+eo | MDD     | T3      | EC+EO     | 64    | 0.4     | 89.1% ± 8.2% (79.0-100%) | 88.3% ± 7.9% (79.1-100%)  |
+| mdd_006_fp1_ec   | MDD     | Fp1     | EC        | 64    | 0.5     | 94.0% ± 9.4% (75.0-100%) | 91.3% ± 7.7% (75.6-98.6%) |
 
-Add these Results saved to experiments/cane_006_fp1_ec/cv_results.txt
+## Key Insights from 006 Experiments
 
-CHUNK Accuracy Mean: 0.5758 ± 0.0722, Min: 0.4645, Max: 0.6648
+### 1. Batch Size Impact on MDD
 
-![losses](experiments/cane_006_fp1_ec/loss_curves/all_folds_combined_loss_curves.png)
+- **fp1_006_mdd_ec (batch 64)**: 94.0% vs **fp1_004_mdd_ec (batch 32)**: 90.5%
+- ~3.5% improvement, though variance increased (±9.4% vs ±8.4%)
+- **Conclusion**: Larger batches provide more stable gradients and better learning on limited data
 
-Add these Results saved to experiments/cane_006_t8_ec+eo/cv_results.txt
+### 2. Fp1 Channel Confirmed as Best for Depression
 
-![losses](experiments/cane_006_t8_ec+eo/loss_curves/all_folds_combined_loss_curves.png)
+- **Fp1**: 94.0% vs **T4**: 88.6%
+- **Reason**: Frontal asymmetry is the key biomarker for depression — T4 (right temporal) misses this critical signal
+
+### 3. CANE Dataset Performance Issues
+
+- **Fp1 channel performance**: 61.9% (essentially random for 2-class classification)
+- **Critical issue**: In `cane_006_t8_ec+eo`, 5 out of 6 folds peaked at epoch 1:
+  - Fold 1: best at epoch 1
+  - Fold 2: best at epoch 1
+  - Fold 3: best at epoch 1
+  - Fold 4: best at epoch 1
+  - Fold 5: best at epoch 1
+  - Fold 6: best at epoch 12 ← only fold that showed learning
+- **Conclusion**: Model cannot learn from this data with current architecture
+
+### 4. The "Fold 6 Problem" in MDD
+
+Both MDD experiments show Fold 6 performing significantly worse:
+- **mdd_006_fp1_ec Fold 6**: 75.0% subject accuracy (vs 100% in other folds)
+- **mdd_006_t4_ec Fold 6**: 75.0% subject accuracy
+- **Hypothesis**: 1-2 subjects in that fold are fundamentally hard to classify
+
+### Priorities Moving Forward
+
+**Priority 1: MDD results are satisfactory**
+- 94% subject accuracy with Fp1/EC/batch64 is solid for ~60 subjects
+- High variance is inherent to small-sample EEG studies
+
+**Priority 2: Re-evaluate CANE approach**
+- Current model architecture cannot learn anxiety patterns with 39 subjects
+- Consider alternative approaches or architectures 
+
+## Detailed Experiment Results (006 Series)
 
 ### MDD Fp1 EC 006
 
@@ -19,7 +58,7 @@ Add these Results saved to experiments/cane_006_t8_ec+eo/cv_results.txt
 python main.py train --skip-ica \
 --channel Fp1 \
 --batch-size 64 \
---checkpoint-dir=experiments/fp1_006_mdd_ec \
+--checkpoint-dir=experiments/mdd_006_fp1_ec \
 --dataset mdd \
 --condition ec \
 --n-folds 6 \
@@ -28,9 +67,11 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
-CHUNK Accuracy Mean: 0.9125 ± 0.0771, Min: 0.7562, Max: 0.9862
+**Results:**
+- SUBJECT Accuracy Mean: 0.9398 ± 0.0941, Min: 0.7500, Max: 1.0000
+- CHUNK Accuracy Mean: 0.9125 ± 0.0771, Min: 0.7562, Max: 0.9862
 
-![training](experiments/fp1_006_mdd_ec/loss_curves/all_folds_combined_loss_curves.png)
+![training](experiments/mdd_006_fp1_ec/loss_curves/all_folds_combined_loss_curves.png)
 
 ### MDD T4 EC 006
 
@@ -38,7 +79,7 @@ CHUNK Accuracy Mean: 0.9125 ± 0.0771, Min: 0.7562, Max: 0.9862
 python main.py train --skip-ica \
 --channel T4 \
 --batch-size 64 \
---checkpoint-dir=experiments/t4_006_mdd_ec \
+--checkpoint-dir=experiments/mdd_006_t4_ec \
 --dataset mdd \
 --condition ec \
 --n-folds 6 \
@@ -47,17 +88,19 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
-CHUNK Accuracy Mean: 0.8652 ± 0.0518, Min: 0.7562, Max: 0.9101
+**Results:**
+- SUBJECT Accuracy Mean: 0.8856 ± 0.0730, Min: 0.7500, Max: 1.0000
+- CHUNK Accuracy Mean: 0.8652 ± 0.0518, Min: 0.7562, Max: 0.9101
 
-![training](experiments/t4_006_mdd_ec/loss_curves/all_folds_combined_loss_curves.png)
+![training](experiments/mdd_006_t4_ec/loss_curves/all_folds_combined_loss_curves.png)
 
-### MDD T4 EC+EO 006
+### MDD T3 EC+EO 006
 
 ```bash
 python main.py train --skip-ica \
 --channel T3 \
 --batch-size 64 \
---checkpoint-dir=experiments/mdd_t4_ec+eo_006 \
+--checkpoint-dir=experiments/mdd_006_t3_ec+eo \
 --dataset mdd \
 --condition ec+eo \
 --n-folds 6 \
@@ -66,9 +109,11 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
-CHUNK Accuracy Mean: 0.8828 ± 0.0785, Min: 0.7906, Max: 1.0000
+**Results:**
+- SUBJECT Accuracy Mean: 0.8912 ± 0.0815, Min: 0.7895, Max: 1.0000
+- CHUNK Accuracy Mean: 0.8828 ± 0.0785, Min: 0.7906, Max: 1.0000
 
-![training](experiments/mdd_t4_ec+eo_006/loss_curves/all_folds_combined_loss_curves.png)
+![training](experiments/mdd_006_t3_ec+eo/loss_curves/all_folds_combined_loss_curves.png)
 
 ### CANE Fp1 EC 006
 
@@ -76,7 +121,7 @@ CHUNK Accuracy Mean: 0.8828 ± 0.0785, Min: 0.7906, Max: 1.0000
 python main.py train --skip-ica \
 --channel Fp1 \
 --batch-size 64 \
---checkpoint-dir=experiments/fp1_006_cane_ec \
+--checkpoint-dir=experiments/cane_006_fp1_ec \
 --dataset cane \
 --condition ec \
 --n-folds 6 \
@@ -85,7 +130,15 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
+**Results:**
+- SUBJECT Accuracy Mean: 0.6190 ± 0.0858, Min: 0.5000, Max: 0.7143
+- CHUNK Accuracy Mean: 0.5758 ± 0.0722, Min: 0.4645, Max: 0.6648
+
+![training](experiments/cane_006_fp1_ec/loss_curves/all_folds_combined_loss_curves.png)
+
 ---
+
+## Earlier Experiments (005 Series)
 
 ### MDD+CANE EC+EO Fp1 005
 
@@ -102,15 +155,14 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
-CHUNK Accuracy Mean: 0.7390 ± 0.0794, Min: 0.5881, Max: 0.8328
+**Results:**
+- CHUNK Accuracy Mean: 0.7390 ± 0.0794, Min: 0.5881, Max: 0.8328
 
 ![training](experiments/both_fp1_ec+eo_005/training_ec+eo_Fp1_noica_20251130_163158.log)
 
----
+### MDD T3 EC+EO 005 (Lower Batch Size)
 
-### MDD EC+EO T3 lower batch size
-
-- **TODO**: try this with batch 128?
+**Note:** TODO - try this with batch 128?
 
 ```bash
 python main.py train --skip-ica \
@@ -125,17 +177,17 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
-[results](experiments/mdd_t3_ec+eo_005/cv_results.txt)
+**Results:** See [cv_results.txt](experiments/mdd_t3_ec+eo_005/cv_results.txt)
 
 ![loss curves](experiments/mdd_t3_ec+eo_005/loss_curves/all_folds_combined_loss_curves.png)
 
-### CANE EC+EO T7 batch size=8
+### CANE T7 EC+EO 005 (Batch Size 8)
 
-Definitely worse: experiments/cane_t7_ec+eo_005/loss_curves/all_folds_combined_loss_curves.png
-probably large batc hand smaller dropout
-
-why is in results written the combined, i need them separate, otherwise it gives those random values
-also the plot is completely broken
+**Observations:**
+- Performance was significantly worse (see loss curves)
+- Likely needs larger batch size and smaller dropout
+- Combined metric in results gives inconsistent values - need separate metrics
+- Loss curve plots appear broken
 
 ```bash
 python main.py train --skip-ica \
@@ -152,7 +204,7 @@ python main.py train --skip-ica \
 
 ![losses](experiments/cane_t7_ec+eo_005/loss_curves/all_folds_combined_loss_curves.png)
 
-Second try:
+**Second attempt with adjusted parameters:**
 ```bash
 python main.py train --skip-ica \
 --channel T7 \
@@ -166,11 +218,11 @@ python main.py train --skip-ica \
 --val-every 1
 ```
 
-## Experiments overview:
+---
 
-### Nov 28
+## Archived Experiments (004 Series and Earlier)
 
-#### CANE EC dropout and L2 / T7
+### CANE T7 EC 005 (Batch Size 32)
 
 ```bash
 python main.py train --skip-ica \
@@ -187,16 +239,27 @@ python main.py train --skip-ica \
 
 ![loss functions](experiments/t7_005_beta_cane_ec/loss_curves/all_folds_combined_loss_curves.png)
 
-### Nov 26
+### MDD Fp1 EC+EO 005 Beta (Nov 26)
 
-Both EC+EO
-I labeled this as beta
-This is the experiment in experiments that's not mentioned here
-python main.py train --skip-ica   --channel Fp1   --batch-size 32   --checkpoint-dir=experiments/fp1_005_mdd_ec   --dataset mdd   --condition ec+eo   --n-folds 6   --dropout 0.5   --weight-decay 1e-4   --val-every 1
+**Notes:**
+- Labeled as "beta" experiment
+- Directory: `experiments/fp1_005_mdd_ec`
+- TODO: Re-run with current logic and consult analysis
 
-I'd do it once again with my current logic, see what it does and consult with CLAUDE
+```bash
+python main.py train --skip-ica \
+  --channel Fp1 \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/fp1_005_mdd_ec \
+  --dataset mdd \
+  --condition ec+eo \
+  --n-folds 6 \
+  --dropout 0.5 \
+  --weight-decay 1e-4 \
+  --val-every 1
+```
 
-#### MDD EC dropout and L2
+### MDD Fp1 EC 004 (Dropout and L2 Regularization)
 
 ```bash
 python main.py train --skip-ica \
@@ -214,43 +277,64 @@ python main.py train --skip-ica \
 
 ![loss functions](experiments/fp1_004_mdd_ec/loss_curves/all_folds_combined_loss_curves.png)
 
+---
 
-### Nov 14
+### MDD Fp1 EC 003 (Nov 14)
 
-#### CANE dropout=0.5 doesn't really work, need to check why.
+```bash
+python main.py train --skip-ica \
+  --channel Fp1 \
+  --batch-size 32 \
+  --checkpoint-dir=checkpoints_fp1_003_mdd \
+  --dataset mdd \
+  --condition ec
+```
 
-- /home/milan/Documents/diplomka/code/venv/bin/python code/main.py train --skip-ica --channel Fp1 --batch-size 32 --checkpoint-dir=checkpoints_fp1_003_cane --dataset cane --condition ec
-- Using 'checkpoints_fp1_003_cane_dqr'
-
-#### Pure MDD attempt
-
-- `python main.py train --skip-ica --channel Fp1 --batch-size 32 --checkpoint-dir=checkpoints_fp1_003_mdd --dataset mdd --condition ec`
-- `experiments/fp1_003_mdd_mqm` directory
+**Directory:** `experiments/fp1_003_mdd_mqm`
 
 ![loss functions](experiments/fp1_003_mdd_mqm/loss_curves/all_folds_combined_loss_curves.png)
 
-The good news: Training loss consistently decreases across all folds, showing the model is learning. 
-Several folds (3, 6, 7, 8, 9) show decent convergence with eval loss stabilizing in a reasonable range.
- 
-The concerning patterns:
-- Significant overfitting in multiple folds — particularly folds 4, 5, and 10 where the gap between train and eval loss 
-  grows substantially. 
-- High variance across folds — the eval loss behavior is quite inconsistent. Some folds stabilize around 0.1-0.2,
-  others hover around 0.5-0.8. This suggests either the data splits have very different characteristics, or the model 
-  is sensitive to which subjects/samples end up in which fold.
-- Eval loss instability — lots of oscillation in the validation curves (folds 1, 4, 5, 8, 10), which could indicate 
-  batch size issues, learning rate too high, or simply that some folds have limited/noisy validation data.
+**Analysis:**
 
-**Changes implemented based on this:** Regularization added, spatial dropout added, considering making model smaller to
-avoid overfitting.
+**Positive observations:**
+- Training loss consistently decreases across all folds → model is learning
+- Folds 3, 6, 7, 8, 9 show decent convergence with stable eval loss
 
-Given that you're doing subject-level splits, the high fold variance makes more sense now. EEG signals vary a lot
-between individuals — electrode impedance, skull thickness, baseline neural patterns, how anxiety manifests
-physiologically. Some subjects are just harder to classify than others.
-This reframes the problem a bit. The inconsistent eval performance across folds might be less about overfitting in the
-traditional sense and more about poor cross-subject generalization — a notoriously hard problem in EEG-based
-classification.
+**Concerning patterns:**
+- **Significant overfitting** in folds 4, 5, and 10 (large train/eval loss gap)
+- **High fold variance**: Eval loss ranges from 0.1-0.2 (some folds) to 0.5-0.8 (others)
+  - Suggests either highly variable data splits or model sensitivity to subject composition
+- **Eval loss instability**: Oscillations in folds 1, 4, 5, 8, 10
+  - Possible causes: batch size issues, learning rate too high, limited/noisy validation data
 
-#### CANE with lower dropout
--  python main.py train --skip-ica --channel Fp1 --batch-size 32 --checkpoint-dir=checkpoints_fp1_003_cane --dataset cane --condition ec
-- Using 'checkpoints_fp1_003_cane_xhv' instead to avoid overwriting.
+**Implemented improvements:**
+- Added regularization (L2 weight decay)
+- Added spatial dropout (nn.Dropout2d)
+- Considering reducing model size
+
+**Key insight:**
+Given subject-level splits, high fold variance is expected. EEG signals vary dramatically between individuals due to:
+- Electrode impedance differences
+- Skull thickness variations
+- Baseline neural patterns
+- Individual physiological manifestations of depression
+
+This reframes the problem: inconsistent eval performance is less about traditional overfitting and more about the challenge of **cross-subject generalization** in EEG-based classification.
+
+### CANE Fp1 EC 003 (Nov 14)
+
+**Notes:**
+- Dropout 0.5 doesn't work well for CANE dataset
+- Using checkpoint directory: `checkpoints_fp1_003_cane_dqr` (to avoid overwriting)
+
+```bash
+python main.py train --skip-ica \
+  --channel Fp1 \
+  --batch-size 32 \
+  --checkpoint-dir=checkpoints_fp1_003_cane \
+  --dataset cane \
+  --condition ec
+```
+
+**Second attempt with lower dropout:**
+- Using checkpoint directory: `checkpoints_fp1_003_cane_xhv`

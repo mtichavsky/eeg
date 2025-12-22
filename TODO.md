@@ -1,57 +1,19 @@
-projekt
-- zadani
-- chce kod/ciste report?
-- potrebuju pak slides
-- jak moc se zamerit na jeden channel x vsechny channely
 
-nechce slidy, staci mu report, vicemene jak chapeme ty metody z prednasek
-
-- jak poznam ze model je dobry - projit modely
-  - jak moc je to spatne a jak moc je to proste EEG data problem
-- all channel x single channel
-  - mam delat 3D konvoluce x nezavisle modely - oni to tam nezminujou, jak velky je model v tom clanku, abych ja nemel
-    moc velky model na signle channel, treba ten jejich model zvladal vsechny channels
-  - oni tam nepisou nic o cross fold
 - online x offline (ICA, common noise)
   - user raw, focus on one channel
-> `combined_metric = chunk_metrics["accuracy"] * subject_metrics["accuracy"]`
-- we kinda skipped this one
-- early stopping based on accuracy
-- mam delat augmentace, I think they were adding noise
-- kombinovat eyes closed x eyes open - deep learning - i can try both, otherwise they treat it separate
-- co mam mit v lednu hotove?
 
-chunks sizes - 1-10s 
-write 4 point into report, make sure to submit by the end of the year
-
-30 Jan 10:40 am
-
-- [ ] Convert to chunk accuracy
-- 
-Evaluation:
-
-- make sure imbalanced classes don't cause you any problems
-- make sure you're not overfitting the model
-- early stopping based on chunk level, loss based on chunk level 
-  - Risk: A model could overfit to chunks while subject accuracy plateaus or decreases
-  - **TODO:** log both metrics and compare, ideally show them on the graphs
-
-> Commentary : Loss function design:
-> `combined_metric = chunk_metrics["accuracy"] * subject_metrics["accuracy"]`
-> This is probably the best right? But do I have it baked into training? No.
-> So I need to clear up this inconsistency, cause training runs surely on chunk_metrics only
-> if it was possible to calculate loss like that
-> Right now, training is done based on chunk accuracy, best model based on combine metrics eval results.
-> That's kinda inconsistent
-> Come up with ideas how to make sure :)
 
 - batch normalization?
 - vanishing gradient problem?
 
-**TODO** train_one_fold - clear up the chunks vs combined accuracy problem
-
 ## What to evaluate on:
 
+- make sure imbalanced classes don't cause you any problems
+- make sure you're not overfitting the model
+- early stopping based on chunk level, loss based on chunk level
+  - Risk: A model could overfit to chunks while subject accuracy plateaus or decreases
+  - **TODO:** log both metrics and compare, ideally show them on the graphs
+ 
 - Chunk level accuracy
 - Subject level accuracy
 - Mixed accuracy
