@@ -1,3 +1,30 @@
+projekt
+- zadani
+- chce kod/ciste report?
+- potrebuju pak slides
+- jak moc se zamerit na jeden channel x vsechny channely
+
+nechce slidy, staci mu report, vicemene jak chapeme ty metody z prednasek
+
+- jak poznam ze model je dobry - projit modely
+  - jak moc je to spatne a jak moc je to proste EEG data problem
+- all channel x single channel
+  - mam delat 3D konvoluce x nezavisle modely - oni to tam nezminujou, jak velky je model v tom clanku, abych ja nemel
+    moc velky model na signle channel, treba ten jejich model zvladal vsechny channels
+  - oni tam nepisou nic o cross fold
+- online x offline (ICA, common noise)
+  - user raw, focus on one channel
+> `combined_metric = chunk_metrics["accuracy"] * subject_metrics["accuracy"]`
+- we kinda skipped this one
+- early stopping based on accuracy
+- mam delat augmentace, I think they were adding noise
+- kombinovat eyes closed x eyes open - deep learning - i can try both, otherwise they treat it separate
+- co mam mit v lednu hotove?
+
+chunks sizes - 1-10s 
+write 4 point into report, make sure to submit by the end of the year
+
+30 Jan 10:40 am
 
 - [ ] Convert to chunk accuracy
 - 
@@ -18,24 +45,31 @@ Evaluation:
 > That's kinda inconsistent
 > Come up with ideas how to make sure :)
 
-What to evaluate on:
+- batch normalization?
+- vanishing gradient problem?
+
+**TODO** train_one_fold - clear up the chunks vs combined accuracy problem
+
+## What to evaluate on:
 
 - Chunk level accuracy
 - Subject level accuracy
 - Mixed accuracy
-- Sensitivity
-- Specificity
-- F1 Score
+- Sensitivity (=Recall, True Positive Rate) = Measures how well the model identifies positive cases
+  - "Of all actual positives, how many did we correctly identify?"
+- Specificity - how well does the model classify negative values =  TN / (TN + FP)
+- Precision = True Positives / True positives + False positives
+- F1 Score - **multiple classes**, useful for imbalanced datasets
+  - F1 Score = 2 x Sensitivity x Precision / (Sensitivity + Precision)
+  - Multiclass -> Macro F1 = Calculate F1 for each class separately, then average them (treats all classes equally)
 - Confusion matrix - Ideally somehow aggregate all folds, maybe average it out
 
 Things to think about: 
 
-Q: **should I focus more on online (i.s. no ICA) or offline** -> how long recordings do I need for X pct validations? - plot some graph in evaluation
+Q: how long recordings do I need for X pct validations? - plot some graph in evaluation
 - [ ] My preprocessing is still using all channels so the question is if to do the preprocessing on chunk level to get
   closer to online and to one channel or to do multichannel preprocessing - i don't think I'm getting a lot of benefit
   from the full channel preprocessing
-
-Combining models - they don't say how they work with  multichannel
 
 What can you tune:
 
