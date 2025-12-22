@@ -1,24 +1,17 @@
 ## Planned experiments
 
+
 ## 006 + 007 bunch
 
-- 007 - results.txt contains chunk accuracy per fold, not combined
+Add these Results saved to experiments/cane_006_fp1_ec/cv_results.txt
 
-### CANE Fp1 EC 007
+CHUNK Accuracy Mean: 0.5758 ± 0.0722, Min: 0.4645, Max: 0.6648
 
-```bash
-python main.py train --skip-ica \
---channel Fp1 \
---batch-size 64 \
---checkpoint-dir=experiments/fp1_006_cane_ec \
---dataset cane \
---condition ec \
---n-folds 6 \
---dropout 0.5 \
---weight-decay 1e-4 \
---val-every 1
-```
+![losses](experiments/cane_006_fp1_ec/loss_curves/all_folds_combined_loss_curves.png)
 
+Add these Results saved to experiments/cane_006_t8_ec+eo/cv_results.txt
+
+![losses](experiments/cane_006_t8_ec+eo/loss_curves/all_folds_combined_loss_curves.png)
 
 ### MDD Fp1 EC 006
 
@@ -77,6 +70,20 @@ CHUNK Accuracy Mean: 0.8828 ± 0.0785, Min: 0.7906, Max: 1.0000
 
 ![training](experiments/mdd_t4_ec+eo_006/loss_curves/all_folds_combined_loss_curves.png)
 
+### CANE Fp1 EC 006
+
+```bash
+python main.py train --skip-ica \
+--channel Fp1 \
+--batch-size 64 \
+--checkpoint-dir=experiments/fp1_006_cane_ec \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.5 \
+--weight-decay 1e-4 \
+--val-every 1
+```
 
 ---
 
