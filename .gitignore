@@ -1,8 +1,11 @@
-### Python template
 # My stuff
 *.pth
-experiments/*/fold_*_loss_curves.png
+experiments/**/fold_*_loss_curves.png
+.idea/
+spectrogram_*.png
+visualized_*.png
 
+### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
