@@ -17,6 +17,24 @@ from typing import Any, Dict, List, Tuple
 import matplotlib.pyplot as plt
 
 
+class TrainingCurvesError(Exception):
+    """Base exception for training curves generation errors."""
+
+    pass
+
+
+class LogFileNotFoundError(TrainingCurvesError):
+    """Raised when the log file does not exist."""
+
+    pass
+
+
+class NoTrainingDataError(TrainingCurvesError):
+    """Raised when no training data is found in the log file."""
+
+    pass
+
+
 def parse_log_file(log_path: Path) -> Dict[int, Dict[str, Any]]:
     """
     Parse training log file and extract loss values per fold.
@@ -305,27 +323,27 @@ def plot_all_folds_combined(data: Dict[int, Dict[str, Any]], output_dir: Path) -
     print(f"Saved combined plot for all folds to {output_path}")
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        print("Usage: python plot_training_curves.py <log_file_path>")
-        print(
-            "Example: python plot_training_curves.py "
-            "checkpoints_fp1_003_mdd_mqm/training_ec_Fp1_noica_20251114_160354.log"
-        )
-        sys.exit(1)
+def generate_training_curves(log_path: Path) -> Path:
+    """
+    Generate training curve plots from a training log file.
 
-    log_path = Path(sys.argv[1])
+    This function parses the training log, extracts loss and accuracy metrics,
+    and generates both individual fold plots and a combined overview plot.
 
+    :param Path log_path: Path to the training log file.
+    :return: Path to the output directory containing the plots.
+    :rtype: Path
+    :raises LogFileNotFoundError: If the log file does not exist.
+    :raises NoTrainingDataError: If no training data is found in the log file.
+    """
     if not log_path.exists():
-        print(f"Error: Log file not found: {log_path}")
-        sys.exit(1)
+        raise LogFileNotFoundError(f"Log file not found: {log_path}")
 
     print(f"Parsing log file: {log_path}")
     data = parse_log_file(log_path)
 
     if not data:
-        print("No training/evaluation loss data found in the log file!")
-        sys.exit(1)
+        raise NoTrainingDataError("No training/evaluation loss data found in the log file")
 
     print(f"Found data for {len(data)} folds")
 
@@ -351,7 +369,29 @@ def main() -> None:
     plot_all_folds_combined(data, output_dir)
 
     print(f"\nAll plots saved to: {output_dir}")
-    print("Done!")
+    return output_dir
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        print("Usage: python plot_training_curves.py <log_file_path>")
+        print(
+            "Example: python plot_training_curves.py "
+            "checkpoints_fp1_003_mdd_mqm/training_ec_Fp1_noica_20251114_160354.log"
+        )
+        sys.exit(1)
+
+    log_path = Path(sys.argv[1])
+
+    try:
+        output_dir = generate_training_curves(log_path)
+        print("Done!")
+    except LogFileNotFoundError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except NoTrainingDataError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

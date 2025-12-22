@@ -13,6 +13,10 @@ import torch.nn as nn
 from sklearn.metrics import confusion_matrix
 from torch.utils.data import ConcatDataset, DataLoader, Subset
 
+from plot_training_curves import (
+    TrainingCurvesError,
+    generate_training_curves,
+)
 from thesis.dataset import (
     CANEDataset,
     FlattenedSpectrogramDataset,
@@ -1065,9 +1069,7 @@ def train_cross_validation(
 
     logger.info("\nPer-fold best validation accuracy (chunk):")
     for i, chunk_acc in enumerate(cv_results["fold_best_eval_chunk_acc"]):
-        logger.info(
-            f"  Fold {i + 1}: {chunk_acc:.4f} (epoch {cv_results['fold_best_epoch'][i]})"
-        )
+        logger.info(f"  Fold {i + 1}: {chunk_acc:.4f} (epoch {cv_results['fold_best_epoch'][i]})")
 
     write_results(logger.info, cv_results)
     logger.info(f"{'=' * 80}\n")
@@ -1276,6 +1278,15 @@ def train(args: argparse.Namespace) -> None:
             )
         write_results(f.write, results)
     logger.info(f"\nResults saved to {results_file}")
+
+    # Generate training curves automatically
+    logger.info("Generating training curves...")
+    try:
+        curves_dir = generate_training_curves(log_path)
+        logger.info(f"Training curves saved to {curves_dir}")
+    except TrainingCurvesError as e:
+        logger.warning(f"Failed to generate training curves: {e}")
+
     logger.info("Training completed!")
 
 
