@@ -933,6 +933,24 @@ files = [
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
+name = "ipyevents"
+version = "2.0.4"
+description = "A custom widget for returning mouse and keyboard events to Python"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "ipyevents-2.0.4-py3-none-any.whl", hash = "sha256:e532e05b037f70373850723f483d2830cb8a633e5aa19637ee9e7adaf41421f1"},
+    {file = "ipyevents-2.0.4.tar.gz", hash = "sha256:bd8c66a9ff26f481494cda1ec1d979722ca9eba19f8ef52538c7cc2db2a1a139"},
+]
+
+[package.dependencies]
+ipywidgets = ">=7.6.0"
+
+[package.extras]
+docs = ["jupyterlab (>=3)", "nbsphinx", "sphinx"]
+test = ["nbval", "pytest", "pytest-cov"]
+
+[[package]]
 name = "ipykernel"
 version = "7.1.0"
 description = "IPython Kernel for Jupyter"
@@ -2166,6 +2184,35 @@ test = ["pytest (>=7.2)", "pytest-cov (>=4.0)", "pytest-xdist (>=3.0)"]
 test-extras = ["pytest-mpl", "pytest-randomly"]
 
 [[package]]
+name = "nibabel"
+version = "5.3.3"
+description = "Access a multitude of neuroimaging data formats"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "nibabel-5.3.3-py3-none-any.whl", hash = "sha256:e8b17423ee8464da3b69e6a15799eb19f2350a7d38377026d527b6b84938adac"},
+    {file = "nibabel-5.3.3.tar.gz", hash = "sha256:8d2006b70d727fd0a798a88ae5fd64339741f436fcfc83d6ea3256cdbc51c5b7"},
+]
+
+[package.dependencies]
+numpy = ">=1.22"
+packaging = ">=20"
+
+[package.extras]
+all = ["h5py", "pillow", "pydicom (>=2.3)", "pyzstd (>=0.14.3)", "scipy"]
+dev = ["tox"]
+dicom = ["pydicom (>=2.3)"]
+dicomfs = ["pillow", "pydicom (>=2.3)"]
+doc = ["matplotlib (>=3.5)", "numpydoc", "sphinx", "texext", "tomli"]
+doctest = ["tox"]
+minc2 = ["h5py"]
+spm = ["scipy"]
+style = ["tox"]
+test = ["coverage (>=7.2)", "pytest", "pytest-cov", "pytest-doctestplus", "pytest-httpserver", "pytest-xdist"]
+typing = ["tox"]
+zstd = ["pyzstd (>=0.14.3)"]
+
+[[package]]
 name = "notebook"
 version = "7.4.7"
 description = "Jupyter Notebook - A web-based notebook environment for interactive computing"
@@ -2997,6 +3044,47 @@ files = [
 ]
 
 [[package]]
+name = "pyvista"
+version = "0.46.4"
+description = "Easier Pythonic interface to VTK"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "pyvista-0.46.4-py3-none-any.whl", hash = "sha256:f113a8db2f49ae1b2f9eeb477c51a4038a4dfdd02ac097900aa49bf1d77f7b2e"},
+    {file = "pyvista-0.46.4.tar.gz", hash = "sha256:37ddd2783a45b552623df293e77ce93ed015244e8d89d1de179d2df594d7c571"},
+]
+
+[package.dependencies]
+matplotlib = ">=3.0.1"
+numpy = ">=1.21.0"
+pillow = "*"
+pooch = "*"
+scooby = ">=0.5.1"
+typing-extensions = ">=4.10"
+vtk = "<9.4.0 || >9.4.0,<9.4.1 || >9.4.1,<9.6.0"
+
+[package.extras]
+all = ["pyvista[colormaps,io,jupyter]"]
+colormaps = ["cmcrameri", "cmocean", "colorcet"]
+io = ["imageio", "meshio (>=5.2)"]
+jupyter = ["ipywidgets", "jupyter-server-proxy", "nest_asyncio", "trame (>=2.5.2)", "trame-client (>=2.12.7)", "trame-server (>=2.11.7)", "trame-vtk (>=2.5.8)", "trame-vuetify (>=2.3.1)"]
+
+[[package]]
+name = "pyvistaqt"
+version = "0.11.3"
+description = "pyvista qt plotter"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pyvistaqt-0.11.3-py3-none-any.whl", hash = "sha256:2b6b1c7b5e03bca3aa60cba0eb44430b779d6b605f38c0e1899ebcd6d9304c05"},
+    {file = "pyvistaqt-0.11.3.tar.gz", hash = "sha256:b45cceaee5013a9f98fec3c5de175f5af897f3a6c558bf65c600a0812c20beba"},
+]
+
+[package.dependencies]
+pyvista = ">=0.32.0"
+QtPy = ">=1.9.0"
+
+[[package]]
 name = "pywinpty"
 version = "3.0.2"
 description = "Pseudo terminal support for Windows from Python."
@@ -3199,6 +3287,23 @@ files = [
 
 [package.dependencies]
 cffi = {version = "*", markers = "implementation_name == \"pypy\""}
+
+[[package]]
+name = "qtpy"
+version = "2.4.3"
+description = "Provides an abstraction layer on top of the various Qt bindings (PyQt5/6 and PySide2/6)."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "QtPy-2.4.3-py3-none-any.whl", hash = "sha256:72095afe13673e017946cc258b8d5da43314197b741ed2890e563cf384b51aa1"},
+    {file = "qtpy-2.4.3.tar.gz", hash = "sha256:db744f7832e6d3da90568ba6ccbca3ee2b3b4a890c3d6fbbc63142f6e4cdf5bb"},
+]
+
+[package.dependencies]
+packaging = "*"
+
+[package.extras]
+test = ["pytest (>=6,!=7.0.0,!=7.0.1)", "pytest-cov (>=3.0.0)", "pytest-qt"]
 
 [[package]]
 name = "referencing"
@@ -3562,6 +3667,20 @@ numpy = ">=1.25.2,<2.6"
 dev = ["cython-lint (>=0.12.2)", "doit (>=0.36.0)", "mypy (==1.10.0)", "pycodestyle", "pydevtool", "rich-click", "ruff (>=0.0.292)", "types-psutil", "typing_extensions"]
 doc = ["intersphinx_registry", "jupyterlite-pyodide-kernel", "jupyterlite-sphinx (>=0.19.1)", "jupytext", "linkify-it-py", "matplotlib (>=3.5)", "myst-nb (>=1.2.0)", "numpydoc", "pooch", "pydata-sphinx-theme (>=0.15.2)", "sphinx (>=5.0.0,<8.2.0)", "sphinx-copybutton", "sphinx-design (>=0.4.0)"]
 test = ["Cython", "array-api-strict (>=2.3.1)", "asv", "gmpy2", "hypothesis (>=6.30)", "meson", "mpmath", "ninja", "pooch", "pytest (>=8.0.0)", "pytest-cov", "pytest-timeout", "pytest-xdist", "scikit-umfpack", "threadpoolctl"]
+
+[[package]]
+name = "scooby"
+version = "0.11.0"
+description = "A Great Dane turned Python environment detective"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "scooby-0.11.0-py3-none-any.whl", hash = "sha256:a79663d1a7711eb104e4b2935988ea1ed5f7be6b7288fad23b4fba7462832f9d"},
+    {file = "scooby-0.11.0.tar.gz", hash = "sha256:3dfacc6becf2d6558efa4b625bae3b844ced5d256f3143ebf774e005367e712a"},
+]
+
+[package.extras]
+cpu = ["mkl", "psutil"]
 
 [[package]]
 name = "send2trash"
@@ -4069,6 +4188,51 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
+name = "vtk"
+version = "9.5.2"
+description = "VTK is an open-source toolkit for 3D computer graphics, image processing, and visualization"
+optional = false
+python-versions = "*"
+files = [
+    {file = "vtk-9.5.2-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:9ca87122352cf3c8748fee73c48930efa46fe1a868149a1f760bc17e8fae27ba"},
+    {file = "vtk-9.5.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:6da02d69dcf2d42472ec8c227e6a8406cedea53d3928af97f8d4e776ff89c95f"},
+    {file = "vtk-9.5.2-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:c0ba9cc4b5cd463a1984dfac6d0a9eeef888b273208739f8ebc46d392ddabb93"},
+    {file = "vtk-9.5.2-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:c9254f864ebef3d69666a1feedf09cad129e4c91f85ca804c38cf8addedb2748"},
+    {file = "vtk-9.5.2-cp310-cp310-win_amd64.whl", hash = "sha256:7c56dbd02e5b4ec0422886bf9e26059ad2d4622857dbfb90d9ed254104fd9d6c"},
+    {file = "vtk-9.5.2-cp311-cp311-macosx_10_10_x86_64.whl", hash = "sha256:afcbc6dc122ebba877793940fda8fd2cbe14e1dae590e6872ea74894abdab9be"},
+    {file = "vtk-9.5.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:005877a568b96cf00ceb5bec268cf102db756bed509cb240fa40ada414a24bf0"},
+    {file = "vtk-9.5.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:2e2fe2535483adb1ba8cc83a0dc296faaffa2505808a3b04f697084f656e5f84"},
+    {file = "vtk-9.5.2-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:0248aab2ee51a69fadcdcf74697a045e2d525009a35296100eed2211f0cca2bb"},
+    {file = "vtk-9.5.2-cp311-cp311-win_amd64.whl", hash = "sha256:f78674fd265022499ea6b7f03d7f11a861e89e1df043592a82e4f5235c537ef5"},
+    {file = "vtk-9.5.2-cp312-cp312-macosx_10_10_x86_64.whl", hash = "sha256:cf5dbc93b6806b08799204430a4fc4bea74290c1c101fa64f1a4703144087fa3"},
+    {file = "vtk-9.5.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:cce212b911d13fb0ca36d339f658c9db1ff27a5a730cdddd5d0c6b2ec24c15b1"},
+    {file = "vtk-9.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:454711c51038824ddc75f955e1064c4e214b452c2e67083f01a8b43fc0ed62cb"},
+    {file = "vtk-9.5.2-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:9fce9688f0dede00dc6f3b046037c5fa8378479fa8303a353fd69afae4078d9a"},
+    {file = "vtk-9.5.2-cp312-cp312-win_amd64.whl", hash = "sha256:5357bccdf8629373195cab871e45c50383d052d316192aa48f45bd9f87bafccb"},
+    {file = "vtk-9.5.2-cp313-cp313-macosx_10_10_x86_64.whl", hash = "sha256:1eae5016620a5fd78f4918256ea65dbe100a7c3ce68f763b64523f06aaaeafbc"},
+    {file = "vtk-9.5.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:29ad766e308dcaa23b36261180cd9960215f48815b31c7ac2aa52edc88e21ef7"},
+    {file = "vtk-9.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:11cf870c05539e9f82f4a5adf450384e0be4ee6cc80274f9502715a4139e2777"},
+    {file = "vtk-9.5.2-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:3c4b658d61815cb87177f4e94281396c9be5a28798464a2c6fa0897b1bba282f"},
+    {file = "vtk-9.5.2-cp313-cp313-win_amd64.whl", hash = "sha256:974783b8865e2ddc2818d3090705b6bc6bf8ae40346d67f9a43485fabcfb3a99"},
+    {file = "vtk-9.5.2-cp38-cp38-macosx_10_10_x86_64.whl", hash = "sha256:227c5e6e9195aa9d92a64d6d07d09f000576b5df231522b5c156a3c4c4190d69"},
+    {file = "vtk-9.5.2-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:b5d0a89e893d9279ba9742d0bbd47d7dfac96fccd8fb9d024bb8aa098fde5637"},
+    {file = "vtk-9.5.2-cp38-cp38-manylinux_2_28_aarch64.whl", hash = "sha256:371d9068f5cb25861aa51c1d1792fffce5a44032dbece55412562429c5f257cc"},
+    {file = "vtk-9.5.2-cp38-cp38-win_amd64.whl", hash = "sha256:7cf2e2e12184c018388f06fbffcb93ea9e478ca4bf636c3f66bd7503e2230298"},
+    {file = "vtk-9.5.2-cp39-cp39-macosx_10_10_x86_64.whl", hash = "sha256:9b148e57837d1fd2a8a72f171a0fb40872837dea191f673f2b7ec397935c754e"},
+    {file = "vtk-9.5.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:6a3b27f22d7e15f6a2d60510e70d75dac4ed2a53600e31275b67fedc45afbcc0"},
+    {file = "vtk-9.5.2-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:b6b91968581132b0d96142a08d50028efa5aa7a876d4aff6de1664e99e006c89"},
+    {file = "vtk-9.5.2-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:2b37670d56de32935eeadee58e1a9a0b5d3847294ca24ea9329101089be5de83"},
+    {file = "vtk-9.5.2-cp39-cp39-win_amd64.whl", hash = "sha256:1ac9ff528892e585f8f3286b26a90250bd6ea9107c38e6e194939f6f28269ad6"},
+]
+
+[package.dependencies]
+matplotlib = ">=2.0.0"
+
+[package.extras]
+numpy = ["numpy (>=1.9)"]
+web = ["wslink (>=1.0.4)"]
+
+[[package]]
 name = "wcwidth"
 version = "0.2.14"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -4131,4 +4295,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.13"
-content-hash = "d0d1d2e933838c398bb0a6ccf4591a5f68315bcdae7b50a662e65c887cfd20f0"
+content-hash = "38c287a1f659f29e8e7748f3a5d3d5da8f86f9f0cac74bc8d74dbed5437460c8"
