@@ -426,8 +426,8 @@ def train_one_fold(
     """
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     early_stopping = EarlyStopping(patience=patience, maximize=True)
-    best_combined_acc = 0.0
-    corr_chunk_acc = 0.0
+    best_chunk_acc = 0.0
+    corr_combined_acc = 0.0
     corr_subject_acc = 0.0
     best_epoch = 0
 
@@ -506,13 +506,13 @@ def train_one_fold(
             fold_history["subject_acc"].append(subject_metrics["accuracy"])
 
             # Combined metric: chunk accuracy weighted by subject accuracy
-            # This handles small validation sets better (e.g., 6 subjects in 10-fold CV)
+            # Calculated for reporting purposes only (not used for model selection)
             combined_metric = chunk_metrics["accuracy"] * subject_metrics["accuracy"]
 
-            # Save the best model (based on combined metric)
-            if combined_metric > best_combined_acc:
-                best_combined_acc = combined_metric
-                corr_chunk_acc = chunk_metrics["accuracy"]
+            # Save the best model (based on chunk accuracy - PRIMARY METRIC)
+            if chunk_metrics["accuracy"] > best_chunk_acc:
+                best_chunk_acc = chunk_metrics["accuracy"]
+                corr_combined_acc = combined_metric
                 corr_subject_acc = subject_metrics["accuracy"]
                 best_epoch = epoch
                 best_model_path = checkpoint_dir / f"fold_{fold + 1}_best.pth"
@@ -521,18 +521,18 @@ def train_one_fold(
                         "epoch": epoch,
                         "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
-                        "combined_acc": best_combined_acc,
+                        "chunk_acc": best_chunk_acc,
                         "val_metrics": eval_metrics,
                     },
                     best_model_path,
                 )
                 logger.info(
                     f"✓ Saved best model: {best_model_path} "
-                    f"(combined={combined_metric:.4f}, chunk={chunk_metrics['accuracy']:.4f}, "
-                    f"subject={subject_metrics['accuracy']:.4f})"
+                    f"(chunk={chunk_metrics['accuracy']:.4f}, subject={subject_metrics['accuracy']:.4f}, "
+                    f"combined={combined_metric:.4f})"
                 )
 
-            # Early stopping check (based on combined metric)
+            # Early stopping check (based on chunk accuracy - PRIMARY METRIC)
             if early_stopping(chunk_metrics["accuracy"], epoch):
                 logger.info(f"Early stopping triggered at epoch {epoch}")
                 break
@@ -553,12 +553,12 @@ def train_one_fold(
 
     logger.info(
         f"\nFold {fold + 1} training completed. "
-        f"Best Combined Val Acc: {best_combined_acc:.4f} at epoch {best_epoch}"
+        f"Best Chunk Val Acc: {best_chunk_acc:.4f} at epoch {best_epoch}"
     )
 
     return {
-        "best_eval_combined_acc": best_combined_acc,
-        "eval_chunk_acc": corr_chunk_acc,
+        "best_eval_chunk_acc": best_chunk_acc,
+        "eval_combined_acc": corr_combined_acc,
         "eval_subject_acc": corr_subject_acc,
         "best_epoch": best_epoch,
         "final_epoch": epoch,
@@ -917,7 +917,7 @@ def train_cross_validation(
     :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
-           best combined accuracy model.
+           best chunk accuracy model (primary metric).
     :rtype: dict
     """
     # Parse condition argument to handle EC+EO
@@ -936,8 +936,8 @@ def train_cross_validation(
     logger.info(f"{'=' * 80}")
 
     cv_results = {
-        "fold_best_eval_combined_acc": [],
-        "fold_eval_chunk_acc": [],
+        "fold_best_eval_chunk_acc": [],
+        "fold_eval_combined_acc": [],
         "fold_eval_subject_acc": [],
         "fold_best_epoch": [],
         "fold_final_epoch": [],
@@ -1056,8 +1056,8 @@ def train_cross_validation(
             checkpoint_dir=checkpoint_dir,
         )
 
-        cv_results["fold_best_eval_combined_acc"].append(fold_result["best_eval_combined_acc"])
-        cv_results["fold_eval_chunk_acc"].append(fold_result["eval_chunk_acc"])
+        cv_results["fold_best_eval_chunk_acc"].append(fold_result["best_eval_chunk_acc"])
+        cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
         cv_results["fold_eval_subject_acc"].append(fold_result["eval_subject_acc"])
         cv_results["fold_best_epoch"].append(fold_result["best_epoch"])
         cv_results["fold_final_epoch"].append(fold_result["final_epoch"])
@@ -1080,27 +1080,27 @@ def train_cross_validation(
 
 
 def write_results(writer: Callable[[str], Any], cv_results: dict[str, list[float]]) -> None:
-    combined_mean_acc = np.mean(cv_results["fold_best_eval_combined_acc"])
-    combined_std_acc = np.std(cv_results["fold_best_eval_combined_acc"])
-    chunk_mean_acc = np.mean(cv_results["fold_eval_chunk_acc"])
-    chunk_std_acc = np.std(cv_results["fold_eval_chunk_acc"])
+    chunk_mean_acc = np.mean(cv_results["fold_best_eval_chunk_acc"])
+    chunk_std_acc = np.std(cv_results["fold_best_eval_chunk_acc"])
+    combined_mean_acc = np.mean(cv_results["fold_eval_combined_acc"])
+    combined_std_acc = np.std(cv_results["fold_eval_combined_acc"])
     subject_mean_acc = np.mean(cv_results["fold_eval_subject_acc"])
     subject_std_acc = np.std(cv_results["fold_eval_subject_acc"])
 
     writer(
-        f"COMBINED Accuracy Mean: {combined_mean_acc:.4f} ± {combined_std_acc:.4f}, "
-        f"Min: {np.min(cv_results['fold_best_eval_combined_acc']):.4f}, "
-        f"Max: {np.max(cv_results['fold_best_eval_combined_acc']):.4f}\n"
-    )
-    writer(
-        f"CHUNK Accuracy Mean: {chunk_mean_acc:.4f} ± {chunk_std_acc:.4f}, "
-        f"Min: {np.min(cv_results['fold_eval_chunk_acc']):.4f}, "
-        f"Max: {np.max(cv_results['fold_eval_chunk_acc']):.4f}\n"
+        f"CHUNK Accuracy Mean (PRIMARY): {chunk_mean_acc:.4f} ± {chunk_std_acc:.4f}, "
+        f"Min: {np.min(cv_results['fold_best_eval_chunk_acc']):.4f}, "
+        f"Max: {np.max(cv_results['fold_best_eval_chunk_acc']):.4f}\n"
     )
     writer(
         f"SUBJECT Accuracy Mean: {subject_mean_acc:.4f} ± {subject_std_acc:.4f}, "
         f"Min: {np.min(cv_results['fold_eval_subject_acc']):.4f}, "
         f"Max: {np.max(cv_results['fold_eval_subject_acc']):.4f}\n"
+    )
+    writer(
+        f"COMBINED Accuracy Mean (chunk×subject): {combined_mean_acc:.4f} ± {combined_std_acc:.4f}, "
+        f"Min: {np.min(cv_results['fold_eval_combined_acc']):.4f}, "
+        f"Max: {np.max(cv_results['fold_eval_combined_acc']):.4f}\n"
     )
 
 
@@ -1269,13 +1269,13 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"Weight Decay (L2 regularization): {args.weight_decay}\n")
         f.write(f"Skip ICA: {args.skip_ica}\n\n")
         f.write("Per-fold best validation accuracy:\n")
-        for i in range(len(results["fold_best_eval_combined_acc"])):
-            combined_acc = results["fold_best_eval_combined_acc"][i]
-            chunk_acc = results["fold_eval_chunk_acc"][i]
+        for i in range(len(results["fold_best_eval_chunk_acc"])):
+            chunk_acc = results["fold_best_eval_chunk_acc"][i]
             subject_acc = results["fold_eval_subject_acc"][i]
+            combined_acc = results["fold_eval_combined_acc"][i]
             f.write(
-                f"  Fold {i + 1}: combined={combined_acc:.4f}, chunk={chunk_acc:.4f}, "
-                f"subject={subject_acc:.4f} (epoch {results['fold_best_epoch'][i]}, "
+                f"  Fold {i + 1}: chunk={chunk_acc:.4f}, subject={subject_acc:.4f}, "
+                f"combined={combined_acc:.4f} (epoch {results['fold_best_epoch'][i]}, "
                 f"stopped at epoch {results['fold_final_epoch'][i]})\n"
             )
         write_results(f.write, results)
