@@ -91,44 +91,16 @@ class CNN_LSTM_DepCap(nn.Module):
         x = self.dropout2d_2(x)
         return x
 
-    def count_parameters(self, trainable_only: bool = False) -> int:
+    def count_parameters(self) -> tuple[int, int]:
         """
         Count the number of parameters in the model.
 
-        :param bool trainable_only: If True, count only trainable parameters.
-                                     If False, count all parameters.
-        :return: Total number of parameters.
-        :rtype: int
+        :return: Tuple of (all_params, trainable_params).
+        :rtype: tuple[int, int]
         """
-        if trainable_only:
-            return sum(p.numel() for p in self.parameters() if p.requires_grad)
-        return sum(p.numel() for p in self.parameters())
-
-    def print_parameter_summary(self) -> None:
-        """
-        Print a detailed summary of model parameters.
-
-        Displays total parameters, trainable parameters, and a breakdown by layer.
-
-        :return: None
-        :rtype: None
-        """
-        total = self.count_parameters(trainable_only=False)
-        trainable = self.count_parameters(trainable_only=True)
-
-        logger.info("=" * 60)
-        logger.info(f"Model: {self.__class__.__name__}")
-        logger.info(f"Total parameters: {total:,}")
-        logger.info(f"Trainable parameters: {trainable:,}")
-        logger.info("=" * 60)
-        logger.info("Parameter breakdown by layer:")
-        logger.info("-" * 60)
-
-        for name, param in self.named_parameters():
-            trainable_str = "✓" if param.requires_grad else "✗"
-            logger.info(f"{trainable_str} {name:30s} {param.numel():>10,}")
-
-        logger.info("=" * 60)
+        trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        all = sum(p.numel() for p in self.parameters())
+        return all, trainable
 
     def forward(self, x):
         """
