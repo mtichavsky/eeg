@@ -25,7 +25,7 @@ from thesis.dataset import (
     collate_spectrograms,
 )
 from thesis.early_stopping import EarlyStopping
-from thesis.model import CNN_LSTM_DepCap
+from thesis.model import CNN_LSTM_DepCap, Smaller
 
 RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -528,7 +528,8 @@ def train_one_fold(
                 )
                 logger.info(
                     f"✓ Saved best model: {best_model_path} "
-                    f"(chunk={chunk_metrics['accuracy']:.4f}, subject={subject_metrics['accuracy']:.4f}, "
+                    f"(chunk={chunk_metrics['accuracy']:.4f}, "
+                    f"subject={subject_metrics['accuracy']:.4f}, "
                     f"combined={corr_combined_acc:.4f})"
                 )
 
@@ -881,6 +882,29 @@ def split_into_folds(subjects: list[tuple[str, str]], n_folds: int) -> list[list
     return folds_with_conditions
 
 
+def create_model(model_name, spec_shape, dropout, num_classes, device):
+    # Initialize model for this fold
+    # Select model class and default parameters
+    if model_name == "CNN_LSTM_DepCap":
+        model_class = CNN_LSTM_DepCap
+        rnn_hidden = 100
+    elif model_name == "Smaller":
+        model_class = Smaller
+        rnn_hidden = 64
+    else:
+        raise ValueError(f"Unknown model name: {model_name}")
+
+    model = model_class(
+        input_shape=spec_shape,
+        in_channels=1,
+        rnn_type="LSTM",
+        rnn_hidden=rnn_hidden,
+        dropout=dropout,
+        num_classes=num_classes,
+    ).to(device)
+    return model
+
+
 def train_cross_validation(
     dataset_type: Literal["mdd", "cane", "both"] = "mdd",
     condition: str = "EC",
@@ -897,6 +921,7 @@ def train_cross_validation(
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     skip_ica: bool = False,
     channel: str | None = None,
+    model_name: str = "CNN_LSTM_DepCap",
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -916,6 +941,7 @@ def train_cross_validation(
     :param torch.device device: Device to train on.
     :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
+    :param str model_name: Model architecture to use ("CNN_LSTM_DepCap" or "Smaller").
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
     :rtype: dict
@@ -1024,15 +1050,7 @@ def train_cross_validation(
             collate_fn=collate_spectrograms,
         )
 
-        # Initialize model for this fold
-        model = CNN_LSTM_DepCap(
-            input_shape=spec_shape,
-            in_channels=1,
-            rnn_type="LSTM",
-            rnn_hidden=100,
-            dropout=dropout,
-            num_classes=num_classes,
-        ).to(device)
+        model = create_model(model_name, spec_shape, dropout, num_classes, device)
 
         criterion = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(
@@ -1096,7 +1114,8 @@ def write_results(writer: Callable[[str], Any], cv_results: dict[str, list[float
         f"Max: {np.max(cv_results['fold_eval_subject_acc']):.4f}\n"
     )
     writer(
-        f"COMBINED Accuracy Mean (chunk×subject): {combined_mean_acc:.4f} ± {combined_std_acc:.4f}, "
+        f"COMBINED Accuracy Mean (chunk×subject): "
+        f"{combined_mean_acc:.4f} ± {combined_std_acc:.4f}, "
         f"Min: {np.min(cv_results['fold_eval_combined_acc']):.4f}, "
         f"Max: {np.max(cv_results['fold_eval_combined_acc']):.4f}\n"
     )
@@ -1136,6 +1155,23 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_model_args(parser: argparse.ArgumentParser) -> None:
+    """
+    Add shared model selection argument to a parser.
+
+    :param argparse.ArgumentParser parser: Parser or subparser to add arguments to.
+    """
+    parser.add_argument(
+        "--model",
+        "-m",
+        type=str,
+        default="CNN_LSTM_DepCap",
+        choices=["CNN_LSTM_DepCap", "Smaller"],
+        help="Model architecture to use: 'CNN_LSTM_DepCap' (default, full model) "
+        "or 'Smaller' (reduced model with ~50%% fewer parameters)",
+    )
+
+
 def get_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="EEG Classification Training",
@@ -1155,6 +1191,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "'cane' (2-3 classes: normal, anxious[, mdd]), "
         "or 'both' (3 classes: normal, mdd, anxious)",
     )
+    add_model_args(train_parser)
     train_parser.add_argument(
         "--n-folds", type=int, default=10, help="Number of cross-validation folds"
     )
@@ -1194,6 +1231,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     add_preprocessing_args(run_parser)
     run_parser.add_argument("model_path", type=str, help="Path to trained model checkpoint (.pth)")
     run_parser.add_argument("edf_file", type=str, help="Path to EDF file to classify")
+    add_model_args(run_parser)
     run_parser.add_argument(
         "--device",
         type=str,
@@ -1252,6 +1290,7 @@ def train(args: argparse.Namespace) -> None:
         device=device,
         skip_ica=args.skip_ica,
         channel=args.channel,
+        model_name=args.model,
     )
 
     # Save final results to file
@@ -1324,19 +1363,18 @@ def run(args: argparse.Namespace) -> None:
     # not applied in eval nor here
     # Load model checkpoint
     logger.info("Loading model checkpoint...")
-    model = CNN_LSTM_DepCap(
-        input_shape=EXPECTED_SPECTROGRAM_SHAPE,
-        in_channels=1,
-        rnn_type="LSTM",
-        rnn_hidden=100,
+
+    model = create_model(
+        model_name=args.model,
+        spec_shape=EXPECTED_SPECTROGRAM_SHAPE,
         dropout=0,
         num_classes=2,
+        device=device,
     )
 
     # Note: weights_only=False is required to load optimizer state and other training info
     saved = torch.load(model_path, weights_only=False)
     model.load_state_dict(saved["model_state_dict"])
-    model.to(device)
     model.eval()  # This among other things deactivates dropout
     logger.info("Model loaded successfully")
 
