@@ -2,11 +2,20 @@
 
 ## Summary Table: Comparing Experiments
 
-| Experiment       | Dataset | Channel | Condition | Batch | Dropout | Subject Acc (Min-Max)    | Chunk Acc (Min-Max)       |
-|------------------|---------|---------|-----------|-------|---------|--------------------------|---------------------------|
-| mdd_006_t4_ec    | MDD     | T4      | EC        | 64    | 0.5     | 88.6% ± 7.3% (75.0-100%) | 86.5% ± 5.2% (75.6-91.0%) |
-| mdd_006_t3_ec+eo | MDD     | T3      | EC+EO     | 64    | 0.4     | 89.1% ± 8.2% (79.0-100%) | 88.3% ± 7.9% (79.1-100%)  |
-| mdd_006_fp1_ec   | MDD     | Fp1     | EC        | 64    | 0.5     | 94.0% ± 9.4% (75.0-100%) | 91.3% ± 7.7% (75.6-98.6%) |
+| Experiment                 | Dataset | Channel | Condition | Batch | Model    | Dropout | Subject Acc (Min-Max)    | Chunk Acc (Min-Max)       | Key Observation                                           |
+|----------------------------|---------|---------|-----------|-------|----------|---------|--------------------------|---------------------------|-----------------------------------------------------------|
+| mdd_006_t4_ec              | MDD     | T4      | EC        | 64    | Original | 0.5     | 88.6% ± 7.3% (75.0-100%) | 86.5% ± 5.2% (75.6-91.0%) |                                                           |
+| mdd_006_t3_ec+eo           | MDD     | T3      | EC+EO     | 64    | Original | 0.4     | 89.1% ± 8.2% (79.0-100%) | 88.3% ± 7.9% (79.1-100%)  |                                                           |
+| mdd_006_fp1_ec             | MDD     | Fp1     | EC        | 64    | Original | 0.5     | 94.0% ± 9.4% (75.0-100%) | 91.3% ± 7.7% (75.6-98.6%) |                                                           |
+| cane_006_fp1_ec (baseline) | CANE    | Fp1     | EC        | 64    | Original | 0.5     | 61.9%                    | 57.6%                     |                                                           |
+| cane_008_t7_ec_og          | CANE    | T7      | EC        | 32    | Original | 0.8     | 48.8%                    | 48.0%                     | All 6 folds peaked at epoch 1 - complete learning failure |
+| cane_008_t7_ec_og_rnd      | CANE    | T7      | EC        | 32    | Original | 0.1     | 62.7%                    | 61.2%                     | 3/6 folds at epoch 1, high variance                       |
+| cane_008_t7_ec_smaller     | CANE    | T7      | EC        | 32    | Smaller  | 0.5     | 62.7%                    | 61.0%                     | 2/6 folds peaked at epoch 1, some learning                |
+| cane_008_t7_ec_smaller_lwa | CANE    | T7      | EC        | 32    | Smaller  | 0.1     | 65.1%                    | 62.2%                     | Better learning, but still 3/6 folds at epoch 1           |
+
+## 008
+
+- Model size reduction made minimal difference for CANE
 
 ## Key Insights from 006 Experiments
 
@@ -49,6 +58,70 @@ Both MDD experiments show Fold 6 performing significantly worse:
 **Priority 2: Re-evaluate CANE approach**
 - Current model architecture cannot learn anxiety patterns with 39 subjects
 - Consider alternative approaches or architectures 
+
+## How I was running 008 batch (Smaller model)
+
+```bash
+python main.py train --skip-ica \
+--channel T7 \
+--batch-size 32 \
+--checkpoint-dir=experiments/cane_008_t7_ec_smaller \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.5 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--model Smaller
+```
+
+- Output dir: `experiments/cane_008_t7_ec_smaller`
+
+```bash
+python main.py train --skip-ica \
+--channel T7 \
+--batch-size 32 \
+--checkpoint-dir=experiments/cane_008_t7_ec_smaller \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--model Smaller
+```
+
+- Output dir: `experiments/cane_008_t7_ec_smaller_lwa`
+
+```bash
+python main.py train --skip-ica \
+--channel T7 \
+--batch-size 32 \
+--checkpoint-dir=experiments/cane_008_t7_ec_og \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.5 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+- Output dir: `experiments/cane_008_t7_ec_og_rnd`
+
+```bash
+python main.py train --skip-ica \
+--channel T7 \
+--batch-size 32 \
+--checkpoint-dir=experiments/cane_008_t7_ec_og \
+--dataset cane experiments/cane_008_t7_ec_og_rnd\
+--condition ec \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1
+```
+
+- Output dir: `experiments/cane_008_t7_ec_og_rnd`
 
 ## Detailed Experiment Results (006 Series)
 
