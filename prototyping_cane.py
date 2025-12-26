@@ -9,15 +9,11 @@ Note: CANE preprocessing includes z-score normalization, CAR, detrending, and ar
 which differs from the MDD preprocessing pipeline.
 """
 
-import logging
-from pathlib import Path
-
+import matplotlib.pyplot as plt
 import mne
 import numpy as np
-import pandas as pd
 
 from thesis.dataset import CANE_DIR, CANEDataset
-import matplotlib.pyplot as plt
 
 example_file = CANE_DIR / "normal" / "eo" / "1060_EO.csv"
 
@@ -38,9 +34,7 @@ print(f"Total duration: {num_chunks * 10} seconds")
 
 # For each channel, concatenate all chunks along the time axis
 # Shape per channel: (num_chunks, 1, chunk_samples) -> (1, num_chunks * chunk_samples)
-data = np.array([
-    all_chunks[ch][:, 0, :].numpy().flatten() for ch in channel_names
-])
+data = np.array([all_chunks[ch][:, 0, :].numpy().flatten() for ch in channel_names])
 
 print(f"Data shape for MNE: {data.shape}")  # Should be (n_channels, total_samples)
 
@@ -51,5 +45,3 @@ raw = mne.io.RawArray(data, info, verbose=False)
 print(raw.info)
 _ = raw.plot(scalings="auto", title=f"CANE Preprocessed: {example_file.name} (Full recording)")
 plt.show()
-
-
