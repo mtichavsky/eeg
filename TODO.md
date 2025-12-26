@@ -2,29 +2,7 @@
 - online x offline (ICA, common noise)
   - user raw, focus on one channel
 
-
-- batch normalization?
-- vanishing gradient problem?
-
-## What to evaluate on:
-
-- make sure imbalanced classes don't cause you any problems
-- make sure you're not overfitting the model
-- early stopping based on chunk level, loss based on chunk level
-  - Risk: A model could overfit to chunks while subject accuracy plateaus or decreases
-  - **TODO:** log both metrics and compare, ideally show them on the graphs
- 
-- Chunk level accuracy
-- Subject level accuracy
-- Mixed accuracy
-- Sensitivity (=Recall, True Positive Rate) = Measures how well the model identifies positive cases
-  - "Of all actual positives, how many did we correctly identify?"
-- Specificity - how well does the model classify negative values =  TN / (TN + FP)
-- Precision = True Positives / True positives + False positives
-- F1 Score - **multiple classes**, useful for imbalanced datasets
-  - F1 Score = 2 x Sensitivity x Precision / (Sensitivity + Precision)
-  - Multiclass -> Macro F1 = Calculate F1 for each class separately, then average them (treats all classes equally)
-- Confusion matrix - Ideally somehow aggregate all folds, maybe average it out
+batch normalization?
 
 Things to think about: 
 
@@ -114,57 +92,9 @@ converted into 2D spectrogram images using STFT. Here,
 a medium size Kaiser window of size 2n − 1 is used for
 windowing, where n is the number of bits.
 
-specificity and this shit they show equations in the paper
-
-The reliability and robustness of the proposed CNN-LSTM
-model are also examined by adding white noises of different
-SNRs ( 0, 10, 20, 30, 40, and 50 dB). It can be seen from
----
-
 
 Evaluation logic
 
-- kazdy 10sekundovy chunk vyhodnocuju zvlast, na konec agreguju pro danou nahravku vsechny chunky, abych dostal vysledek
 - Eyes closed only
 - one channel only
 - 10 fold cross validation 
-
-MDD dataset
-
-
-Participant’s EEG was recorded for 10 minutes, comprising
-5 minutes with their Eyes Open (EO) and 5 minutes with Eyes
-Closed (EC).
-
-this is citation
-choppy activities in depressed EEG. A Butterworth band pass
-filter of cut-off frequency 0.5Hz-70Hz and a notch filter of
-50Hz is used to remove the power grid effect
-Independent Component Analysis
-(ICA) is used to reduce artifacts caused by patient movement
-and eye blinking. Then, the whole EEG signal of 5 min
-duration is segmented into the interval of 10s. Finally, the Z
-score normalization technique is used for amplitude scaling
-of each EEG segment before being sent to the proposed neural
-network.
-
-
-sth to put into your thesis
-STFT is
-an extension of simple Fourier transform, that leads to better
-spectral analysis to extract features and detect abnormalities
-in EEG signals at every instant. STFT is
-an extension of simple Fourier transform, that leads to better
-spectral analysis to extract features and detect abnormalities
-in EEG signals at every instant
-These networks are preferred over
-traditional machine learning methods for several reasons:
-1) CNNs can learn a high-level representation of data directly
-from the input, unlike other machine learning algorithms
-requiring hand-crafted features. 2) CNNs use convolutional
-filters, which are very efficient in extracting spatial infor-
-mation which other machine-learning models can miss.
-3) CNNs can be trained more efficiently on larger datasets
-than other machine learning models. 4) CNNs can be opti-
-mized for speed and complexity by altering various parame-
-ters and fortifying the network’s architecture.

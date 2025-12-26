@@ -134,3 +134,130 @@ class CNN_LSTM_DepCap(nn.Module):
         x = F.relu(self.fc2(x))
         logits = self.out(x)
         return logits
+
+
+class Smaller(nn.Module):
+    def __init__(
+        self,
+        input_shape,
+        in_channels=1,
+        rnn_type="LSTM",
+        rnn_hidden=64,
+        dropout=0.3,
+        num_classes=2,
+    ):
+        """
+        Initialize the reduced model for depression detection from spectrograms.
+
+        Implements a smaller version of the CNN-LSTM architecture (~50% fewer parameters):
+         - Conv2D(32, 10x10, stride=2), ReLU -> MaxPool(2x2, stride=1)
+         - Conv2D(16, 5x5, stride=1), ReLU -> MaxPool(2x2, stride=1)
+         - Reshape to sequence (time=W) and pass through LSTM/GRU (hidden=64)
+         - Dense 32 -> Dense 16 -> Output 2 classes
+
+
+        :param tuple input_shape: Tuple of (height, width) for the input spectrogram.
+        :param int in_channels: Number of input channels (default=1 for one channel EEG).
+        :param str rnn_type: Type of RNN to use - "LSTM" or "GRU".
+        :param int rnn_hidden: Hidden size for RNN layer (default=64).
+        :param float dropout: Dropout probability for regularization.
+        :param int num_classes: Number of output classes of the classifier.
+        """
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=(10, 10), stride=2, padding=0)  # 64->32
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=1)
+        self.dropout2d_1 = nn.Dropout2d(dropout)
+
+        self.conv2 = nn.Conv2d(32, 16, kernel_size=(5, 5), stride=1, padding=0)  # 32->16
+        self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=1)
+        self.dropout2d_2 = nn.Dropout2d(dropout)
+        self.relu = nn.ReLU(inplace=True)
+
+        # Calculate RNN input size by doing a dummy forward pass through conv layers
+        with torch.no_grad():
+            dummy_input = torch.zeros(1, in_channels, *input_shape)
+            conv_output = self._forward_conv_layers(dummy_input)
+            _, C, H, W = conv_output.shape
+            rnn_input_size = H * C  # Each time step has H*C features
+
+        # Initialize RNN with correct input size
+        self.rnn_type = rnn_type.upper()
+        self.rnn: Union[nn.LSTM, nn.GRU]
+        if self.rnn_type == "LSTM":
+            self.rnn = nn.LSTM(input_size=rnn_input_size, hidden_size=rnn_hidden, batch_first=True)
+        elif self.rnn_type == "GRU":
+            self.rnn = nn.GRU(input_size=rnn_input_size, hidden_size=rnn_hidden, batch_first=True)
+        else:
+            raise ValueError("rnn_type must be 'LSTM' or 'GRU'")
+
+        logger.info(
+            f"Initialized {self.rnn_type} with input_size={rnn_input_size}, "
+            f"hidden_size={rnn_hidden}, batch_first=True"
+        )
+
+        # Classifier head - reduced
+        self.dropout = nn.Dropout(dropout)
+        self.fc1 = nn.Linear(rnn_hidden, 32)
+        self.fc2 = nn.Linear(32, 16)
+        self.out = nn.Linear(16, num_classes)
+
+    def _forward_conv_layers(self, x):
+        """
+        Pass input through convolutional layers only.
+
+        :param torch.Tensor x: Input tensor of shape (B, C, H, W).
+        :return: Output tensor after convolution and pooling layers.
+        :rtype: torch.Tensor
+        """
+        x = self.relu(self.conv1(x))
+        x = self.pool1(x)
+        x = self.dropout2d_1(x)
+        x = self.relu(self.conv2(x))
+        x = self.pool2(x)
+        x = self.dropout2d_2(x)
+        return x
+
+    def count_parameters(self) -> tuple[int, int]:
+        """
+        Count the number of parameters in the model.
+
+        :return: Tuple of (all_params, trainable_params).
+        :rtype: tuple[int, int]
+        """
+        trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        all = sum(p.numel() for p in self.parameters())
+        return all, trainable
+
+    def forward(self, x):
+        """
+        Forward pass through the network.
+
+        :param torch.Tensor x: Input tensor of shape (B, C, H, W) where B=batch size,
+                               C=channels (typically 1 for mono spectrograms),
+                               H=height (frequency bins), W=width (time frames).
+        :return: Class probabilities of shape (B, num_classes) after softmax.
+        :rtype: torch.Tensor
+        """
+        # Pass through convolutional layers
+        x = self._forward_conv_layers(x)  # -> (B, 32, H', W')
+
+        # TODO check the reshape
+        # Reshape into sequence: treat width (time) as sequence dimension
+        # Each time step contains all features from height and channels
+        B, C, H, W = x.shape
+        seq = x.permute(0, 3, 2, 1).contiguous()  # (B, W, H, C)
+        seq = seq.view(B, W, H * C)  # (B, seq_len=W, features=H*C)
+
+        # RNN outputs hidden states for all time steps
+        rnn_out, _ = self.rnn(seq)  # rnn_out: (B, seq_len, hidden_size)
+
+        # Take the last time step's hidden state as the sequence representation
+        last_hidden = rnn_out[:, -1, :]  # (B, hidden_size)
+
+        # Pass through classifier layers
+        x = self.dropout(last_hidden)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        logits = self.out(x)
+        return logits

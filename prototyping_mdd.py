@@ -2,12 +2,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import mne
-import numpy as np
-import pandas as pd
-from mne.preprocessing import ICA
-from mne_icalabel import label_components
-from scipy.signal import stft
-from scipy.stats import zscore
 
 MDD_DIR = Path("../MDD/")
 
