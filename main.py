@@ -36,6 +36,12 @@ logger = logging.getLogger(__name__)
 
 EXPECTED_SPECTROGRAM_SHAPE = (129, 41)  # Expected spectrogram shape from training
 
+# Model registry: maps model names to (model_class, default_rnn_hidden)
+MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int]] = {
+    "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
+    "Smaller": (Smaller, 64),
+}
+
 
 class IllegalPathError(Exception):
     pass
@@ -883,17 +889,33 @@ def split_into_folds(subjects: list[tuple[str, str]], n_folds: int) -> list[list
     return folds_with_conditions
 
 
-def create_model(model_name, spec_shape, dropout, num_classes, device):
-    # Initialize model for this fold
-    # Select model class and default parameters
-    if model_name == "CNN_LSTM_DepCap":
-        model_class = CNN_LSTM_DepCap
-        rnn_hidden = 100
-    elif model_name == "Smaller":
-        model_class = Smaller
-        rnn_hidden = 64
-    else:
-        raise ValueError(f"Unknown model name: {model_name}")
+def create_model(
+    model_name: str,
+    spec_shape: tuple[int, int],
+    dropout: float,
+    num_classes: int,
+    device: torch.device,
+    pretrained_checkpoint: str | None = None,
+    freeze_cnn: bool = False,
+) -> nn.Module:
+    """
+    Create and initialize a model, optionally loading pretrained weights.
+
+    :param str model_name: Model architecture ("CNN_LSTM_DepCap" or "Smaller").
+    :param tuple spec_shape: Input spectrogram shape (height, width).
+    :param float dropout: Dropout rate.
+    :param int num_classes: Number of output classes.
+    :param torch.device device: Device to place model on.
+    :param str | None pretrained_checkpoint: Path to pretrained checkpoint for transfer learning.
+    :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
+    :return: Initialized model.
+    :rtype: nn.Module
+    """
+    # Get model class and default parameters from registry
+    if model_name not in MODEL_REGISTRY:
+        raise ValueError(f"Unknown model: {model_name}. Available: {list(MODEL_REGISTRY.keys())}")
+
+    model_class, rnn_hidden = MODEL_REGISTRY[model_name]
 
     model = model_class(
         input_shape=spec_shape,
@@ -903,6 +925,30 @@ def create_model(model_name, spec_shape, dropout, num_classes, device):
         dropout=dropout,
         num_classes=num_classes,
     ).to(device)
+
+    # Transfer learning: load pretrained weights if provided
+    if pretrained_checkpoint:
+        logger.info(f"Loading pretrained weights from: {pretrained_checkpoint}")
+        saved = torch.load(pretrained_checkpoint, weights_only=False, map_location=device)
+
+        # Load state dict (strict=False allows for num_classes mismatch in final layer)
+        model.load_state_dict(saved["model_state_dict"], strict=False)
+        logger.info("Pretrained weights loaded successfully")
+
+        if freeze_cnn:
+            # Freeze CNN layers (conv1, conv2 and their dropout layers)
+            for param in model.conv1.parameters():
+                param.requires_grad = False
+            for param in model.conv2.parameters():
+                param.requires_grad = False
+            for param in model.dropout2d_1.parameters():
+                param.requires_grad = False
+            for param in model.dropout2d_2.parameters():
+                param.requires_grad = False
+
+            all_params, trainable_params = model.count_parameters()
+            logger.info(f"CNN layers frozen. Trainable params: {trainable_params}/{all_params}")
+
     return model
 
 
@@ -923,6 +969,8 @@ def train_cross_validation(
     skip_ica: bool = False,
     channel: str | None = None,
     model_name: str = "CNN_LSTM_DepCap",
+    pretrained_checkpoint: str | None = None,
+    freeze_cnn: bool = False,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -943,6 +991,10 @@ def train_cross_validation(
     :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
     :param str model_name: Model architecture to use ("CNN_LSTM_DepCap" or "Smaller").
+    :param str | None pretrained_checkpoint: Path to pretrained model checkpoint for transfer
+        learning. Must use same model architecture as pretrained model.
+    :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
+        Only LSTM and classifier head will be trained.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
     :rtype: dict
@@ -1051,11 +1103,22 @@ def train_cross_validation(
             collate_fn=collate_spectrograms,
         )
 
-        model = create_model(model_name, spec_shape, dropout, num_classes, device)
+        model = create_model(
+            model_name=model_name,
+            spec_shape=spec_shape,
+            dropout=dropout,
+            num_classes=num_classes,
+            device=device,
+            pretrained_checkpoint=pretrained_checkpoint,
+            freeze_cnn=freeze_cnn,
+        )
 
         criterion = nn.CrossEntropyLoss()
+        # Only optimize trainable parameters (important when CNN layers are frozen)
         optimizer = torch.optim.Adam(
-            model.parameters(), lr=learning_rate, weight_decay=weight_decay
+            filter(lambda p: p.requires_grad, model.parameters()),
+            lr=learning_rate,
+            weight_decay=weight_decay,
         )
 
         # Train this fold
@@ -1148,6 +1211,8 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Save Checkpoint Every: {args.save_every} epochs")
     logger.info(f"  Early Stopping Patience: {args.patience} epochs")
     logger.info(f"  Skip ICA: {args.skip_ica}")
+    logger.info(f"  Pretrained Checkpoint: {args.pretrained_checkpoint}")
+    logger.info(f"  Freeze CNN: {args.freeze_cnn}")
     logger.info(f"  Device: {device}")
     logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
     logger.info(f"  Log File: {log_path}")
@@ -1170,6 +1235,8 @@ def train(args: argparse.Namespace) -> None:
         skip_ica=args.skip_ica,
         channel=args.channel,
         model_name=args.model,
+        pretrained_checkpoint=args.pretrained_checkpoint,
+        freeze_cnn=args.freeze_cnn,
     )
 
     # Save final results to file
@@ -1183,7 +1250,9 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"Learning Rate: {args.lr}\n")
         f.write(f"Dropout: {args.dropout}\n")
         f.write(f"Weight Decay (L2 regularization): {args.weight_decay}\n")
-        f.write(f"Skip ICA: {args.skip_ica}\n\n")
+        f.write(f"Skip ICA: {args.skip_ica}\n")
+        f.write(f"Pretrained Checkpoint: {args.pretrained_checkpoint}\n")
+        f.write(f"Freeze CNN: {args.freeze_cnn}\n\n")
         f.write("Per-fold best validation accuracy:\n")
         for i in range(len(results["fold_best_eval_chunk_acc"])):
             chunk_acc = results["fold_best_eval_chunk_acc"][i]
@@ -1319,6 +1388,10 @@ def run(args: argparse.Namespace) -> None:
 def main() -> None:
     parser = get_arg_parser()
     args = parser.parse_args()
+
+    # Validate transfer learning arguments
+    if args.command == "train" and args.freeze_cnn and not args.pretrained_checkpoint:
+        parser.error("--freeze-cnn requires --pretrained-checkpoint")
 
     if args.command == "train":
         train(args)
