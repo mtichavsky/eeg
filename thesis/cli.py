@@ -132,6 +132,12 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Freeze CNN layers (conv1, conv2) during training. "
         "Only LSTM and classifier head will be trained.",
     )
+    train_parser.add_argument(
+        "--freeze-lstm",
+        action="store_true",
+        help="Freeze LSTM layer during training. "
+        "Only classifier head will be trained. Implies --freeze-cnn.",
+    )
 
     # Run subcommand
     run_parser = subparsers.add_parser("run", help="Run inference on a single EDF file")
