@@ -118,6 +118,21 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Device to train on",
     )
 
+    # Transfer learning arguments
+    train_parser.add_argument(
+        "--pretrained-checkpoint",
+        type=str,
+        default=None,
+        help="Path to pretrained model checkpoint (.pth) for transfer learning. "
+        "Must use same --model architecture as pretrained model.",
+    )
+    train_parser.add_argument(
+        "--freeze-cnn",
+        action="store_true",
+        help="Freeze CNN layers (conv1, conv2) during training. "
+        "Only LSTM and classifier head will be trained.",
+    )
+
     # Run subcommand
     run_parser = subparsers.add_parser("run", help="Run inference on a single EDF file")
     add_preprocessing_args(run_parser)
