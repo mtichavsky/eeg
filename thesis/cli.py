@@ -100,7 +100,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     train_parser.add_argument("--val-every", type=int, default=2, help="Validate every N epochs")
     train_parser.add_argument(
-        "--save-every", type=int, default=10, help="Save checkpoint every N epochs"
+        "--save-every", type=int, default=100, help="Save checkpoint every N epochs"
     )
     train_parser.add_argument("--patience", type=int, default=20, help="Early stopping patience")
     train_parser.add_argument(
