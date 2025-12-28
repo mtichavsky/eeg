@@ -82,6 +82,37 @@ poetry run python main.py train --skip-ica \
   --val-every 1
 ```
 
+### Transfer Learning
+```bash
+# Fine-tune a pretrained MDD model on CANE dataset
+poetry run python main.py train --skip-ica \
+  --channel Fp1 \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/cane_009_fp1_ec_transfer \
+  --dataset cane \
+  --condition ec \
+  --n-folds 6 \
+  --pretrained-checkpoint experiments/mdd_006_fp1_ec/fold_1_best.pth \
+  --freeze-cnn
+
+# Transfer learning with all layers trainable (no freezing)
+poetry run python main.py train --skip-ica \
+  --channel Fp1 \
+  --checkpoint-dir=experiments/cane_009_fp1_ec_finetune \
+  --dataset cane \
+  --condition ec \
+  --pretrained-checkpoint experiments/mdd_006_fp1_ec/fold_1_best.pth
+```
+
+**Transfer Learning Options:**
+- `--pretrained-checkpoint <path>`: Load weights from a trained model checkpoint (.pth file)
+- `--freeze-cnn`: Freeze CNN layers (conv1, conv2) during training; only LSTM and classifier are trained
+
+**Use Cases:**
+- Pre-train on larger MDD dataset, then fine-tune on smaller CANE dataset
+- Leverage learned EEG feature representations across related tasks
+- Reduce training time when target dataset is small
+
 ### Experiment Organization
 
 **IMPORTANT: Experiment Directory Naming Convention**
@@ -150,6 +181,9 @@ Run with: `poetry run jupyter notebook`
 - Early stopping based on chunk-level accuracy (not combined metric)
 - Configurable hyperparameters: dropout (default 0.5), weight decay/L2 (default 1e-4)
 - Current setup: 10-fold CV (configurable with --n-folds)
+- **Transfer learning support**: Load pretrained weights and optionally freeze CNN layers
+- **Model registry**: `MODEL_REGISTRY` dict maps model names to (class, default_rnn_hidden) tuples
+- **Model factory**: `create_model()` handles model instantiation, weight loading, and layer freezing
 
 **`train_cv_example.py`** - Clean reference implementation
 - Shows proper 10-fold cross-validation pattern
@@ -271,6 +305,8 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Transfer learning**: Load pretrained weights via `--pretrained-checkpoint` and freeze CNN layers with `--freeze-cnn`
+- **Model registry**: `MODEL_REGISTRY` dict centralizes model class lookups; `create_model()` factory handles instantiation
 - **Multi-condition support**: Can now train on combined EC+EO conditions using `--condition ec+eo`
 - **Spatial Dropout**: Added `nn.Dropout2d` after CNN pooling layers for better feature map regularization
 - **L2 Regularization**: Added weight decay parameter (default 1e-4) for L2 penalty on weights
@@ -279,8 +315,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - **Training visualization**: Added `plot_training_curves.py` for analyzing fold performance
 - Refactored from single-dataset to multi-dataset support
 - Moved from simple array splits to balanced stratified folding
-- Introduced dataset-aware subject tuples: `(dataset_label, subject_id)`
-- See `context.md` for detailed refactoring history
+- Introduced dataset-aware subject tuples: `(dataset_label, subject_id)` for cross-dataset training
 
 **Deprecated Patterns:**
 - ~~Direct use of `MDDDataset` for training~~ → Use `prepare_mdd_dataset()`
@@ -306,9 +341,9 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Usage: `poetry run python plot_training_curves.py <checkpoint_dir>/<log file>`
 
 ## Quick Reference Files
-- `context.md` - Detailed recent refactoring history and implementation rationale
 - `DATASET_USAGE.md` - Dataset-specific preprocessing and loading details
 - `EXPERIMENTS.md` - Log of experiment configurations and results
 - `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, SpectrogramDataset)
-- `main.py` - Training orchestration and cross-validation logic
+- `thesis/cli.py` - CLI argument parser with all training options
+- `main.py` - Training orchestration, cross-validation logic, and transfer learning support
 - `plot_training_curves.py` - Training curve visualization utility
