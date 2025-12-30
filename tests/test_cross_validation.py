@@ -1,6 +1,6 @@
 """Tests for cross-validation split logic."""
 
-from main import create_balanced_folds, split_into_folds
+from thesis.data_preparation import create_balanced_folds, split_into_folds
 
 
 class TestSplitIntoFolds:
@@ -65,9 +65,7 @@ class TestSplitIntoFolds:
             for j, fold2 in enumerate(fold_base_subjects):
                 if i != j:
                     overlap = fold1 & fold2
-                    assert len(overlap) == 0, (
-                        f"Subject leakage between fold {i} and {j}: {overlap}"
-                    )
+                    assert len(overlap) == 0, f"Subject leakage between fold {i} and {j}: {overlap}"
 
     def test_all_subjects_included(self):
         """Verify all subjects are included in exactly one fold."""
