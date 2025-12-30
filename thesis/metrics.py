@@ -1,5 +1,7 @@
 """Classification metrics for EEG depression/anxiety detection."""
 
+from typing import Any, Callable
+
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
@@ -161,3 +163,141 @@ def format_metrics_for_logging(metrics: dict[str, float | int], num_classes: int
                 rec = metrics[f"recall_{class_name}"]
                 parts.append(f"{class_name}: P={prec:.3f} R={rec:.3f}")
         return " | ".join(parts)
+
+
+def extract_classification_metrics(metrics: dict[str, float], num_classes: int) -> dict[str, float]:
+    """
+    Extract relevant metrics based on classification type (binary vs multi-class).
+
+    For binary classification: returns accuracy, sensitivity, specificity.
+    For multi-class: returns accuracy and per-class recall.
+
+    :param dict[str, float] metrics: Source metrics dictionary from classification_metrics().
+    :param int num_classes: Number of classes (2 for binary, >2 for multi-class).
+    :return: Dictionary with accuracy and type-specific metrics.
+    :rtype: dict[str, float]
+    """
+    if num_classes == 2:
+        return {
+            "accuracy": metrics["accuracy"],
+            "sensitivity": metrics["recall"],
+            "specificity": metrics["specificity"],
+        }
+    else:
+        return {
+            "accuracy": metrics["accuracy"],
+            "recall_normal": metrics.get("recall_normal", 0.0),
+            "recall_mdd": metrics.get("recall_mdd", 0.0),
+            "recall_anxious": metrics.get("recall_anxious", 0.0),
+        }
+
+
+def _format_pct(value: float) -> str:
+    """
+    Format a decimal value as percentage with 2 decimal places.
+
+    :param float value: Decimal value (e.g., 0.85).
+    :return: Formatted percentage string (e.g., "85.00%").
+    :rtype: str
+    """
+    return f"{value * 100:.2f}%"
+
+
+def _format_metric_line(name: str, values: list[float]) -> str:
+    """
+    Format a metric line with mean, std, min, max as percentages.
+
+    :param str name: Metric name for the output line.
+    :param list[float] values: List of metric values across folds.
+    :return: Formatted string with statistics.
+    :rtype: str
+    """
+    mean = np.mean(values)
+    std = np.std(values)
+    min_val = np.min(values)
+    max_val = np.max(values)
+    return (
+        f"{name}: {_format_pct(mean)} ± {_format_pct(std)}, "
+        f"Min: {_format_pct(min_val)}, Max: {_format_pct(max_val)}\n"
+    )
+
+
+def _extract_metric_values(fold_metrics: list[dict[str, float]], key: str) -> list[float]:
+    """
+    Extract a specific metric value from each fold's metrics dict.
+
+    :param list[dict[str, float]] fold_metrics: List of metric dicts from each fold.
+    :param str key: Metric key to extract.
+    :return: List of extracted values.
+    :rtype: list[float]
+    """
+    return [m.get(key, 0.0) for m in fold_metrics]
+
+
+def _write_metrics_block(
+    writer: Callable[[str], Any],
+    metrics: list[dict[str, float]],
+    level: str,
+) -> None:
+    """
+    Write a block of metrics for either chunk-level or subject-level evaluation.
+
+    For binary classification: writes accuracy, sensitivity, specificity.
+    For multi-class: writes accuracy and per-class recall.
+
+    :param Callable[[str], Any] writer: Function to write output (e.g., logger.info).
+    :param list[dict[str, float]] metrics: List of metric dicts from each fold.
+    :param str level: Metric level identifier, either "CHUNK" or "SUBJECT".
+    :return: None
+    :rtype: None
+    """
+    if not metrics:
+        return
+
+    acc_values = _extract_metric_values(metrics, "accuracy")
+    label = f"{level} Accuracy Mean"
+    writer(_format_metric_line(label, acc_values))
+
+    # Binary classification: sensitivity & specificity
+    if "sensitivity" in metrics[0]:
+        sens_values = _extract_metric_values(metrics, "sensitivity")
+        spec_values = _extract_metric_values(metrics, "specificity")
+        writer(_format_metric_line(f"{level} Sensitivity Mean", sens_values))
+        writer(_format_metric_line(f"{level} Specificity Mean", spec_values))
+
+    # Multi-class: per-class recall
+    elif "recall_normal" in metrics[0]:
+        for class_name in ["normal", "mdd", "anxious"]:
+            key = f"recall_{class_name}"
+            values = _extract_metric_values(metrics, key)
+            writer(_format_metric_line(f"{level} Recall ({class_name.capitalize()}) Mean", values))
+
+
+def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> None:
+    """
+    Write cross-validation results summary.
+
+    Formats and outputs chunk-level, subject-level, and combined metrics.
+    For binary classification: shows accuracy, sensitivity, specificity.
+    For multi-class: shows accuracy and per-class recall.
+    All values formatted as percentages.
+
+    :param Callable[[str], Any] writer: Function to write output (e.g., logger.info or file.write).
+    :param dict[str, list] cv_results: Cross-validation results containing:
+        - fold_chunk_metrics: List of chunk-level metric dicts
+        - fold_subject_metrics: List of subject-level metric dicts
+        - fold_eval_combined_acc: List of combined accuracy values
+    :return: None
+    :rtype: None
+    """
+    chunk_metrics = cv_results.get("fold_chunk_metrics", [])
+    subject_metrics = cv_results.get("fold_subject_metrics", [])
+
+    _write_metrics_block(writer, chunk_metrics, "CHUNK")
+    _write_metrics_block(writer, subject_metrics, "SUBJECT")
+
+    writer(
+        _format_metric_line(
+            "COMBINED Accuracy Mean (chunk×subject)", cv_results["fold_eval_combined_acc"]
+        )
+    )
