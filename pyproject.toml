@@ -25,6 +25,7 @@ ipykernel = "*"
 jupyter = "*"
 mypy = "*"
 pandas-stubs = "*"
+pytest = "*"
 
 
 [build-system]
