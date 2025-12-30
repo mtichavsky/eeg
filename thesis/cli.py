@@ -29,6 +29,12 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         help="Skip ICA artifact removal (faster but less clean data)",
     )
     preproc_group.add_argument(
+        "--skip-artifact-removal",
+        action="store_true",
+        help="Skip artifact interpolation and clipping in CANE dataset "
+        "(let the neural network learn to handle artifacts)",
+    )
+    preproc_group.add_argument(
         "--channel",
         type=str,
         choices=list(
