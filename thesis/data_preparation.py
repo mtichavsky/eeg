@@ -1,6 +1,7 @@
 """Data preparation utilities for cross-validation training."""
 
 import logging
+from collections.abc import Callable
 from typing import Literal
 
 import numpy as np
@@ -24,6 +25,7 @@ def prepare_mdd_dataset(
     skip_ica: bool,
     channel: str | None,
     rng: np.random.RandomState,
+    augmentation: Callable | None = None,
 ) -> tuple[
     ConcatDataset | FlattenedSpectrogramDataset,
     list[tuple[str, str]],
@@ -37,6 +39,7 @@ def prepare_mdd_dataset(
     :param bool skip_ica: Whether to skip ICA preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1").
     :param np.random.RandomState rng: Random number generator for shuffling.
+    :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
     :rtype: tuple
     """
@@ -45,7 +48,9 @@ def prepare_mdd_dataset(
 
     for condition in conditions:
         mdd_dataset = MDDDataset(condition=condition, skip_ica=skip_ica, channel=channel)
-        mdd_spec_dataset = SpectrogramDataset(mdd_dataset, fs=MDDDataset.FS)
+        mdd_spec_dataset = SpectrogramDataset(
+            mdd_dataset, fs=MDDDataset.FS, augmentation=augmentation
+        )
         mdd_flat_dataset = FlattenedSpectrogramDataset(mdd_spec_dataset)
 
         spec_shape = mdd_flat_dataset[0][0].shape[1:]
@@ -73,6 +78,7 @@ def prepare_cane_dataset(
     rng: np.random.RandomState,
     remap_labels: bool = False,
     skip_artifact_removal: bool = False,
+    augmentation: Callable | None = None,
 ) -> tuple[
     ConcatDataset | FlattenedSpectrogramDataset,
     list[tuple[str, str]],
@@ -87,6 +93,7 @@ def prepare_cane_dataset(
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param bool remap_labels: If True, remap labels {0->0, 2->1} for binary classification.
     :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
+    :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
     :rtype: tuple
     """
@@ -105,6 +112,7 @@ def prepare_cane_dataset(
             fs=CANEDataset.FS,
             nperseg=CANEDataset.STFT_NPERSEG,
             noverlap=CANEDataset.STFT_NOVERLAP,
+            augmentation=augmentation,
         )
 
         # Apply label remapping if training on CANE alone (binary classification)

@@ -16,6 +16,7 @@ from plot_training_curves import (
     TrainingCurvesError,
     generate_training_curves,
 )
+from thesis.augmentation import EEGAugmentation
 from thesis.cli import get_arg_parser
 from thesis.data_preparation import (
     EXPECTED_SPECTROGRAM_SHAPE,
@@ -468,7 +469,6 @@ def create_model(
         model.load_state_dict(saved["model_state_dict"], strict=False)
         logger.info("Pretrained weights loaded successfully")
 
-        # Freeze CNN layers independently
         if freeze_cnn:
             # Freeze CNN layers (conv1, conv2 and their dropout layers)
             for param in model.conv1.parameters():
@@ -480,7 +480,6 @@ def create_model(
             for param in model.dropout2d_2.parameters():
                 param.requires_grad = False
 
-        # Freeze LSTM layer independently
         if freeze_lstm:
             # Freeze LSTM layer
             for param in model.rnn.parameters():
@@ -523,6 +522,7 @@ def train_cross_validation(
     pretrained_checkpoint: str | None = None,
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
+    augmentation: Callable | None = None,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -550,6 +550,7 @@ def train_cross_validation(
         Can be used alone or with freeze_lstm.
     :param bool freeze_lstm: If True, freeze LSTM layer during training.
         Can be used alone or with freeze_cnn.
+    :param Callable | None augmentation: Optional augmentation to apply to raw EEG during training.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
     :rtype: dict
@@ -597,15 +598,20 @@ def train_cross_validation(
             rng,
             remap_labels=True,
             skip_artifact_removal=skip_artifact_removal,
+            augmentation=augmentation,
         )
         logger.info(f"CANE dataset: {len(normal)} normal, {len(anxious)} anxious subjects")
     elif dataset_type == "both":
         mdd_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious = prepare_mdd_dataset(
-            conditions, skip_ica, channel, rng
+            conditions, skip_ica, channel, rng, augmentation=augmentation
         )
         cane_conditions = [c.lower() for c in conditions]
         cane_flat_dataset, cane_normal, cane_depressed, cane_anxious = prepare_cane_dataset(
-            cane_conditions, channel, rng, skip_artifact_removal=skip_artifact_removal
+            cane_conditions,
+            channel,
+            rng,
+            skip_artifact_removal=skip_artifact_removal,
+            augmentation=augmentation,
         )
         num_classes = 3
 
@@ -772,6 +778,12 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Early Stopping Patience: {args.patience} epochs")
     logger.info(f"  Skip ICA: {args.skip_ica}")
     logger.info(f"  Skip Artifact Removal: {args.skip_artifact_removal}")
+    if args.augment_data is not None:
+        augmentation: EEGAugmentation | None = EEGAugmentation(p_aug=args.augment_data)
+        logger.info(f"  Data Augmentation: enabled (p={args.augment_data})")
+    else:
+        augmentation = None
+        logger.info("  Data Augmentation: disabled")
     logger.info(f"  Pretrained Checkpoint: {args.pretrained_checkpoint}")
     logger.info(f"  Freeze CNN: {args.freeze_cnn}")
     logger.info(f"  Freeze LSTM: {args.freeze_lstm}")
@@ -801,6 +813,7 @@ def train(args: argparse.Namespace) -> None:
         pretrained_checkpoint=args.pretrained_checkpoint,
         freeze_cnn=args.freeze_cnn,
         freeze_lstm=args.freeze_lstm,
+        augmentation=augmentation,
     )
 
     # Save final results to file
@@ -815,7 +828,11 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"Dropout: {args.dropout}\n")
         f.write(f"Weight Decay (L2 regularization): {args.weight_decay}\n")
         f.write(f"Skip ICA: {args.skip_ica}\n")
-        f.write(f"Skip Artifact Removal: {args.skip_artifact_removal}\n\n")
+        f.write(f"Skip Artifact Removal: {args.skip_artifact_removal}\n")
+        if args.augment_data is not None:
+            f.write(f"Data Augmentation: enabled (p={args.augment_data})\n")
+        else:
+            f.write("Data Augmentation: disabled\n")
         f.write(f"Pretrained Checkpoint: {args.pretrained_checkpoint}\n")
         f.write(f"Freeze CNN: {args.freeze_cnn}\n")
         f.write(f"Freeze LSTM: {args.freeze_lstm}\n\n")
