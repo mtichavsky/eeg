@@ -124,6 +124,17 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Device to train on",
     )
 
+    # Data augmentation arguments
+    train_parser.add_argument(
+        "--augment-data",
+        type=float,
+        default=None,
+        metavar="PROB",
+        help="Enable data augmentation with given probability (0.0-1.0). "
+        "Example: --augment-data 0.5 applies each augmentation with 50%% chance. "
+        "Augmentations: FTSurrogate, MagWarp, TimeReverse, Scaling.",
+    )
+
     # Transfer learning arguments
     train_parser.add_argument(
         "--pretrained-checkpoint",
@@ -141,8 +152,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     train_parser.add_argument(
         "--freeze-lstm",
         action="store_true",
-        help="Freeze LSTM layer during training. "
-        "Can be used alone or with --freeze-cnn.",
+        help="Freeze LSTM layer during training. Can be used alone or with --freeze-cnn.",
     )
 
     # Run subcommand

@@ -675,6 +675,7 @@ class SpectrogramDataset(Dataset):
         noverlap: int = 192,
         window: str = "hamming",
         cache_size: int = 100,
+        augmentation: Optional[Callable] = None,
     ):
         """
         Initialize the SpectrogramDataset.
@@ -685,19 +686,32 @@ class SpectrogramDataset(Dataset):
         :param int noverlap: Number of points to overlap between segments (default: 192).
         :param str window: Window function for STFT (default: "hamming").
         :param int cache_size: Number of processed items to cache in memory.
+        :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
+               before spectrogram conversion. When enabled, caching is disabled to ensure
+               fresh augmentations on each access.
         """
         self.dataset = dataset
         self.fs = fs
         self.nperseg = nperseg
         self.noverlap = noverlap
         self.window = window
+        self.augmentation = augmentation
 
-        # Create a bound method cache for this instance
-        self._get_item_cached = lru_cache(maxsize=cache_size)(self._get_item)
+        # Disable caching when augmentation is enabled - each access should return
+        # a fresh augmentation. Otherwise, use LRU cache for performance.
+        if augmentation is None:
+            self._get_item_cached = lru_cache(maxsize=cache_size)(self._get_item)
+        else:
+            self._get_item_cached = self._get_item
 
     @staticmethod
     def convert_to_spectrograms(
-        tensor: torch.Tensor, nperseg: int, fs: float, noverlap: int, window: str
+        tensor: torch.Tensor,
+        nperseg: int,
+        fs: float,
+        noverlap: int,
+        window: str,
+        augmentation: Optional[Callable] = None,
     ) -> list[torch.Tensor]:
         """
         Convert EEG tensor to list of spectrograms using STFT.
@@ -710,6 +724,8 @@ class SpectrogramDataset(Dataset):
         :param float fs: Sampling frequency for STFT.
         :param int noverlap: Number of points to overlap between segments.
         :param str window: Window function for STFT.
+        :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
+               before STFT conversion.
         :return: List of spectrogram tensors, each with shape (1, freq_bins, time_frames).
         :rtype: list[torch.Tensor]
         """
@@ -717,6 +733,10 @@ class SpectrogramDataset(Dataset):
         for chunk_idx in range(tensor.size(0)):
             # Extract the first channel for spectrogram generation
             channel_data = tensor[chunk_idx, 0, :].numpy()
+
+            # Apply augmentation to raw EEG before STFT
+            if augmentation is not None:
+                channel_data = augmentation(channel_data)
 
             # Skip if too short for STFT
             if len(channel_data) < nperseg:
@@ -756,7 +776,12 @@ class SpectrogramDataset(Dataset):
         """
         item = self.dataset.__getitem__(idx)
         spectograms = self.convert_to_spectrograms(
-            item["eeg"], self.nperseg, self.fs, self.noverlap, self.window
+            item["eeg"],
+            self.nperseg,
+            self.fs,
+            self.noverlap,
+            self.window,
+            self.augmentation,
         )
         return spectograms, item["label"], item["subject"]
 
