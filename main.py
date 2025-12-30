@@ -622,6 +622,7 @@ def prepare_cane_dataset(
     channel: str | None,
     rng: np.random.RandomState,
     remap_labels: bool = False,
+    skip_artifact_removal: bool = False,
 ) -> tuple:
     """
     Prepare CANE dataset with spectrograms and split subjects by class.
@@ -630,6 +631,7 @@ def prepare_cane_dataset(
     :param str | None channel: Single channel to use (e.g., "Fp1").
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param bool remap_labels: If True, remap labels {0->0, 2->1} for binary classification.
+    :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
     :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
     :rtype: tuple
     """
@@ -638,7 +640,10 @@ def prepare_cane_dataset(
 
     for condition in conditions:
         cane_dataset = CANEDataset(
-            condition=condition, channel=channel, skip_extreme_artifacts=True
+            condition=condition,
+            channel=channel,
+            skip_extreme_artifacts=True,
+            skip_artifact_removal=skip_artifact_removal,
         )
         cane_spec_dataset = SpectrogramDataset(
             cane_dataset,
@@ -986,6 +991,7 @@ def train_cross_validation(
     skip_ica: bool = False,
     channel: str | None = None,
     model_name: str = "CNN_LSTM_DepCap",
+    skip_artifact_removal: bool = False,
     pretrained_checkpoint: str | None = None,
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
@@ -1009,6 +1015,7 @@ def train_cross_validation(
     :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
     :param str model_name: Model architecture to use ("CNN_LSTM_DepCap" or "Smaller").
+    :param bool skip_artifact_removal: If True, skip artifact interpolation/clipping in CANE.
     :param str | None pretrained_checkpoint: Path to pretrained model checkpoint for transfer
         learning. Must use same model architecture as pretrained model.
     :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
@@ -1057,7 +1064,11 @@ def train_cross_validation(
         # Convert to lowercase for CANE
         cane_conditions = [c.lower() for c in conditions]
         flat_dataset, normal, depressed, anxious = prepare_cane_dataset(
-            cane_conditions, channel, rng, remap_labels=True
+            cane_conditions,
+            channel,
+            rng,
+            remap_labels=True,
+            skip_artifact_removal=skip_artifact_removal,
         )
         logger.info(f"CANE dataset: {len(normal)} normal, {len(anxious)} anxious subjects")
     elif dataset_type == "both":
@@ -1066,7 +1077,7 @@ def train_cross_validation(
         )
         cane_conditions = [c.lower() for c in conditions]
         cane_flat_dataset, cane_normal, cane_depressed, cane_anxious = prepare_cane_dataset(
-            cane_conditions, channel, rng
+            cane_conditions, channel, rng, skip_artifact_removal=skip_artifact_removal
         )
         num_classes = 3
 
@@ -1139,7 +1150,7 @@ def train_cross_validation(
         optimizer = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
             lr=learning_rate,
-            weight_decay=weight_decay,
+            weight_decay=weight_decay
         )
 
         # Train this fold
@@ -1232,6 +1243,7 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Save Checkpoint Every: {args.save_every} epochs")
     logger.info(f"  Early Stopping Patience: {args.patience} epochs")
     logger.info(f"  Skip ICA: {args.skip_ica}")
+    logger.info(f"  Skip Artifact Removal: {args.skip_artifact_removal}")
     logger.info(f"  Pretrained Checkpoint: {args.pretrained_checkpoint}")
     logger.info(f"  Freeze CNN: {args.freeze_cnn}")
     logger.info(f"  Freeze LSTM: {args.freeze_lstm}")
@@ -1257,6 +1269,7 @@ def train(args: argparse.Namespace) -> None:
         skip_ica=args.skip_ica,
         channel=args.channel,
         model_name=args.model,
+        skip_artifact_removal=args.skip_artifact_removal,
         pretrained_checkpoint=args.pretrained_checkpoint,
         freeze_cnn=args.freeze_cnn,
         freeze_lstm=args.freeze_lstm,
@@ -1274,6 +1287,7 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"Dropout: {args.dropout}\n")
         f.write(f"Weight Decay (L2 regularization): {args.weight_decay}\n")
         f.write(f"Skip ICA: {args.skip_ica}\n")
+        f.write(f"Skip Artifact Removal: {args.skip_artifact_removal}\n\n")
         f.write(f"Pretrained Checkpoint: {args.pretrained_checkpoint}\n")
         f.write(f"Freeze CNN: {args.freeze_cnn}\n")
         f.write(f"Freeze LSTM: {args.freeze_lstm}\n\n")
