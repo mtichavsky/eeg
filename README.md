@@ -149,6 +149,12 @@ Each EDF file undergoes the following preprocessing (see `thesis/dataset.py`):
 
 ## Development
 
+### Executing tests
+
+```
+make test
+```
+
 ### Formatting and Linting
 
 ```bash

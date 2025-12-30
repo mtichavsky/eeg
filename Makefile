@@ -1,5 +1,8 @@
 
-.PHONY: venv lock format typecheck
+.PHONY: venv lock format typecheck test
+
+test:
+	poetry run pytest .
 
 format:
 	poetry run ruff format .
