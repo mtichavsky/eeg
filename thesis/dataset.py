@@ -314,6 +314,7 @@ class CANEDataset(Dataset):
         artifact_threshold: float = 4.0,
         apply_car: bool = True,
         skip_extreme_artifacts: bool = False,
+        skip_artifact_removal: bool = False,
     ):
         """
         Initialize the CANE EEG dataset.
@@ -334,6 +335,8 @@ class CANEDataset(Dataset):
         :param float artifact_threshold: Z-score threshold for artifact detection.
         :param bool apply_car: Whether to apply Common Average Reference.
         :param bool skip_extreme_artifacts: If True, completely removes chunks with >10% artifacts.
+        :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping
+               (let the neural network learn to handle artifacts).
         """
         self.data_dir = Path(data_dir)
         self.condition = str(condition).lower()
@@ -343,6 +346,7 @@ class CANEDataset(Dataset):
         self.artifact_threshold = artifact_threshold
         self.apply_car = apply_car
         self.skip_extreme_artifacts = skip_extreme_artifacts
+        self.skip_artifact_removal = skip_artifact_removal
 
         self.files = self._discover_files(condition, subjects, labels)
 
@@ -454,6 +458,7 @@ class CANEDataset(Dataset):
         artifact_threshold: float = 4.0,
         apply_car: bool = True,
         skip_extreme_artifacts: bool = False,
+        skip_artifact_removal: bool = False,
     ) -> torch.Tensor:
         """
         Load a CSV file from disk, preprocess it, and return chunks.
@@ -469,6 +474,7 @@ class CANEDataset(Dataset):
         :param float artifact_threshold: Z-score threshold for artifact detection.
         :param bool apply_car: Whether to apply Common Average Reference.
         :param bool skip_extreme_artifacts: If True, completely removes chunks with >10% artifacts.
+        :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
         :return: Tensor of preprocessed EEG chunks with shape (num_chunks, 1, chunk_samples).
         :rtype: torch.Tensor
         """
@@ -505,37 +511,41 @@ class CANEDataset(Dataset):
         signal = detrend(signal, type="linear")
 
         # Step 4: Artifact handling (before filtering to avoid spreading artifacts)
-        if artifact_method in ["interpolation", "both"]:
-            z_scores = np.abs(zscore(signal))
-            artifact_indices = np.where(z_scores > artifact_threshold)[0]
+        # Skip if skip_artifact_removal is True (let neural network handle artifacts)
+        if not skip_artifact_removal:
+            if artifact_method in ["interpolation", "both"]:
+                z_scores = np.abs(zscore(signal))
+                artifact_indices = np.where(z_scores > artifact_threshold)[0]
 
-            if len(artifact_indices) > 0:
-                artifact_pct = len(artifact_indices) / len(signal) * 100
-                logger.info(f"Found {len(artifact_indices)} artifacts ({artifact_pct:.2f}%)")
+                if len(artifact_indices) > 0:
+                    artifact_pct = len(artifact_indices) / len(signal) * 100
+                    logger.info(f"Found {len(artifact_indices)} artifacts ({artifact_pct:.2f}%)")
 
-                # Interpolate artifacts
-                for idx in artifact_indices:
-                    # Find clean neighbors within ±100 samples
-                    window_start = max(0, idx - 100)
-                    window_end = min(len(signal), idx + 100)
+                    # Interpolate artifacts
+                    for idx in artifact_indices:
+                        # Find clean neighbors within ±100 samples
+                        window_start = max(0, idx - 100)
+                        window_end = min(len(signal), idx + 100)
 
-                    neighbors = signal[window_start:window_end]
-                    neighbor_mask = (
-                        np.abs(zscore(neighbors)) < CANEDataset.NEIGHBOUR_ZSCORE_THRESHOLD
-                    )
+                        neighbors = signal[window_start:window_end]
+                        neighbor_mask = (
+                            np.abs(zscore(neighbors)) < CANEDataset.NEIGHBOUR_ZSCORE_THRESHOLD
+                        )
 
-                    if neighbor_mask.sum() > 10:  # Need at least 10 clean samples
-                        signal[idx] = np.median(neighbors[neighbor_mask])
-                    elif (
-                        0 < idx < len(signal) - 1
-                    ):  # If no clean neighbors, use linear interpolation
-                        signal[idx] = (signal[idx - 1] + signal[idx + 1]) / 2
+                        if neighbor_mask.sum() > 10:  # Need at least 10 clean samples
+                            signal[idx] = np.median(neighbors[neighbor_mask])
+                        elif (
+                            0 < idx < len(signal) - 1
+                        ):  # If no clean neighbors, use linear interpolation
+                            signal[idx] = (signal[idx - 1] + signal[idx + 1]) / 2
 
-        if artifact_method in ["clipping", "both"]:
-            # Percentile-based clipping as additional safety
-            lower = np.percentile(signal, 0.5)
-            upper = np.percentile(signal, 99.5)
-            signal = np.clip(signal, lower, upper)
+            if artifact_method in ["clipping", "both"]:
+                # Percentile-based clipping as additional safety
+                lower = np.percentile(signal, 0.5)
+                upper = np.percentile(signal, 99.5)
+                signal = np.clip(signal, lower, upper)
+        else:
+            logger.debug("Skipping artifact removal (--skip-artifact-removal enabled)")
 
         # Step 5: Bandpass filter (matching MDD: 1-70 Hz)
         nyq = 0.5 * CANEDataset.FS
@@ -601,6 +611,7 @@ class CANEDataset(Dataset):
             self.artifact_threshold,
             self.apply_car,
             self.skip_extreme_artifacts,
+            self.skip_artifact_removal,
         )
 
         if self.transform:
