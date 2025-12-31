@@ -440,7 +440,7 @@ def create_model(
     :param torch.device device: Device to place model on.
     :param str | None pretrained_checkpoint: Path to pretrained checkpoint for transfer learning.
     :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
-    :param bool freeze_lstm: If True, freeze LSTM layer during training. Implies freeze_cnn.
+    :param bool freeze_lstm: If True, freeze LSTM layer during training.
     :return: Initialized model.
     :rtype: nn.Module
     """
@@ -468,8 +468,8 @@ def create_model(
         model.load_state_dict(saved["model_state_dict"], strict=False)
         logger.info("Pretrained weights loaded successfully")
 
-        # freeze_lstm implies freeze_cnn
-        if freeze_cnn or freeze_lstm:
+        # Freeze CNN layers independently
+        if freeze_cnn:
             # Freeze CNN layers (conv1, conv2 and their dropout layers)
             for param in model.conv1.parameters():
                 param.requires_grad = False
@@ -480,15 +480,17 @@ def create_model(
             for param in model.dropout2d_2.parameters():
                 param.requires_grad = False
 
+        # Freeze LSTM layer independently
         if freeze_lstm:
             # Freeze LSTM layer
             for param in model.rnn.parameters():
                 param.requires_grad = False
 
+        # Log which layers are frozen
         if freeze_cnn or freeze_lstm:
             all_params, trainable_params = model.count_parameters()
             frozen_parts = []
-            if freeze_cnn or freeze_lstm:
+            if freeze_cnn:
                 frozen_parts.append("CNN")
             if freeze_lstm:
                 frozen_parts.append("LSTM")
@@ -545,9 +547,9 @@ def train_cross_validation(
     :param str | None pretrained_checkpoint: Path to pretrained model checkpoint for transfer
         learning. Must use same model architecture as pretrained model.
     :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
-        Only LSTM and classifier head will be trained.
-    :param bool freeze_lstm: If True, freeze LSTM layer during training. Implies freeze_cnn.
-        Only classifier head will be trained.
+        Can be used alone or with freeze_lstm.
+    :param bool freeze_lstm: If True, freeze LSTM layer during training.
+        Can be used alone or with freeze_cnn.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
     :rtype: dict
