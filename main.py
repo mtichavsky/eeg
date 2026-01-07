@@ -609,9 +609,14 @@ def train_cross_validation(
         )
         logger.info(f"CANE dataset: {len(normal)} normal, {len(anxious)} anxious subjects")
     elif dataset_type == "both":
+        # T3=T7 and T4=T8 for these purposes, otherwise I couldn't combine the datasets
+        if channel in ["T7", "T8"]:
+            channel = {"T7": "T3", "T8": "T4"}[channel]
         mdd_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious = prepare_mdd_dataset(
             conditions, skip_ica, channel, rng, augmentation=augmentation
         )
+        if channel in ["T3", "T4"]:
+            channel = {"T3": "T7", "T4": "T8"}[channel]
         cane_conditions = [c.lower() for c in conditions]
         cane_flat_dataset, cane_normal, cane_depressed, cane_anxious = prepare_cane_dataset(
             cane_conditions,
