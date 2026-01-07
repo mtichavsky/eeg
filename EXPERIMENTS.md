@@ -2,25 +2,178 @@
 
 ## Summary Table: Comparing Experiments
 
-| Experiment                                             | Dataset | Channel | Condition | Batch | Model    | Dropout | Chunk Acc (Min-Max)            | Subject Acc (Min-Max)      | Key Observation                                            |
-|--------------------------------------------------------|---------|---------|-----------|-------|----------|---------|--------------------------------|----------------------------|------------------------------------------------------------|
-| **mdd_006_fp1_ec**                                     | MDD     | Fp1     | EC        | 64    | Original | 0.5     | 91.3% ± 7.7% (75.6-98.6%)      | 94.0% ± 9.4% (75.0-100%)   |                                                            |
-| mdd_006_t4_ec                                          | MDD     | T4      | EC        | 64    | Original | 0.5     | 86.5% ± 5.2% (75.6-91.0%)      | 88.6% ± 7.3% (75.0-100%)   |                                                            |
-| **mdd_006_t3_ec+eo**                                   | MDD     | T3      | EC+EO     | 64    | Original | 0.4     | 88.3% ± 7.9% (79.1-100%)       | 89.1% ± 8.2% (79.0-100%)   |                                                            |
-| **mdd_008_t3_ec+eo_smaller**                           | MDD     | T3      | EC+EO     | 64    | Smaller  | 0.1     | 86.4% ± 7.5% (77.8-98.5%)      | 88.2% ± 7.4% (78.9-100%)   | Behaves very similar considering it's ~50% smaller         |
-| **mdd_006_t4_ec+eo**                                   | MDD     | T4      | EC+EO     | 64    | Original | 0.4     | 87.3% ± 8.1% (75.9-100%)       | 89.2% ± 6.3% (83.3-100%)   |                                                            |
-| cane_006_fp1_ec (baseline)                             | CANE    | Fp1     | EC        | 64    | Original | 0.5     | 57.6%                          | 61.9%                      |                                                            |
-| cane_008_t7_ec_og                                      | CANE    | T7      | EC        | 32    | Original | 0.8     | 48.0%                          | 48.8%                      | All 6 folds peaked at epoch 1 - complete learning failure  |
-| cane_008_t7_ec_og_rnd                                  | CANE    | T7      | EC        | 32    | Original | 0.1     | 61.2%                          | 62.7%                      | 3/6 folds at epoch 1, high variance                        |
-| cane_008_t7_ec_smaller                                 | CANE    | T7      | EC        | 32    | Smaller  | 0.5     | 61.0%                          | 62.7%                      | 2/6 folds peaked at epoch 1, some learning                 |
+| Experiment                                   | Dataset | Channel | Condition | Batch | Model         | Dropout | Chunk Acc (Min-Max)            | Subject Acc (Min-Max)       | Key Observation                                                                |
+|----------------------------------------------|---------|---------|-----------|-------|---------------|---------|--------------------------------|-----------------------------|--------------------------------------------------------------------------------|
+| **mdd_006_fp1_ec**                           | MDD     | Fp1     | EC        | 64    | Original      | 0.5     | 91.3% ± 7.7% (75.6-98.6%)      | 94.0% ± 9.4% (75.0-100%)    |                                                                                |
+| mdd_006_t4_ec                                | MDD     | T4      | EC        | 64    | Original      | 0.5     | 86.5% ± 5.2% (75.6-91.0%)      | 88.6% ± 7.3% (75.0-100%)    |                                                                                |
+| **mdd_006_t3_ec+eo**                         | MDD     | T3      | EC+EO     | 64    | Original      | 0.4     | 88.3% ± 7.9% (79.1-100%)       | 89.1% ± 8.2% (79.0-100%)    |                                                                                |
+| **mdd_008_t3_ec+eo_smaller**                 | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 86.4% ± 7.5% (77.8-98.5%)      | 88.2% ± 7.4% (78.9-100%)    | Behaves very similar considering it's ~50% smaller                             |
+| **mdd_006_t4_ec+eo**                         | MDD     | T4      | EC+EO     | 64    | Original      | 0.4     | 87.3% ± 8.1% (75.9-100%)       | 89.2% ± 6.3% (83.3-100%)    |                                                                                |
+| cane_006_fp1_ec (baseline)                   | CANE    | Fp1     | EC        | 64    | Original      | 0.5     | 57.6%                          | 61.9%                       |                                                                                |
+| cane_008_t7_ec_og                            | CANE    | T7      | EC        | 32    | Original      | 0.8     | 48.0%                          | 48.8%                       | All 6 folds peaked at epoch 1 - complete learning failure                      |
+| cane_008_t7_ec_og_rnd                        | CANE    | T7      | EC        | 32    | Original      | 0.1     | 61.2%                          | 62.7%                       | 3/6 folds at epoch 1, high variance                                            |
+| cane_008_t7_ec_smaller                       | CANE    | T7      | EC        | 32    | Smaller       | 0.5     | 61.0%                          | 62.7%                       | 2/6 folds peaked at epoch 1, some learning                                     |
+| **cane_008_t7_ec_smaller_lwa**               | CANE    | T7      | EC        | 32    | Smaller       | 0.1     | **62.2% (53.6%-81.8%)**        | 65.1%                       | Better learning, but still 3/6 folds at epoch 1                                |
+| **Transfer Learning (009: freeze CNN only)** |         |         |           |       |               |         |                                |                             |                                                                                |
+| cane_009_fp1_ec_transfer                     | CANE    | Fp1     | EC        | 64    | Transfer      | 0.5     | 61.1% ± 12.7% (43.2-78.4%)     | 65.5% ± 18.0% (42.9-83.3%)  | Best fold 78.4% chunk; high variance; 1/6 folds at epoch 1                     |
+| cane_009_t8_ec_transfer                      | CANE    | T8      | EC        | 64    | Transfer      | 0.5     | 49.1% ± 6.8% (37.7-56.3%)      | 48.8% ± 10.0% (33.3-66.7%)  | 3/6 folds at epoch 1 - T8 transfer worse than baseline                         |
+| cane_009_t8_ec_transfer_lowdrop              | CANE    | T8      | EC        | 64    | Transfer      | 0.1     | 51.7% ± 10.5% (35.5-65.9%)     | 54.4% ± 13.2% (33.3-66.7%)  | 3/6 folds at epoch 1; low dropout didn't help T8                               |
+| **Transfer Learning (010: freeze CNN+LSTM)** |         |         |           |       |               |         |                                |                             |                                                                                |
+| cane_010_fp1_ec_transfer                     | CANE    | Fp1     | EC        | 64    | Transfer      | 0.5     | 60.0% ± 11.8% (36.4-72.1%)     | 59.9% ± 9.8% (42.9-66.7%)   | 2/6 folds at epoch 1; only classifier trainable                                |
+| cane_010_fp1_ec_transfer_lowdrop             | CANE    | Fp1     | EC        | 64    | Transfer      | 0.1     | 61.0% ± 13.7% (43.2-81.8%)     | 68.3% ± 19.2% (42.9-100%)   | Freeze CNN+LSTM; Fold 3 achieved 81.8% chunk                                   |
+| **011 Series (Augmentation & Freeze LSTM)**  |         |         |           |       |               |         |                                |                             |                                                                                |
+| mdd_011_t3_ec+eo_smaller                     | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 87.5% ± 7.5% (78.5-100%)       | 88.3% ± 7.2% (78.9-100%)    | **+1.1%** with 20% augment vs mdd_008                                          |
+| mdd_011_t3_ec+eo_smaller_more                | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 86.8% ± 8.4% (77.6-100%)       | 87.4% ± 8.1% (77.8-100%)    | 30% augment too much; Fold 4 epoch 1                                           |
+| **cane_011_fp1_ec_transfer_lowdrop**         | CANE    | Fp1     | EC        | 64    | Transfer (OG) | 0.1     | **68.6% ± 12.6% (50.8-90.3%)** | **73.0% ± 15.5% (50-100%)** | **Best CANE**: Freeze LSTM only; Fold 3=90.3%/100%, experiments/mdd_006_fp1_ec |
+| cane_011_t7_ec+eo_transfer_lowdrop_tcl       | CANE    | T7      | EC        | 64    | Smaller       | 0.1     | 52.6% ± 7.0% (43.2-65.9%)      | 51.6% ± 7.2% (42.9-66.7%)   | **FAILED**: 5/6 folds epoch 1; T3→T7 transfer, frozen LSTM                     |
+| cane_011_t7_ec_smaller_lowdrop_fqm           | CANE    | T7      | EC        | 64    | Smaller       | 0.1     | 56.8% ± 7.7% (45.5-67.5%)      | 59.5% ± 7.5% (50-66.7%)     | 20% augment **hurts** T7 (-5.4% vs cane_008 baseline); 3/6 epoch 1             |
+
+## 011 Analysis
+
+### Next steps for transfer learning
+
+Figure out how exaclty does augmentation is applyied per chunk or per recording? how many times is called focuntion
+for preprocessing? is it cached or not? disable the creating spectgram prints, make it debug
+
+1. Combine winners: Try CANE transfer with frozen LSTM + 20% augmentation - cant say it improved anything
+2. Try EC+EO on CANE transfer: Current best uses EC only
+3. Different pretrained source: Use fold 3 or 4 of MDD instead of fold 1
+4. different seed
+
+do the same thing then with different seed
+
+
+Possible explanations:
+1. Bad initialization - T3 pretrained weights gave CNN a poor starting point for T7, harder to recover from than random init
+2. LSTM temporal patterns are channel-specific too - the frozen LSTM learned T3-specific temporal dynamics that don't apply to T7
+3. Smaller model - less capacity to overcome bad initialization
+
+This actually suggests LSTM features might be more channel-dependent than expected. The frozen LSTM could be the bottleneck.
+
+Test idea: Try the same T3→T7 transfer but freeze CNN instead of LSTM (let LSTM adapt). Or try no freezing at all - just use pretrained weights as initialization.
+### Key Findings
+
+**Data Augmentation (MDD):**
+- 20% augmentation provides modest improvement (+1.1% chunk accuracy)
+- 30% augmentation degrades performance - too aggressive
+- Fold convergence is faster with augmentation (epochs 3-5 vs 5-17)
+
+**Transfer Learning Architecture (CANE):**
+- **Freezing LSTM only (train CNN + classifier)** is the best configuration
+- 68.6% mean chunk accuracy vs 61.0% with frozen CNN+LSTM
+- Fold 3 achieves 90.3% chunk / 100% subject - best CANE result ever
+
+### 011 configurations 
+
+Transfer training, freezing only LSTP
+
+```bash
+poetry run python main.py train --skip-ica \
+--channel Fp1 \
+--batch-size 64 \
+--checkpoint-dir=experiments/cane_011_fp1_ec_transfer_lowdrop \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--pretrained-checkpoint experiments/mdd_006_fp1_ec/fold_1_best.pth \
+--freeze-lstm
+```
+
+the same thing, just for T7 on EC+EO
+mdd_008_t3_ec+eo_smaller transfer from this, oc+eo, lstm-freeze t7:
+
+```bash
+poetry run python main.py train --skip-ica \
+--channel T7 \
+--batch-size 64 \
+--checkpoint-dir=experiments/cane_011_t7_ec+eo_transfer_lowdrop_tcl \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--pretrained-checkpoint experiments/mdd_008_t3_ec+eo_smaller/fold_1_best.pth \
+--freeze-lstm \
+--model Smaller
+```
+- out dir: `experiments/cane_011_t7_ec+eo_transfer_lowdrop_tcl`
+
+- [ ] TODO: Now adding augmentation
+
+```bash
+poetry run python main.py train --skip-ica \
+--channel T7 \
+--batch-size 64 \
+--checkpoint-dir=experiments/cane_011_t7_ec+eo_transfer_lowdrop \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--pretrained-checkpoint experiments/mdd_008_t3_ec+eo_smaller/fold_1_best.pth \
+--freeze-lstm \
+--model Smaller \
+--augment-data 0.15
+```
+
 | **cane_008_t7_ec_smaller_lwa**                         | CANE    | T7      | EC        | 32    | Smaller  | 0.1     | **62.2% (53.6%-81.8%)**        | 65.1%                      | Better learning, but still 3/6 folds at epoch 1            |
-| **Transfer Learning (009 series - freeze CNN only)**   |         |         |           |       |          |         |                                |                            |                                                            |
-| cane_009_fp1_ec_transfer                               | CANE    | Fp1     | EC        | 64    | Transfer | 0.5     | 61.1% ± 12.7% (43.2-78.4%)     | 65.5% ± 18.0% (42.9-83.3%) | Best fold 78.4% chunk; high variance; 1/6 folds at epoch 1 |
-| cane_009_t8_ec_transfer                                | CANE    | T8      | EC        | 64    | Transfer | 0.5     | 49.1% ± 6.8% (37.7-56.3%)      | 48.8% ± 10.0% (33.3-66.7%) | 3/6 folds at epoch 1 - T8 transfer worse than baseline     |
-| cane_009_t8_ec_transfer_lowdrop                        | CANE    | T8      | EC        | 64    | Transfer | 0.1     | 51.7% ± 10.5% (35.5-65.9%)     | 54.4% ± 13.2% (33.3-66.7%) | 3/6 folds at epoch 1; low dropout didn't help T8           |
-| **Transfer Learning (010 series - freeze CNN + LSTM)** |         |         |           |       |          |         |                                |                            |                                                            |
-| cane_010_fp1_ec_transfer                               | CANE    | Fp1     | EC        | 64    | Transfer | 0.5     | 60.0% ± 11.8% (36.4-72.1%)     | 59.9% ± 9.8% (42.9-66.7%)  | 2/6 folds at epoch 1; only classifier trainable            |
-| cane_010_fp1_ec_transfer_lowdrop                       | CANE    | Fp1     | EC        | 64    | Transfer | 0.1     | **61.0% ± 13.7% (43.2-81.8%)** | 68.3% ± 19.2% (42.9-100%)  | **Best result**: Fold 3 achieved 81.8% chunk, 100% subject |
+1. 64 batch, avoid artifact processing
+2. add augumaentation
+
+```bash
+python main.py train --skip-ica \
+--channel T7 \
+--batch-size 64 \
+--checkpoint-dir=experiments/cane_011_t7_ec_smaller_lowdrop \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--model Smaller \
+--augument-data 0.2
+```
+
+3. add augumentation + EO+EC
+
+try augmentation on MDD
+
+```bash
+python main.py train --skip-ica \
+--channel T3 \
+--batch-size 64 \
+--checkpoint-dir=experiments/mdd_011_t3_ec+eo_smaller \
+--dataset mdd \
+--model Smaller \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--augment-data 0.2 \
+--val-every 1
+```
+
+
+```bash
+python main.py train --skip-ica \
+--channel T3 \
+--batch-size 64 \
+--checkpoint-dir=experiments/mdd_011_t3_ec+eo_smaller_more \
+--dataset mdd \
+--model Smaller \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--augment-data 0.3 \
+--val-every 1
+```
 
 ## 009+010: Transfer learning
 
@@ -49,8 +202,8 @@ Parameter breakdown:
 
 Freezing options:
 - --freeze-cnn: 740,610 trainable (93%) - LSTM + classifier
-- --freeze-lstm: 8,610 trainable (1%) - classifier only (implies --freeze-cnn)
-- [ ] TODO experiment with only freezing lstm without freezing CNN
+- --freeze-lstm + --freeze-cnn: 8,610 trainable (1%) - classifier only (implies --freeze-cnn)
+- --freeze-lstm: **68.6% chunk accuracy** - best CANE result!
 
 ## Key Insights from 008 Experiments
 
