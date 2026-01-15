@@ -2,31 +2,157 @@
 
 ## Summary Table: Comparing Experiments
 
-| Experiment                                   | Dataset | Channel | Condition | Batch | Model         | Dropout | Chunk Acc (Min-Max)            | Subject Acc (Min-Max)       | Key Observation                                                                |
-|----------------------------------------------|---------|---------|-----------|-------|---------------|---------|--------------------------------|-----------------------------|--------------------------------------------------------------------------------|
-| **mdd_006_fp1_ec**                           | MDD     | Fp1     | EC        | 64    | Original      | 0.5     | 91.3% ± 7.7% (75.6-98.6%)      | 94.0% ± 9.4% (75.0-100%)    |                                                                                |
-| mdd_006_t4_ec                                | MDD     | T4      | EC        | 64    | Original      | 0.5     | 86.5% ± 5.2% (75.6-91.0%)      | 88.6% ± 7.3% (75.0-100%)    |                                                                                |
-| **mdd_006_t3_ec+eo**                         | MDD     | T3      | EC+EO     | 64    | Original      | 0.4     | 88.3% ± 7.9% (79.1-100%)       | 89.1% ± 8.2% (79.0-100%)    |                                                                                |
-| **mdd_008_t3_ec+eo_smaller**                 | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 86.4% ± 7.5% (77.8-98.5%)      | 88.2% ± 7.4% (78.9-100%)    | Behaves very similar considering it's ~50% smaller                             |
-| **mdd_006_t4_ec+eo**                         | MDD     | T4      | EC+EO     | 64    | Original      | 0.4     | 87.3% ± 8.1% (75.9-100%)       | 89.2% ± 6.3% (83.3-100%)    |                                                                                |
-| cane_006_fp1_ec (baseline)                   | CANE    | Fp1     | EC        | 64    | Original      | 0.5     | 57.6%                          | 61.9%                       |                                                                                |
-| cane_008_t7_ec_og                            | CANE    | T7      | EC        | 32    | Original      | 0.8     | 48.0%                          | 48.8%                       | All 6 folds peaked at epoch 1 - complete learning failure                      |
-| cane_008_t7_ec_og_rnd                        | CANE    | T7      | EC        | 32    | Original      | 0.1     | 61.2%                          | 62.7%                       | 3/6 folds at epoch 1, high variance                                            |
-| cane_008_t7_ec_smaller                       | CANE    | T7      | EC        | 32    | Smaller       | 0.5     | 61.0%                          | 62.7%                       | 2/6 folds peaked at epoch 1, some learning                                     |
-| **cane_008_t7_ec_smaller_lwa**               | CANE    | T7      | EC        | 32    | Smaller       | 0.1     | **62.2% (53.6%-81.8%)**        | 65.1%                       | Better learning, but still 3/6 folds at epoch 1                                |
-| **Transfer Learning (009: freeze CNN only)** |         |         |           |       |               |         |                                |                             |                                                                                |
-| cane_009_fp1_ec_transfer                     | CANE    | Fp1     | EC        | 64    | Transfer      | 0.5     | 61.1% ± 12.7% (43.2-78.4%)     | 65.5% ± 18.0% (42.9-83.3%)  | Best fold 78.4% chunk; high variance; 1/6 folds at epoch 1                     |
-| cane_009_t8_ec_transfer                      | CANE    | T8      | EC        | 64    | Transfer      | 0.5     | 49.1% ± 6.8% (37.7-56.3%)      | 48.8% ± 10.0% (33.3-66.7%)  | 3/6 folds at epoch 1 - T8 transfer worse than baseline                         |
-| cane_009_t8_ec_transfer_lowdrop              | CANE    | T8      | EC        | 64    | Transfer      | 0.1     | 51.7% ± 10.5% (35.5-65.9%)     | 54.4% ± 13.2% (33.3-66.7%)  | 3/6 folds at epoch 1; low dropout didn't help T8                               |
-| **Transfer Learning (010: freeze CNN+LSTM)** |         |         |           |       |               |         |                                |                             |                                                                                |
-| cane_010_fp1_ec_transfer                     | CANE    | Fp1     | EC        | 64    | Transfer      | 0.5     | 60.0% ± 11.8% (36.4-72.1%)     | 59.9% ± 9.8% (42.9-66.7%)   | 2/6 folds at epoch 1; only classifier trainable                                |
-| cane_010_fp1_ec_transfer_lowdrop             | CANE    | Fp1     | EC        | 64    | Transfer      | 0.1     | 61.0% ± 13.7% (43.2-81.8%)     | 68.3% ± 19.2% (42.9-100%)   | Freeze CNN+LSTM; Fold 3 achieved 81.8% chunk                                   |
-| **011 Series (Augmentation & Freeze LSTM)**  |         |         |           |       |               |         |                                |                             |                                                                                |
-| mdd_011_t3_ec+eo_smaller                     | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 87.5% ± 7.5% (78.5-100%)       | 88.3% ± 7.2% (78.9-100%)    | **+1.1%** with 20% augment vs mdd_008                                          |
-| mdd_011_t3_ec+eo_smaller_more                | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 86.8% ± 8.4% (77.6-100%)       | 87.4% ± 8.1% (77.8-100%)    | 30% augment too much; Fold 4 epoch 1                                           |
-| **cane_011_fp1_ec_transfer_lowdrop**         | CANE    | Fp1     | EC        | 64    | Transfer (OG) | 0.1     | **68.6% ± 12.6% (50.8-90.3%)** | **73.0% ± 15.5% (50-100%)** | **Best CANE**: Freeze LSTM only; Fold 3=90.3%/100%, experiments/mdd_006_fp1_ec |
-| cane_011_t7_ec+eo_transfer_lowdrop_tcl       | CANE    | T7      | EC        | 64    | Smaller       | 0.1     | 52.6% ± 7.0% (43.2-65.9%)      | 51.6% ± 7.2% (42.9-66.7%)   | **FAILED**: 5/6 folds epoch 1; T3→T7 transfer, frozen LSTM                     |
-| cane_011_t7_ec_smaller_lowdrop_fqm           | CANE    | T7      | EC        | 64    | Smaller       | 0.1     | 56.8% ± 7.7% (45.5-67.5%)      | 59.5% ± 7.5% (50-66.7%)     | 20% augment **hurts** T7 (-5.4% vs cane_008 baseline); 3/6 epoch 1             |
+| Experiment                                   | Dataset | Channel | Condition | Batch | Model         | Dropout | Chunk Acc (Min-Max)              | Subject Acc (Min-Max)       | Key Observation                                                                                            |
+|----------------------------------------------|---------|---------|-----------|-------|---------------|---------|----------------------------------|-----------------------------|------------------------------------------------------------------------------------------------------------|
+| **mdd_006_fp1_ec**                           | MDD     | Fp1     | EC        | 64    | Original      | 0.5     | 91.3% ± 7.7% (75.6-98.6%)        | 94.0% ± 9.4% (75.0-100%)    |                                                                                                            |
+| mdd_006_t4_ec                                | MDD     | T4      | EC        | 64    | Original      | 0.5     | 86.5% ± 5.2% (75.6-91.0%)        | 88.6% ± 7.3% (75.0-100%)    |                                                                                                            |
+| **mdd_006_t3_ec+eo**                         | MDD     | T3      | EC+EO     | 64    | Original      | 0.4     | 88.3% ± 7.9% (79.1-100%)         | 89.1% ± 8.2% (79.0-100%)    |                                                                                                            |
+| **mdd_008_t3_ec+eo_smaller**                 | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 86.4% ± 7.5% (77.8-98.5%)        | 88.2% ± 7.4% (78.9-100%)    | Behaves very similar considering it's ~50% smaller                                                         |
+| **mdd_006_t4_ec+eo**                         | MDD     | T4      | EC+EO     | 64    | Original      | 0.4     | 87.3% ± 8.1% (75.9-100%)         | 89.2% ± 6.3% (83.3-100%)    |                                                                                                            |
+| cane_006_fp1_ec (baseline)                   | CANE    | Fp1     | EC        | 64    | Original      | 0.5     | 57.6%                            | 61.9%                       |                                                                                                            |
+| cane_008_t7_ec_og                            | CANE    | T7      | EC        | 32    | Original      | 0.8     | 48.0%                            | 48.8%                       | All 6 folds peaked at epoch 1 - complete learning failure                                                  |
+| cane_008_t7_ec_og_rnd                        | CANE    | T7      | EC        | 32    | Original      | 0.1     | 61.2%                            | 62.7%                       | 3/6 folds at epoch 1, high variance                                                                        |
+| cane_008_t7_ec_smaller                       | CANE    | T7      | EC        | 32    | Smaller       | 0.5     | 61.0%                            | 62.7%                       | 2/6 folds peaked at epoch 1, some learning                                                                 |
+| **cane_008_t7_ec_smaller_lwa**               | CANE    | T7      | EC        | 32    | Smaller       | 0.1     | **62.2% (53.6%-81.8%)**          | 65.1%                       | Better learning, but still 3/6 folds at epoch 1                                                            |
+| cane_012b_t7_ec_smaller_skip                 | CANE    | T7      | EC        | 64    | Smaller       | 0.1     | 61.98% ± 6.91% (54.55% - 73.30%) | 65.08%                      | --skip-artifact-removal minimal effect; tried also with EC+EO, ended up poorly (chunk acc: 54.38% ± 6.93%) |
+| **Transfer Learning (009: freeze CNN only)** |         |         |           |       |               |         |                                  |                             |                                                                                                            |
+| cane_009_fp1_ec_transfer                     | CANE    | Fp1     | EC        | 64    | Transfer      | 0.5     | 61.1% ± 12.7% (43.2-78.4%)       | 65.5% ± 18.0% (42.9-83.3%)  | Best fold 78.4% chunk; high variance; 1/6 folds at epoch 1                                                 |
+| cane_009_t8_ec_transfer                      | CANE    | T8      | EC        | 64    | Transfer      | 0.5     | 49.1% ± 6.8% (37.7-56.3%)        | 48.8% ± 10.0% (33.3-66.7%)  | 3/6 folds at epoch 1 - T8 transfer worse than baseline                                                     |
+| cane_009_t8_ec_transfer_lowdrop              | CANE    | T8      | EC        | 64    | Transfer      | 0.1     | 51.7% ± 10.5% (35.5-65.9%)       | 54.4% ± 13.2% (33.3-66.7%)  | 3/6 folds at epoch 1; low dropout didn't help T8                                                           |
+| **Transfer Learning (010: freeze CNN+LSTM)** |         |         |           |       |               |         |                                  |                             |                                                                                                            |
+| cane_010_fp1_ec_transfer                     | CANE    | Fp1     | EC        | 64    | Transfer      | 0.5     | 60.0% ± 11.8% (36.4-72.1%)       | 59.9% ± 9.8% (42.9-66.7%)   | 2/6 folds at epoch 1; only classifier trainable                                                            |
+| cane_010_fp1_ec_transfer_lowdrop             | CANE    | Fp1     | EC        | 64    | Transfer      | 0.1     | 61.0% ± 13.7% (43.2-81.8%)       | 68.3% ± 19.2% (42.9-100%)   | Freeze CNN+LSTM; Fold 3 achieved 81.8% chunk                                                               |
+| **011 Series (Augmentation & Freeze LSTM)**  |         |         |           |       |               |         |                                  |                             |                                                                                                            |
+| mdd_011_t3_ec+eo_smaller                     | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 87.5% ± 7.5% (78.5-100%)         | 88.3% ± 7.2% (78.9-100%)    | **+1.1%** with 20% augment vs mdd_008                                                                      |
+| mdd_011_t3_ec+eo_smaller_more                | MDD     | T3      | EC+EO     | 64    | Smaller       | 0.1     | 86.8% ± 8.4% (77.6-100%)         | 87.4% ± 8.1% (77.8-100%)    | 30% augment too much; Fold 4 epoch 1                                                                       |
+| **cane_011_fp1_ec_transfer_lowdrop**         | CANE    | Fp1     | EC        | 64    | Transfer (OG) | 0.1     | **68.6% ± 12.6% (50.8-90.3%)**   | **73.0% ± 15.5% (50-100%)** | **Best CANE**: Freeze LSTM only; Fold 3=90.3%/100%, experiments/mdd_006_fp1_ec                             |
+| cane_011_t7_ec+eo_transfer_lowdrop_tcl       | CANE    | T7      | EC        | 64    | Smaller       | 0.1     | 52.6% ± 7.0% (43.2-65.9%)        | 51.6% ± 7.2% (42.9-66.7%)   | **FAILED**: 5/6 folds epoch 1; T3→T7 transfer, frozen LSTM                                                 |
+| cane_011_t7_ec_smaller_lowdrop_fqm           | CANE    | T7      | EC        | 64    | Smaller       | 0.1     | 56.8% ± 7.7% (45.5-67.5%)        | 59.5% ± 7.5% (50-66.7%)     | 20% augment **hurts** T7 (-5.4% vs cane_008 baseline); 3/6 epoch 1                                         |
+| **both_012b_t3_ec_smaller**                  | BOTH    | T3      | EC        | 64    | Smaller       | 0.1     | 67.48% ± 6.38% (53.88%-72.73%)   | 71.18% ± 7.17% (57.14%-81.25%) | Normal: 93.2%/89.2%, MDD: 73.3%/66.9%, Anxious: **11.1%/13.1%** - CANE classification fails          |
+| **both_012b_t3_ec+eo_smaller_hcf**           | BOTH    | T3      | EC+EO     | 64    | Smaller       | 0.1     | 73.35% ± 6.12% (65.82%-81.53%)   | 77.83% ± 5.87% (70.97%-86.67%) | Normal: 79.0%/79.3%, MDD: **94.4%/85.7%**, Anxious: 47.2%/38.8% - EC+EO boosts anxious detection   |
+| cane_012b_t7_ec_smaller_skip                 | CANE    | T7      | EC        | 64    | Smaller       | 0.1     | 61.98% ± 6.91% (54.55%-73.30%)   | 65.08% ± 10.26% (50%-83.33%)    | --skip-artifact-removal minimal effect vs cane_008_t7_ec_smaller_lwa (62.2%)                         |
+| cane_012b_t7_ec+eo_smaller_skip              | CANE    | T7      | EC+EO     | 64    | Smaller       | 0.1     | 54.38% ± 6.93% (48.58%-68.54%)   | 56.91% ± 10.17% (50%-78.57%)    | EC+EO **worse** than EC-only for CANE; 4/6 folds peaked at epoch 1 - learning failure                |
+| cane_012b_t7_ec+eo_smaller_no_skip           | CANE    | T7      | EC+EO     | 64    | Smaller       | 0.1     | 53.48% ± 5.25% (48.58%-63.75%)   | 55.52% ± 10.44% (50%-78.57%)    | Artifact removal ON slightly **worse** (53.5% vs 54.4%); 5/6 folds at epoch 1                        |
+
+## 012b Analysis
+
+### Executive Summary
+
+The 012b experiments tested two main hypotheses: (1) skipping artifact removal to improve CANE performance on T7, and (2) training a multi-class model on both datasets simultaneously. **Key findings**:
+
+- **Artifact removal skip**: Minimal to no benefit for CANE T7 (61.98% vs 62.2% baseline)
+- **EC+EO for CANE**: Counterintuitively **worse** than EC-only (54.4% vs 62.0%), with 4-5/6 folds failing to learn
+- **Multi-dataset training (BOTH)**: Shows promise with 73.4% chunk accuracy on EC+EO
+  - **Critical issue**: Severe class imbalance - Anxious class recall is catastrophically low (11-47% subject-level)
+  - Normal: 79-93%, MDD: 86-94% recall → model biased against CANE subjects
+
+### Detailed Experiment Review
+
+#### **CANE Experiments (T7 channel, Smaller model)**
+
+All three CANE 012b experiments share the same hyperparameters (batch=64, dropout=0.1, Smaller model) and test preprocessing variations:
+
+| Experiment                             | Artifact Removal | Condition | Chunk Acc      | Folds at Epoch 1 | Analysis                                                |
+|----------------------------------------|------------------|-----------|----------------|------------------|---------------------------------------------------------|
+| **cane_012b_t7_ec_smaller_skip**       | Skip             | EC        | 61.98% ± 6.91% | 2/6              | Artifact skip has **no benefit** vs baseline (62.2%)    |
+| **cane_012b_t7_ec+eo_smaller_skip**    | Skip             | EC+EO     | 54.38% ± 6.93% | 4/6              | EC+EO **dramatically worse**; learning failure          |
+| **cane_012b_t7_ec+eo_smaller_no_skip** | Standard         | EC+EO     | 53.48% ± 5.25% | 5/6              | Keeping artifact removal **even worse**; 5/6 folds fail |
+
+**Key Insight**: The EC+EO condition is fundamentally problematic for CANE with current architecture:
+- Doubling data doesn't help - it makes things worse
+- Possible causes: (1) EC and EO anxiety patterns may be contradictory/confusing, (2) insufficient model capacity, (3) more data exposes overfitting to training initialization
+
+#### **Multi-Dataset Experiments (BOTH dataset, T3 channel)**
+
+**both_012b_t3_ec_smaller** (EC-only, 3-class):
+- **Overall**: 67.5% chunk / 71.2% subject accuracy
+- **Per-class breakdown (Subject/Chunk recall)**:
+  - Normal: 93.2% / 89.2% ✓ Excellent
+  - MDD: 73.3% / 66.9% ✓ Acceptable
+  - Anxious: **11.1% / 13.1%** ✗ **FAILURE**
+- **Analysis**: Model essentially ignores anxious class - just 1 in 9 anxious subjects correctly classified
+
+**both_012b_t3_ec+eo_smaller_hcf** (EC+EO, 3-class):
+- **Overall**: 73.4% chunk / 77.8% subject accuracy (+6% improvement with EC+EO!)
+- **Per-class breakdown (Subject/Chunk recall)**:
+  - Normal: 79.0% / 79.3% ✓ Good
+  - MDD: **94.4% / 85.7%** ✓ **Excellent**
+  - Anxious: 47.2% / 38.8% ⚠ Still poor, but **4x better** than EC-only
+- **Analysis**: EC+EO helps anxiety detection significantly, but still biased
+
+**Critical Finding**: The model has severe class imbalance issues when combining datasets. Anxious subjects are systematically underrepresented or misclassified as Normal/MDD.
+
+### Root Cause Analysis
+
+**Why does multi-dataset training fail for CANE subjects?**
+
+1. **Dataset size imbalance**: MDD has ~60 subjects, CANE has ~39 subjects
+   - Even with stratified folding, CANE subjects are minority in training batches
+   - Model optimizes for MDD performance at expense of CANE
+
+2. **Different EEG characteristics**: Depression vs anxiety have different neural signatures
+   - Model learns MDD patterns as "primary abnormality", treats CANE as noise
+   - Frontal asymmetry (depression) is stronger signal than anxiety markers
+
+3. **Cross-dataset generalization**: Model trained on MDD Fp1 struggles with CANE T7/T3
+   - Channel location matters - T3 may not capture anxiety biomarkers well
+   - EC+EO helps because it provides more temporal context for anxiety patterns
+
+4. **Training dynamics**: With 3 classes and imbalanced data, loss surface is complex
+   - Early stopping based on overall chunk accuracy doesn't protect minority class
+   - Need class-balanced loss or per-class early stopping criteria
+
+### Comparative Analysis
+
+**EC vs EC+EO Impact by Dataset:**
+
+| Dataset | EC Chunk Acc | EC+EO Chunk Acc | Δ | Interpretation |
+|---------|-------------|-----------------|---|----------------|
+| CANE (T7) | 61.98% | 54.38% | **-7.6%** | EC+EO **hurts** CANE single-dataset |
+| BOTH (T3) | 67.48% | 73.35% | **+5.9%** | EC+EO **helps** multi-dataset |
+
+**Hypothesis**: EC+EO benefits multi-dataset training because:
+- More data per subject helps separate depression vs anxiety temporal dynamics
+- Combined conditions expose different aspects of each disorder
+- For single-dataset CANE, EC+EO just adds noise without helping separation
+
+**Artifact Removal Impact:**
+- Skip vs Standard on CANE EC+EO: 54.38% vs 53.48% (negligible +0.9%)
+- **Conclusion**: Artifact removal is not the bottleneck for CANE performance
+
+### Recommendations (Prioritized by Expected Impact)
+
+**Priority 1: Address Class Imbalance in Multi-Dataset Training**
+- [ ] Implement class-weighted loss function (weight Anxious class ~2-3x higher)
+- [ ] Try balanced batch sampling - ensure each batch has Normal/MDD/Anxious examples
+- [ ] Monitor per-class metrics during training, add per-class early stopping
+- [ ] Expected impact: +20-30% anxious recall
+
+**Priority 2: Abandon EC+EO for Single-Dataset CANE**
+- [ ] EC+EO consistently hurts CANE T7 performance
+- [ ] Stick with EC-only for future CANE experiments
+- [ ] If need more data, try augmentation instead of adding EO condition
+
+**Priority 3: Try Different Channels for Anxious Detection**
+- [ ] T3 shows 11% anxious recall, T7 is untested in multi-dataset
+- [ ] Try Fp1 or Fp2 for BOTH dataset (frontal regions involved in anxiety)
+- [ ] Hypothesis: Temporal channels (T3/T7) may not capture anxiety biomarkers
+
+**Priority 4: Architecture Modifications for 3-Class Problem**
+- [ ] Current model designed for binary classification
+- [ ] Try increasing classifier capacity (add layer, increase hidden dims)
+- [ ] Consider separate feature extractors for depression vs anxiety detection
+- [ ] Multi-task learning: auxiliary binary tasks (normal vs abnormal, depression vs anxiety)
+
+**Priority 5: Dataset-Specific Preprocessing**
+- [ ] Current artifact removal is CANE-specific (`skip_extreme_artifacts=True`)
+- [ ] Investigate if harmonizing preprocessing across datasets helps
+- [ ] Try removing common noise transform to make model channel-independent
+
+**De-prioritized**:
+- ~~Skipping artifact removal~~ - No meaningful impact (tested)
+- ~~Larger batch sizes~~ - Already at 64, hardware limit likely
+- ~~Lower dropout~~ - Already at 0.1, further reduction risks overfitting
 
 ## 011 Analysis
 
@@ -63,6 +189,72 @@ Test idea: Try the same T3→T7 transfer but freeze CNN instead of LSTM (let LST
 - 68.6% mean chunk accuracy vs 61.0% with frozen CNN+LSTM
 - Fold 3 achieves 90.3% chunk / 100% subject - best CANE result ever
 
+ICA on full model - will it make a difference or not?
+
+# 12 beta
+My double code: 
+python main.py train --skip-ica --channel T3 --batch-size 64 --checkpoint-dir=experiments/both_012b_t3_ec+eo_smaller --dataset both --model Smaller --condition ec+eo --n-folds 6 --dropout 0.1 --weight-decay 1e-4 --val-every 1
+
+check the recall: experiments/both_012b_t3_ec+eo_smaller_hcf it's not good, CANE is quite bad, any other dataset I could try?
+
+only ec:
+```bash
+python main.py train --skip-ica --channel T7 --batch-size 64 --checkpoint-dir=experiments/both_012b_t3_ec_smaller --dataset both --model Smaller --condition ec --n-folds 6 --dropout 0.1 --weight-decay 1e-4 --val-every 1
+```
+
+
+Tryna improve cane_008_t7_ec_smaller_lwa by skipping artifact removal
+```bash
+python main.py train --skip-ica \
+--skip-artifact-removal  \
+--channel T7 \
+--batch-size 64 \
+--checkpoint-dir=experiments/cane_012b_t7_ec_smaller_skip \
+--dataset cane \
+--condition ec \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--model Smaller
+```
+
+- results here: experiments/cane_012b_t7_ec_smaller_skip/cv_results.txt
+
+Same as above, but both EC+EO:
+
+```bash
+python main.py train --skip-ica \
+--skip-artifact-removal  \
+--channel T7 \
+--batch-size 64 \
+--checkpoint-dir=experiments/cane_012b_t7_ec+eo_smaller_skip \
+--dataset cane \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--model Smaller
+```
+
+- results: experiments/cane_012b_t7_ec+eo_smaller_skip
+
+no skip, also slightly worse than without skipping the artifact removal:
+
+```bash
+python main.py train --skip-ica \
+--channel T7 \
+--batch-size 64 \
+--checkpoint-dir=experiments/cane_012b_t7_ec+eo_smaller_no_skip \
+--dataset cane \
+--condition ec+eo \
+--n-folds 6 \
+--dropout 0.1 \
+--weight-decay 1e-4 \
+--val-every 1 \
+--model Smaller
+```
 ### 011 configurations 
 
 Transfer training, freezing only LSTP
