@@ -2,8 +2,9 @@
 """
 Prototyping script for visualizing CANE dataset preprocessing.
 
-This script loads CANE EEG data, applies preprocessing via CANEDataset.load_and_preprocess_cane_raw_file,
-and visualizes it using MNE's plotting capabilities.
+This script loads CANE EEG data, applies preprocessing via
+CANEDataset.load_and_preprocess_cane_raw_file, and visualizes it using MNE's plotting
+capabilities.
 
 Note: CANE preprocessing includes z-score normalization, CAR, detrending, and artifact removal,
 which differs from the MDD preprocessing pipeline.

@@ -9,8 +9,6 @@ import mne
 import numpy as np
 import pandas as pd
 import torch
-from mne.preprocessing import ICA
-from mne_icalabel import label_components
 from scipy.signal import butter, detrend, filtfilt, iirnotch, stft
 from scipy.stats import zscore
 from torch.utils.data import Dataset
@@ -23,6 +21,14 @@ CANE_DIR = Path("/home/milan/Documents/diplomka/CANE/")
 MDD_DIR = Path("/home/milan/Documents/diplomka/MDD/")
 
 CHUNK_DURATION_SEC = 10
+
+# Canonical channel order for multi-channel loading (consistent across datasets)
+# T7/T8 are new nomenclature, equivalent to T3/T4 in older systems
+CANONICAL_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2/Oz"]
+
+# Dataset-specific channel mappings to canonical order
+MDD_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]  # T3→T7, T4→T8
+CANE_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "Oz"]
 
 
 class MDDDataset(Dataset):
@@ -41,8 +47,9 @@ class MDDDataset(Dataset):
         "EEG Fp1-LE": "Fp1",
         "EEG Fp2-LE": "Fp2",
         "EEG O2-LE": "O2",
-        "EEG T3-LE": "T3",
-        "EEG T4-LE": "T4",
+        # The reason T3->T7 and T4->T8 is so that I can merge multiple datasets
+        "EEG T3-LE": "T7",
+        "EEG T4-LE": "T8",
     }
 
     def __init__(
@@ -53,8 +60,8 @@ class MDDDataset(Dataset):
         labels: Optional[list[str]] = None,
         cache_size: Optional[int] = 100,
         transform: Optional[Callable] = None,
-        skip_ica: bool = False,
-        channel: Optional[str] = None,
+        skip_ica: bool = True,
+        channel: str = "all",
     ):
         """
         Initialize the MDD EEG dataset.
@@ -69,16 +76,23 @@ class MDDDataset(Dataset):
         :param int cache_size: Number of preprocessed files to cache in memory. If None,
                cache is not used
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
-        :param bool skip_ica: If True, skip ICA artifact removal (faster but less clean data).
+        :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
+        :param Optional[str] channel: Channel to use: specific channel name (e.g., "Fp1") or
+               "all" for all 8 channels (excludes A2-A1 reference).
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
         self.skip_ica = skip_ica
-        self.files = self._discover_files(condition.upper() if not None else None, subjects, labels)
+        self.files = self._discover_files(
+            condition.upper() if condition is not None else None, subjects, labels
+        )
+
+        # Handle channel selection
         self.channel = channel
-        if channel and not skip_ica:
-            raise RuntimeError("When channel is chosen, skip ICA has to be set to True.")
+        self.channel_names = (
+            MDD_CHANNEL_ORDER if channel == "all" else ([channel] if channel else [])
+        )
 
         if cache_size:
             self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
@@ -139,17 +153,18 @@ class MDDDataset(Dataset):
 
     @staticmethod
     def load_and_preprocess_mdd_raw_file(
-        file_path: Path, channel: Optional[str] = None, skip_ica: bool = False
+        file_path: Path,
+        channel: str,
     ) -> torch.Tensor:
         """
         Load an EDF file from disk, preprocess it, and return chunks. This contains all the
         preprocessing logic in this class.
 
-        Applies the full preprocessing pipeline: filtering, optional ICA, artifact removal,
-        and chunking.
+        Applies the full preprocessing pipeline: filtering, artifact removal (no ICA), and chunking.
 
         :param Path file_path: Path to the EDF file to preprocess.
-        :param bool skip_ica: If True, skip ICA artifact removal for faster processing.
+        :param str channel: Channel to use: specific channel name (e.g., "Fp1") or
+               "all" for all 8 channels.
         :return: Tensor of preprocessed EEG chunks with shape (num_chunks, channels, samples).
         :rtype: torch.Tensor
         """
@@ -160,38 +175,16 @@ class MDDDataset(Dataset):
         raw = raw.pick(list(MDDDataset.CHANNEL_MAPPING.keys()))
         raw = raw.rename_channels(MDDDataset.CHANNEL_MAPPING)
 
-        # Pick the channel if specified
-        if channel is not None:
+        if channel == "all":
+            # Pick channels in canonical order (excludes A2-A1 reference)
+            # This ensures consistent channel ordering across datasets
+            raw = raw.pick(MDD_CHANNEL_ORDER)
+        elif channel is not None:
             raw = raw.pick([channel])
         else:
-            raise RuntimeError("Not implemented properly yet")
+            raise RuntimeError("Must specify 'channel' parameter")
 
-        # Apply ICA if not skipped
-        if not skip_ica:
-            filt_raw = raw.set_eeg_reference("average", verbose=False)
-            ica = ICA(
-                max_iter="auto",
-                method="infomax",
-                random_state=97,
-                fit_params=dict(extended=True),
-            )
-            ica.fit(filt_raw, verbose=False)
-
-            montage = mne.channels.make_standard_montage("standard_1020")
-            filt_raw = filt_raw.set_montage(montage, match_case=False, verbose=False)
-            ic_labels = label_components(filt_raw, ica, method="iclabel")
-
-            labels = ic_labels["labels"]
-            exclude_idx = [
-                idx for idx, label in enumerate(labels) if label not in ["brain", "other"]
-            ]
-
-            preprocessed = filt_raw.copy()
-            ica.apply(preprocessed, exclude=exclude_idx, verbose=False)
-        else:
-            preprocessed = raw
-
-        data = preprocessed.get_data()
+        data = raw.get_data()
         n_samples = data.shape[1]
         chunks_list: list[np.ndarray] = []
         for i in range(0, n_samples - MDDDataset.CHUNK_SAMPLES + 1, MDDDataset.CHUNK_SAMPLES):
@@ -212,14 +205,13 @@ class MDDDataset(Dataset):
         :param int idx: Index of the file to retrieve.
         :return: Dictionary containing 'eeg' (tensor of shape (num_chunks, channels, samples)),
                  'label' (integer: 0=Healthy, 1=MDD), 'subject' (subject ID string),
-                 and 'condition' (condition string: EC/EO/TASK).
+                 'condition' (condition string: EC/EO/TASK), and 'channels' (list of channel names
+                 in the order they appear in the tensor).
         :rtype: dict
         """
         file_info = self.files[idx]
 
-        chunks = self._load_and_preprocess_mdd_raw_file_cached(
-            file_info["path"], self.channel, self.skip_ica
-        )
+        chunks = self._load_and_preprocess_mdd_raw_file_cached(file_info["path"], self.channel)
 
         if self.transform:
             eeg_tensor = self.transform(chunks)
@@ -231,6 +223,7 @@ class MDDDataset(Dataset):
             "label": file_info["label_int"],
             "subject": file_info["subject"],
             "condition": file_info["condition"],
+            "channels": self.channel_names,
         }
 
     def get_sorted_subjects(self) -> list[str]:
@@ -287,6 +280,9 @@ class CANEDataset(Dataset):
     # Available EEG channels in raw CANE data
     CHANNELS = [f"d{i}" for i in range(1, 9)]
 
+    CLASS_DIRECTORIES = ["normal", "anxiety", "depression", "anxiety-depression"]
+    LABEL_MAP = {"normal": "H", "anxiety": "AX", "depression": "DEP", "anxiety-depression": "AXDEP"}
+    LABEL_INT_MAP = {"normal": 0, "anxiety": 1, "depression": 2, "anxiety-depression": 3}
     CHANNEL_MAPPING = {
         "d1": "Fp1",
         "d2": "Fp2",
@@ -309,7 +305,7 @@ class CANEDataset(Dataset):
         labels: Optional[list[str]] = None,
         cache_size: Optional[int] = 100,
         transform: Optional[Callable] = None,
-        channel: str = "Fp1",
+        channel: Optional[str] = "Fp1",
         artifact_method: str = "interpolation",
         artifact_threshold: float = 4.0,
         apply_car: bool = True,
@@ -328,8 +324,9 @@ class CANEDataset(Dataset):
         :param int cache_size: Number of preprocessed files to cache in memory. If None,
                cache is not used.
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
-        :param str channel: Which channel to use. Can be MDD channel names (Fp1, Fp2, C3, C4, etc.)
-               which will be mapped to CANE channels (d1-d8), or direct CANE channel names (d1-d8).
+        :param Optional[str] channel: Channel to use: specific channel name (e.g., "Fp1", "T7")
+               or "all" for all 8 channels. Accepts both MDD channel names (Fp1, Fp2, C3, C4, etc.)
+               and CANE channel names (d1-d8).
         :param str artifact_method: Method for artifact removal ("interpolation", "clipping",
                or "both").
         :param float artifact_threshold: Z-score threshold for artifact detection.
@@ -347,6 +344,14 @@ class CANEDataset(Dataset):
         self.apply_car = apply_car
         self.skip_extreme_artifacts = skip_extreme_artifacts
         self.skip_artifact_removal = skip_artifact_removal
+
+        # Set channel_names for verification
+        if channel == "all":
+            self.channel_names = CANE_CHANNEL_ORDER
+        elif channel:
+            self.channel_names = [channel]
+        else:
+            self.channel_names = []
 
         self.files = self._discover_files(condition, subjects, labels)
 
@@ -383,9 +388,8 @@ class CANEDataset(Dataset):
         pattern = re.compile(r"(\d+)_?(EC|EO|Ec|Eo|ec|eo)\.csv", re.IGNORECASE)
 
         # Traverse the directory structure: {label}/{condition}/*.csv
-        label_map = {"normal": "H", "anxiety": "AX"}
         condition_map = {"ec": "EC", "eo": "EO"}
-        for label_dir in ["normal", "anxiety"]:
+        for label_dir in self.CLASS_DIRECTORIES:
             label_path = self.data_dir / label_dir
             if not label_path.exists():
                 continue
@@ -406,7 +410,7 @@ class CANEDataset(Dataset):
                         continue
 
                     subject_num, _ = match.groups()
-                    label = label_map.get(label_dir, label_dir)
+                    label = self.LABEL_MAP.get(label_dir, label_dir)
                     subject_id = (
                         f"{label} S{subject_num} {condition_map.get(condition_dir, condition_dir)}"
                     )
@@ -425,7 +429,7 @@ class CANEDataset(Dataset):
                             "label": label_dir,
                             "subject": subject_id,
                             "condition": condition_dir,
-                            "label_int": 0 if label_dir == "normal" else 2,  # normal=0, anxiety=2
+                            "label_int": self.LABEL_INT_MAP[label_dir],
                         }
                     )
 
@@ -451,66 +455,37 @@ class CANEDataset(Dataset):
             )
 
     @staticmethod
-    def load_and_preprocess_cane_raw_file(
+    def _process_single_channel(
+        signal: np.ndarray,
+        channel_name: str,
         file_path: Path,
-        channel: str = "Fp1",
-        artifact_method: str = "interpolation",
-        artifact_threshold: float = 4.0,
-        apply_car: bool = True,
-        skip_extreme_artifacts: bool = False,
-        skip_artifact_removal: bool = False,
-    ) -> torch.Tensor:
+        artifact_method: str,
+        artifact_threshold: float,
+        skip_artifact_removal: bool,
+    ) -> np.ndarray:
         """
-        Load a CSV file from disk, preprocess it, and return chunks.
+        Process a single EEG channel through the preprocessing pipeline.
 
-        This contains all the preprocessing logic for CANE data.
-        Preprocessing pipeline: CAR → detrend → artifact removal → bandpass filter (1-70 Hz)
-        → notch filter (50 Hz) → chunking → z-score normalization.
-
-        :param Path file_path: Path to the CSV file to preprocess.
-        :param str channel: Which channel to use (d1-d8), default "d4".
-        :param str artifact_method: Method for artifact removal ("interpolation", "clipping",
-               or "both").
+        :param np.ndarray signal: Raw channel signal.
+        :param str channel_name: Name of the channel being processed.
+        :param Path file_path: Path to the file being processed (for error reporting).
+        :param str artifact_method: Method for artifact removal
+               ("interpolation", "clipping", or "both").
         :param float artifact_threshold: Z-score threshold for artifact detection.
-        :param bool apply_car: Whether to apply Common Average Reference.
-        :param bool skip_extreme_artifacts: If True, completely removes chunks with >10% artifacts.
-        :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
-        :return: Tensor of preprocessed EEG chunks with shape (num_chunks, 1, chunk_samples).
-        :rtype: torch.Tensor
+        :param bool skip_artifact_removal: If True, skip artifact removal.
+        :return: Processed channel signal.
+        :rtype: np.ndarray
         """
-        df = pd.read_csv(file_path)
-        try:
-            CANEDataset.verify_sampling_rate(df)
-        except ValueError as exc:
-            raise ValueError(f"Error while processing {file_path}") from exc
-
-        # Step 1: Initial scaling (z-score normalization of raw ADC values)
-        for ch in CANEDataset.CHANNELS:
-            if ch in df.columns:
-                df[ch] = zscore(df[ch])
-
-        # Step 2: Common Average Reference (before filtering to remove common noise)
-        if apply_car and all(ch in df.columns for ch in CANEDataset.CHANNELS):
-            car = df[CANEDataset.CHANNELS].mean(axis=1)
-            for ch in CANEDataset.CHANNELS:
-                df[ch] = df[ch] - car
-            logger.info("Applied Common Average Reference")
-
-        df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
-        # Extract the specific channel
-        logger.info(f"Picking {channel} channel")
-        signal = df[channel].values.astype(float)
-
         # Check for NaN/inf values before detrending
         if np.any(np.isnan(signal)) or np.any(np.isinf(signal)):
             raise NaNValuesError(
                 f"Double check file {file_path}, seems like its standard deviation is 0."
             )
 
-        # Step 3: Detrend to remove slow drifts (before filtering)
+        # Step 1: Detrend to remove slow drifts (before filtering)
         signal = detrend(signal, type="linear")
 
-        # Step 4: Artifact handling (before filtering to avoid spreading artifacts)
+        # Step 2: Artifact handling (before filtering to avoid spreading artifacts)
         # Skip if skip_artifact_removal is True (let neural network handle artifacts)
         if not skip_artifact_removal:
             if artifact_method in ["interpolation", "both"]:
@@ -519,7 +494,10 @@ class CANEDataset(Dataset):
 
                 if len(artifact_indices) > 0:
                     artifact_pct = len(artifact_indices) / len(signal) * 100
-                    logger.info(f"Found {len(artifact_indices)} artifacts ({artifact_pct:.2f}%)")
+                    logger.info(
+                        f"Channel {channel_name}: Found {len(artifact_indices)} "
+                        f"artifacts ({artifact_pct:.2f}%)"
+                    )
 
                     # Interpolate artifacts
                     for idx in artifact_indices:
@@ -547,47 +525,137 @@ class CANEDataset(Dataset):
         else:
             logger.debug("Skipping artifact removal (--skip-artifact-removal enabled)")
 
-        # Step 5: Bandpass filter (matching MDD: 1-70 Hz)
+        # Step 3: Bandpass filter (matching MDD: 1-70 Hz)
         nyq = 0.5 * CANEDataset.FS
         b_bp, a_bp = butter(4, [1.0 / nyq, 70.0 / nyq], btype="band")
         signal = filtfilt(b_bp, a_bp, signal)
 
-        # Step 6: Notch filter at 50 Hz (European powerline)
+        # Step 4: Notch filter at 50 Hz (European powerline)
         b_notch, a_notch = iirnotch(50.0, Q=30, fs=CANEDataset.FS)
         signal = filtfilt(b_notch, a_notch, signal)
 
-        # Step 7: Chunk the signal at native sampling rate
-        n_samples = len(signal)
+        return signal
+
+    @staticmethod
+    def load_and_preprocess_cane_raw_file(
+        file_path: Path,
+        channel: str = "all",
+        artifact_method: str = "interpolation",
+        artifact_threshold: float = 4.0,
+        apply_car: bool = True,
+        skip_extreme_artifacts: bool = False,
+        skip_artifact_removal: bool = False,
+    ) -> torch.Tensor:
+        """
+        Load a CSV file from disk, preprocess it, and return chunks.
+
+        This contains all the preprocessing logic for CANE data.
+        Preprocessing pipeline: CAR → detrend → artifact removal → bandpass filter (1-70 Hz)
+        → notch filter (50 Hz) → chunking → z-score normalization.
+
+        :param Path file_path: Path to the CSV file to preprocess.
+        :param str channel: Channel to use: specific channel name (e.g., "Fp1", "T7") or None.
+        :param str artifact_method: Method for artifact removal ("interpolation", "clipping",
+               or "both").
+        :param float artifact_threshold: Z-score threshold for artifact detection.
+        :param bool apply_car: Whether to apply Common Average Reference.
+        :param bool skip_extreme_artifacts: If True, completely removes chunks with >10% artifacts.
+        :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
+        :return: Tensor of preprocessed EEG chunks with shape
+                 (num_chunks, num_channels, chunk_samples) where num_channels is 1 for single
+                 channel or 8 for all channels.
+        :rtype: torch.Tensor
+        """
+        df = pd.read_csv(file_path)
+        try:
+            CANEDataset.verify_sampling_rate(df)
+        except ValueError as exc:
+            raise ValueError(f"Error while processing {file_path}") from exc
+
+        # Step 1: Initial z-score normalization of raw ADC values
+        for ch in CANEDataset.CHANNELS:
+            if ch in df.columns:
+                df[ch] = zscore(df[ch])
+
+        # Step 2: Common Average Reference (before filtering to remove common noise)
+        if apply_car and all(ch in df.columns for ch in CANEDataset.CHANNELS):
+            car = df[CANEDataset.CHANNELS].mean(axis=1)
+            for ch in CANEDataset.CHANNELS:
+                df[ch] = df[ch] - car
+            logger.info("Applied Common Average Reference")
+
+        df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
+
+        # Determine which channels to use
+        if channel == "all":
+            # Use all 8 channels in canonical order
+            channels_to_use = CANE_CHANNEL_ORDER
+            logger.info(f"Loading all {len(channels_to_use)} channels in canonical order")
+        elif channel is not None:
+            channels_to_use = [channel]
+            logger.info(f"Picking {channel} channel")
+        else:
+            raise RuntimeError("Must specify 'channel' parameter")
+
+        # Process each channel through the preprocessing pipeline
+        processed_channels = []
+        for ch in channels_to_use:
+            signal = df[ch].values.astype(float)
+            processed_signal = CANEDataset._process_single_channel(
+                signal,
+                ch,
+                file_path,
+                artifact_method,
+                artifact_threshold,
+                skip_artifact_removal,
+            )
+            processed_channels.append(processed_signal)
+
+        # Step 7: Chunk the signals at native sampling rate
+        # Stack all channels together: (num_channels, n_samples)
+        multi_channel_signal = np.stack(processed_channels, axis=0)
+        num_channels = multi_channel_signal.shape[0]
+        n_samples = multi_channel_signal.shape[1]
+
         chunks_list: list[torch.Tensor] = []
         chunk_samples = int(CHUNK_DURATION_SEC * CANEDataset.FS)
         logger.info(f"Using sampling rate: {CANEDataset.FS} Hz")
         logger.info(f"Chunk size: {chunk_samples} samples ({CHUNK_DURATION_SEC}s)")
 
         for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
-            chunk = signal[i : i + chunk_samples]
+            chunk = multi_channel_signal[:, i : i + chunk_samples]  # (num_channels, chunk_samples)
 
-            # Optional: Skip chunks with too many residual artifacts
+            # Optional: Skip chunks with too many residual artifacts (check all channels)
             if skip_extreme_artifacts:
-                chunk_z = np.abs(zscore(chunk))
-                if (chunk_z > artifact_threshold * 0.95).sum() / len(chunk) > 0.1:  # >10% artifacts
-                    logger.warning(f"Skipping chunk {len(chunks_list)} due to excessive artifacts")
+                skip_chunk = False
+                for ch_idx in range(num_channels):
+                    chunk_z = np.abs(zscore(chunk[ch_idx]))
+                    if (chunk_z > artifact_threshold * 0.95).sum() / len(chunk[ch_idx]) > 0.1:
+                        logger.warning(
+                            f"Skipping chunk {len(chunks_list)} due to excessive "
+                            f"artifacts in channel {ch_idx}"
+                        )
+                        skip_chunk = True
+                        break
+                if skip_chunk:
                     continue
 
-            # Final z-score normalization per chunk (matching MDD)
-            chunk = zscore(chunk)
+            # Final z-score normalization per chunk per channel (matching MDD)
+            chunk_normalized = np.zeros_like(chunk)
+            for ch_idx in range(num_channels):
+                chunk_normalized[ch_idx] = zscore(chunk[ch_idx])
 
-            # Reshape to (1, samples) to match MDD format (channels, samples)
-            chunk = chunk.reshape(1, -1)
-            chunks_list.append(torch.from_numpy(chunk).float())
+            # Shape is already (num_channels, samples) to match MDD format
+            chunks_list.append(torch.from_numpy(chunk_normalized).float())
 
-        # Stack into tensor (num_chunks, channels=1, samples)
+        # Stack into tensor (num_chunks, num_channels, samples)
         if chunks_list:
             chunks_tensor = torch.stack(chunks_list)
             logger.info(f"Created {len(chunks_list)} chunks of shape {chunks_tensor.shape}")
             return chunks_tensor
         else:
             logger.error("No valid chunks created!")
-            return torch.empty(0, 1, chunk_samples)
+            return torch.empty(0, num_channels, chunk_samples)
 
     def __len__(self) -> int:
         return len(self.files)
@@ -597,16 +665,18 @@ class CANEDataset(Dataset):
         Get file from the dataset preprocessed by self.transform method.
 
         :param int idx: Index of the file to retrieve.
-        :return: Dictionary containing 'eeg' (tensor of shape (num_chunks, 1, samples)),
-                 'label' (integer: 0=normal, 1=anxiety), 'subject' (subject ID string),
-                 and 'condition' (condition string: ec/eo).
+        :return: Dictionary containing 'eeg' (tensor of shape (num_chunks, num_channels, samples)
+                 where num_channels is 1 for single channel or 8 for all channels),
+                 'label' (integer: 0=normal, 1=anxiety, 2=depression, 3=anxiety+depression),
+                 'subject' (subject ID string), 'condition' (condition string: ec/eo), and
+                 'channels' (list of channel names in the order they appear in the tensor).
         :rtype: dict
         """
         file_info = self.files[idx]
 
         chunks = self._load_and_preprocess_cane_raw_file(
             file_info["path"],
-            self.channel,  # Use CANE channel name for reading CSV
+            self.channel,
             self.artifact_method,
             self.artifact_threshold,
             self.apply_car,
@@ -624,6 +694,7 @@ class CANEDataset(Dataset):
             "label": file_info["label_int"],
             "subject": file_info["subject"],
             "condition": file_info["condition"],
+            "channels": self.channel_names,
         }
 
     def get_sorted_subjects(self) -> list[str]:
@@ -716,51 +787,69 @@ class SpectrogramDataset(Dataset):
         """
         Convert EEG tensor to list of spectrograms using STFT.
 
-        Expects input tensor of shape (num_chunks, channels, samples).
-        Extracts only the first channel for spectrogram generation.
+        Expects input tensor of shape (num_chunks, num_channels, samples).
+        Processes channels to create spectrograms.
 
-        :param torch.Tensor tensor: EEG tensor with shape (num_chunks, channels, samples).
+        :param torch.Tensor tensor: EEG tensor with shape (num_chunks, num_channels, samples).
         :param int nperseg: Length of each segment for STFT.
         :param float fs: Sampling frequency for STFT.
         :param int noverlap: Number of points to overlap between segments.
         :param str window: Window function for STFT.
         :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
                before STFT conversion.
-        :return: List of spectrogram tensors, each with shape (1, freq_bins, time_frames).
+        :return: List of spectrogram tensors, each with shape
+                 (num_channels, freq_bins, time_frames).
         :rtype: list[torch.Tensor]
         """
         spectograms = []
-        for chunk_idx in range(tensor.size(0)):
-            # Extract the first channel for spectrogram generation
-            channel_data = tensor[chunk_idx, 0, :].numpy()
+        num_chunks = tensor.size(0)
+        num_channels = tensor.size(1)
 
-            # Apply augmentation to raw EEG before STFT
-            if augmentation is not None:
-                channel_data = augmentation(channel_data)
+        for chunk_idx in range(num_chunks):
+            chunk_data = tensor[chunk_idx]  # (num_channels, samples)
 
-            # Skip if too short for STFT
-            if len(channel_data) < nperseg:
-                logger.warning(f"Skipping sample due to insufficient length: {len(channel_data)}")
-                continue
+            channel_spectrograms = []
+            for ch_idx in range(num_channels):
+                channel_data = chunk_data[ch_idx].numpy()
 
-            # Compute STFT
-            f, t, Zxx = stft(
-                channel_data,
-                fs=fs,
-                nperseg=nperseg,
-                noverlap=noverlap,
-                window=window,
+                # Apply augmentation to raw EEG before STFT
+                if augmentation is not None:
+                    channel_data = augmentation(channel_data)
+
+                # Skip if too short for STFT
+                if len(channel_data) < nperseg:
+                    logger.warning(
+                        f"Skipping chunk {chunk_idx} channel {ch_idx} due to "
+                        f"insufficient length: {len(channel_data)}"
+                    )
+                    break
+
+                # Compute STFT
+                f, t, Zxx = stft(
+                    channel_data,
+                    fs=fs,
+                    nperseg=nperseg,
+                    noverlap=noverlap,
+                    window=window,
+                )
+
+                # Log magnitude spectrogram
+                Zxx_mag = np.log1p(np.abs(Zxx))
+                channel_spectrograms.append(Zxx_mag)
+
+            # Only add if all channels processed successfully
+            if len(channel_spectrograms) == num_channels:
+                # Stack: (num_channels, H, W)
+                spec_tensor = torch.tensor(np.stack(channel_spectrograms), dtype=torch.float32)
+                spectograms.append(spec_tensor)
+
+        if spectograms:
+            logger.info(
+                f"Created {len(spectograms)} spectrograms with shape {spectograms[0].shape}"
             )
+        else:
+            logger.warning("No valid spectrograms created!")
 
-            # Log magnitude spectrogram
-            Zxx_mag = np.log1p(np.abs(Zxx))
-
-            # Convert to tensor: (1, H, W) for single-channel spectrogram
-            spec_tensor = torch.tensor(Zxx_mag, dtype=torch.float32).unsqueeze(0)
-
-            spectograms.append(spec_tensor)
-
-        logger.info(f"Created {len(spectograms)} spectrograms")
         return spectograms
 
     def __len__(self) -> int:
