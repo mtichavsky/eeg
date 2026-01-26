@@ -235,6 +235,7 @@ class TestClassificationMetricsMulticlass:
         assert metrics["recall_mdd"] == 0.0  # None of class 1 predicted
         assert metrics["recall_anxious"] == 0.0  # None of class 2 predicted
 
+
 class TestAggregateSubjectPredictions:
     """Subject-level majority voting aggregation."""
 

@@ -70,7 +70,11 @@ def classification_metrics(
             precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
 
-            class_names = ["normal", "mdd", "anxious"]
+            if num_classes == 4:
+                class_names = ["normal", "anxiety", "depression", "anxiety+depression"]
+            else:
+                raise Exception("Unexpected number of classes")
+
             class_name = (
                 class_names[class_idx] if class_idx < len(class_names) else f"class_{class_idx}"
             )
@@ -183,13 +187,16 @@ def extract_classification_metrics(metrics: dict[str, float], num_classes: int) 
             "sensitivity": metrics["recall"],
             "specificity": metrics["specificity"],
         }
-    else:
+    elif num_classes == 4:
         return {
             "accuracy": metrics["accuracy"],
             "recall_normal": metrics.get("recall_normal", 0.0),
-            "recall_mdd": metrics.get("recall_mdd", 0.0),
-            "recall_anxious": metrics.get("recall_anxious", 0.0),
+            "recall_anxiety": metrics.get("recall_anxiety", 0.0),
+            "recall_depression": metrics.get("recall_depression", 0.0),
+            "recall_anxiety+depression": metrics.get("recall_anxiety+depression", 0.0),
         }
+    else:
+        raise ValueError(f"Unsupported num_classes: {num_classes}")
 
 
 def _format_pct(value: float) -> str:
@@ -265,10 +272,12 @@ def _write_metrics_block(
         writer(_format_metric_line(f"{level} Sensitivity Mean", sens_values))
         writer(_format_metric_line(f"{level} Specificity Mean", spec_values))
 
-    # Multi-class: per-class recall
+    # Multi-class: per-class recall (detect class names dynamically)
     elif "recall_normal" in metrics[0]:
-        for class_name in ["normal", "mdd", "anxious"]:
-            key = f"recall_{class_name}"
+        # Extract all recall_* keys from first metrics dict
+        class_keys = [k for k in metrics[0].keys() if k.startswith("recall_")]
+        for key in class_keys:
+            class_name = key.replace("recall_", "")
             values = _extract_metric_values(metrics, key)
             writer(_format_metric_line(f"{level} Recall ({class_name.capitalize()}) Mean", values))
 

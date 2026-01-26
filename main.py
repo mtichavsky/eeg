@@ -21,6 +21,7 @@ from thesis.cli import get_arg_parser
 from thesis.data_preparation import (
     EXPECTED_SPECTROGRAM_SHAPE,
     create_balanced_folds,
+    determine_num_classes,
     get_datasets_for_fold,
     prepare_cane_dataset,
     prepare_mdd_dataset,
@@ -39,19 +40,13 @@ from thesis.metrics import (
     format_metrics_for_logging,
     write_results,
 )
-from thesis.model import CNN_LSTM_DepCap, Smaller
+from thesis.model import MODEL_REGISTRY
 
 RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
 LOG_LEVEL = "INFO"
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
-
-# Model registry: maps model names to (model_class, default_rnn_hidden)
-MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int]] = {
-    "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
-    "Smaller": (Smaller, 64),
-}
 
 
 class IllegalPathError(Exception):
@@ -434,6 +429,7 @@ def create_model(
     dropout: float,
     num_classes: int,
     device: torch.device,
+    in_channels: int = 1,
     pretrained_checkpoint: str | None = None,
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
@@ -446,6 +442,7 @@ def create_model(
     :param float dropout: Dropout rate.
     :param int num_classes: Number of output classes.
     :param torch.device device: Device to place model on.
+    :param int in_channels: Number of input channels (1 for single-channel, 8 for multi-channel).
     :param str | None pretrained_checkpoint: Path to pretrained checkpoint for transfer learning.
     :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
     :param bool freeze_lstm: If True, freeze LSTM layer during training.
@@ -460,7 +457,7 @@ def create_model(
 
     model = model_class(
         input_shape=spec_shape,
-        in_channels=1,
+        in_channels=in_channels,
         rnn_type="LSTM",
         rnn_hidden=rnn_hidden,
         dropout=dropout,
@@ -511,6 +508,7 @@ def create_model(
 def train_cross_validation(
     dataset_type: Literal["mdd", "cane", "both"] = "mdd",
     condition: str = "EC",
+    class_mode: str = "2",
     n_folds: int = 10,
     batch_size: int = 32,
     num_epochs: int = 100,
@@ -536,6 +534,7 @@ def train_cross_validation(
 
     :param str dataset_type: Dataset to use ("mdd", "cane", or "both").
     :param str condition: EEG condition to use ("EC", "EO", "TASK", or "EC+EO").
+    :param str class_mode: Classification mode ("2", or "4").
     :param int n_folds: Number of cross-validation folds.
     :param int batch_size: Batch size for training.
     :param int num_epochs: Maximum number of epochs per fold.
@@ -589,58 +588,100 @@ def train_cross_validation(
     if "TASK" in conditions and dataset_type == "cane":
         raise ValueError("condition TASK not possible for CANE dataset")
 
+    # Determine num_classes and label_mapping based on class_mode
+    num_classes, label_mapping = determine_num_classes(class_mode)
+    logger.info(f"Classification mode: {num_classes}-class")
+    if label_mapping:
+        logger.info(f"Label mapping: {label_mapping} (collapsing to binary)")
+
     mdd_flat_dataset, cane_flat_dataset, flat_dataset = None, None, None
-    num_classes = 2
     if dataset_type == "mdd":
-        flat_dataset, normal, depressed, anxious = prepare_mdd_dataset(
-            conditions, skip_ica, channel, rng
+        flat_dataset, subject_classes = prepare_mdd_dataset(
+            conditions, channel, rng, augmentation=augmentation
         )
-        logger.info(f"MDD dataset: {len(normal)} normal, {len(depressed)} MDD subjects")
+        normal, anxiety, depression, anxiety_depression = (
+            subject_classes.normal,
+            subject_classes.anxiety,
+            subject_classes.depression,
+            subject_classes.anxiety_depression,
+        )
+        logger.info(f"MDD dataset: {len(normal)} normal, {len(depression)} depression subjects")
     elif dataset_type == "cane":
         # Convert to lowercase for CANE
         cane_conditions = [c.lower() for c in conditions]
-        flat_dataset, normal, depressed, anxious = prepare_cane_dataset(
+        flat_dataset, subject_classes = prepare_cane_dataset(
             cane_conditions,
             channel,
             rng,
-            remap_labels=True,
+            label_mapping=label_mapping,
             skip_artifact_removal=skip_artifact_removal,
             augmentation=augmentation,
         )
-        logger.info(f"CANE dataset: {len(normal)} normal, {len(anxious)} anxious subjects")
+        normal, anxiety, depression, anxiety_depression = (
+            subject_classes.normal,
+            subject_classes.anxiety,
+            subject_classes.depression,
+            subject_classes.anxiety_depression,
+        )
+        logger.info(
+            f"CANE dataset: {len(normal)} normal, {len(anxiety)} anxiety, "
+            f"{len(depression)} depression, {len(anxiety_depression)} anxiety+depression subjects"
+        )
     elif dataset_type == "both":
         # T3=T7 and T4=T8 for these purposes, otherwise I couldn't combine the datasets
         if channel in ["T7", "T8"]:
             channel = {"T7": "T3", "T8": "T4"}[channel]
-        mdd_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious = prepare_mdd_dataset(
-            conditions, skip_ica, channel, rng, augmentation=augmentation
+        mdd_flat_dataset, mdd_subject_classes = prepare_mdd_dataset(
+            conditions, channel, rng, augmentation=augmentation
+        )
+        mdd_normal, mdd_anxiety, mdd_depression, mdd_anxiety_depression = (
+            mdd_subject_classes.normal,
+            mdd_subject_classes.anxiety,
+            mdd_subject_classes.depression,
+            mdd_subject_classes.anxiety_depression,
         )
         if channel in ["T3", "T4"]:
             channel = {"T3": "T7", "T4": "T8"}[channel]
         cane_conditions = [c.lower() for c in conditions]
-        cane_flat_dataset, cane_normal, cane_depressed, cane_anxious = prepare_cane_dataset(
+        cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
             cane_conditions,
             channel,
             rng,
+            label_mapping=label_mapping,
             skip_artifact_removal=skip_artifact_removal,
             augmentation=augmentation,
         )
-        num_classes = 3
+        cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
+            cane_subject_classes.normal,
+            cane_subject_classes.anxiety,
+            cane_subject_classes.depression,
+            cane_subject_classes.anxiety_depression,
+        )
 
     # Create folds for each class separately (stratified)
     if dataset_type == "both":
         # For combined dataset, stratify each dataset separately then merge corresponding folds
-        normal_folds, anxious_folds, mdd_folds = create_balanced_folds(
-            mdd_normal, mdd_depressed, cane_normal, cane_depressed, cane_anxious, n_folds
+        normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds = (
+            create_balanced_folds(
+                [mdd_normal, cane_normal],
+                [mdd_anxiety, cane_anxiety],
+                [mdd_depression, cane_depression],
+                [mdd_anxiety_depression, cane_anxiety_depression],
+                n_folds,
+            )
         )
         logger.info(
             f"Created {n_folds} balanced folds with subjects from both MDD and CANE datasets"
         )
     else:
+        # Single dataset: some classes may be empty
         empty_folds = [[] for _ in range(n_folds)]
         normal_folds = split_into_folds(normal, n_folds)
-        mdd_folds = split_into_folds(depressed, n_folds) if depressed else empty_folds
-        anxious_folds = split_into_folds(anxious, n_folds) if anxious else empty_folds
+        anxiety_folds = split_into_folds(anxiety, n_folds) if anxiety else empty_folds
+        depression_folds = split_into_folds(depression, n_folds) if depression else empty_folds
+        anxiety_depression_folds = (
+            split_into_folds(anxiety_depression, n_folds) if anxiety_depression else empty_folds
+        )
 
     spec_shape = EXPECTED_SPECTROGRAM_SHAPE
     for fold in range(n_folds):
@@ -651,8 +692,9 @@ def train_cross_validation(
         train_dataset, val_dataset = get_datasets_for_fold(
             fold,
             normal_folds,
-            mdd_folds,
-            anxious_folds,
+            anxiety_folds,
+            depression_folds,
+            anxiety_depression_folds,
             dataset_type,
             mdd_flat_dataset,
             cane_flat_dataset,
@@ -686,6 +728,7 @@ def train_cross_validation(
             dropout=dropout,
             num_classes=num_classes,
             device=device,
+            in_channels=8 if channel == "all" else 1,
             pretrained_checkpoint=pretrained_checkpoint,
             freeze_cnn=freeze_cnn,
             freeze_lstm=freeze_lstm,
@@ -774,6 +817,7 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Pretrained Checkpoint: {args.pretrained_checkpoint}")
     logger.info(f"  Freeze CNN: {args.freeze_cnn}")
     logger.info(f"  Freeze LSTM: {args.freeze_lstm}")
+    logger.info(f"  Class mode: {args.class_mode}")
     logger.info(f"  Device: {device}")
     logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
     logger.info(f"  Log File: {log_path}")
@@ -782,6 +826,7 @@ def train(args: argparse.Namespace) -> None:
     results = train_cross_validation(
         dataset_type=args.dataset,
         condition=args.condition,
+        class_mode=args.class_mode,
         n_folds=args.n_folds,
         batch_size=args.batch_size,
         num_epochs=args.epochs,
@@ -877,11 +922,8 @@ def run(args: argparse.Namespace) -> None:
     logger.info(f"Device: {device}")
     logger.info(f"{'=' * 80}")
 
-    # TODO - maybe I should remove drophout here no? I HAVE TO make sure dropout is
-    # not applied in eval nor here
-    # Load model checkpoint
     logger.info("Loading model checkpoint...")
-
+    # Load model checkpoint (dropout=0 and model.eval() ensure no dropout during inference)
     model = create_model(
         model_name=args.model,
         spec_shape=EXPECTED_SPECTROGRAM_SHAPE,
@@ -893,14 +935,12 @@ def run(args: argparse.Namespace) -> None:
     # Note: weights_only=False is required to load optimizer state and other training info
     saved = torch.load(model_path, weights_only=False)
     model.load_state_dict(saved["model_state_dict"])
-    model.eval()  # This among other things deactivates dropout
+    model.eval()  # Set model to evaluation mode (deactivates dropout, batch norm, etc.)
     logger.info("Model loaded successfully")
 
     # Preprocess EDF file
     logger.info("Preprocessing EDF file...")
-    chunks = MDDDataset.load_and_preprocess_mdd_raw_file(
-        edf_file, args.channel, skip_ica=args.skip_ica
-    )
+    chunks = MDDDataset.load_and_preprocess_mdd_raw_file(edf_file, args.channel)
     logger.info(f"Extracted {len(chunks)} chunks from EDF file")
     if len(chunks) == 0:
         raise RuntimeError("No valid chunks extracted from EDF file")

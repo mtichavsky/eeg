@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Callable
-from typing import Literal
+from typing import Literal, NamedTuple, Optional
 
 import numpy as np
 import torch
@@ -19,35 +19,63 @@ logger = logging.getLogger(__name__)
 
 EXPECTED_SPECTROGRAM_SHAPE = (129, 41)  # Expected spectrogram shape from training
 
+SubjectList = list[tuple[str, str]]  # Single dataset: (dataset_label, subject_id) tuples
+MultiDatasetSubjectList = list[SubjectList]  # Multiple datasets: list of subject lists
+
+
+class SubjectClasses(NamedTuple):
+    """Container for subjects split by diagnostic class."""
+
+    normal: SubjectList
+    anxiety: SubjectList
+    depression: SubjectList
+    anxiety_depression: SubjectList
+
+
+def determine_num_classes(class_mode: str) -> tuple[int, Optional[dict[int, int]]]:
+    """
+    Determine number of classes and label mapping based on dataset and class_mode.
+
+    :param class_mode: Class mode (2", or "4")
+    :return: Tuple of (num_classes, label_mapping)
+        - label_mapping is None for 4-class (use original labels)
+        - label_mapping remaps for 2-class: {0:0, 1:1, 2:1, 3:1}
+    :rtype: tuple[int, Optional[dict[int, int]]]
+    """
+    if class_mode == "2":
+        # Force binary: healthy vs any-pathological
+        return 2, {0: 0, 1: 1, 2: 1, 3: 1}
+    elif class_mode == "4":
+        return 4, None
+    else:
+        raise ValueError(f"Invalid class_mode: {class_mode}")
+
 
 def prepare_mdd_dataset(
     conditions: list[Literal["EC", "EO", "TASK"]],
-    skip_ica: bool,
-    channel: str | None,
+    channel: str,
     rng: np.random.RandomState,
     augmentation: Callable | None = None,
-) -> tuple[
-    ConcatDataset | FlattenedSpectrogramDataset,
-    list[tuple[str, str]],
-    list[tuple[str, str]],
-    list[tuple[str, str]],
-]:
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
     Prepare MDD dataset with spectrograms and split subjects by class.
 
     :param list[str] conditions: EEG conditions to load (e.g., ["EC", "EO"]).
-    :param bool skip_ica: Whether to skip ICA preprocessing.
-    :param str | None channel: Single channel to use (e.g., "Fp1").
+    :param str channel: Channel to use (e.g., "Fp1" or "all").
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
-    :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
-    :rtype: tuple
+    :return: Tuple of (flat_dataset, SubjectClasses).
+             Note: anxiety and anxiety_depression are empty for MDD dataset.
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
     """
     all_flat_datasets = []
     all_subjects = []
 
     for condition in conditions:
-        mdd_dataset = MDDDataset(condition=condition, skip_ica=skip_ica, channel=channel)
+        mdd_dataset = MDDDataset(
+            condition=condition,
+            channel=channel,
+        )
         mdd_spec_dataset = SpectrogramDataset(
             mdd_dataset, fs=MDDDataset.FS, augmentation=augmentation
         )
@@ -68,34 +96,31 @@ def prepare_mdd_dataset(
     else:
         combined_flat_dataset = ConcatDataset(all_flat_datasets)
 
-    mdd_normal, mdd_depressed, mdd_anxious = split_subjects_into_classes(all_subjects, "mdd", rng)
-    return combined_flat_dataset, mdd_normal, mdd_depressed, mdd_anxious
+    subject_classes = split_subjects_into_classes(all_subjects, "mdd", rng)
+    # anxiety and anxiety_depression will be empty lists for MDD
+    return combined_flat_dataset, subject_classes
 
 
 def prepare_cane_dataset(
     conditions: list[Literal["ec", "eo"]],
-    channel: str | None,
+    channel: str,
     rng: np.random.RandomState,
-    remap_labels: bool = False,
+    label_mapping: Optional[dict[int, int]] = None,
     skip_artifact_removal: bool = False,
     augmentation: Callable | None = None,
-) -> tuple[
-    ConcatDataset | FlattenedSpectrogramDataset,
-    list[tuple[str, str]],
-    list[tuple[str, str]],
-    list[tuple[str, str]],
-]:
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
     Prepare CANE dataset with spectrograms and split subjects by class.
 
     :param list[str] conditions: EEG conditions to load (e.g., ["ec", "eo"]).
-    :param str | None channel: Single channel to use (e.g., "Fp1").
+    :param str: channel: Channel to use (e.g., "Fp1" or "all").
     :param np.random.RandomState rng: Random number generator for shuffling.
-    :param bool remap_labels: If True, remap labels {0->0, 2->1} for binary classification.
+    :param Optional[dict[int, int]] label_mapping: Optional label remapping
+           (e.g., {0:0, 1:1, 2:1, 3:1}).
     :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
-    :return: Tuple of (flat_dataset, normal_subjects, depressed_subjects, anxious_subjects).
-    :rtype: tuple
+    :return: Tuple of (flat_dataset, SubjectClasses).
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
     """
     all_flat_datasets = []
     all_subjects = []
@@ -115,8 +140,6 @@ def prepare_cane_dataset(
             augmentation=augmentation,
         )
 
-        # Apply label remapping if training on CANE alone (binary classification)
-        label_mapping = {0: 0, 2: 1} if remap_labels else None
         cane_flat_dataset = FlattenedSpectrogramDataset(
             cane_spec_dataset, label_mapping=label_mapping
         )
@@ -136,45 +159,53 @@ def prepare_cane_dataset(
     else:
         cane_combined_flat = ConcatDataset(all_flat_datasets)
 
-    cane_normal, cane_depressed, cane_anxious = split_subjects_into_classes(
-        all_subjects, "cane", rng
-    )
-    return cane_combined_flat, cane_normal, cane_depressed, cane_anxious
+    subject_classes = split_subjects_into_classes(all_subjects, "cane", rng)
+    return cane_combined_flat, subject_classes
 
 
 def split_subjects_into_classes(
     subjects: list[str], dataset_label: str, rng: np.random.RandomState
-) -> tuple[list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
+) -> SubjectClasses:
     """
-    Split subjects into normal, depressed, and anxious classes.
+    Split subjects into normal, anxiety, depression, and anxiety+depression classes.
 
     :param list[str] subjects: List of subject IDs.
     :param str dataset_label: Dataset label ("mdd" or "cane").
     :param np.random.RandomState rng: Random number generator for shuffling.
-    :return: Tuple of (normal, depressed, anxious) subject lists.
-    :rtype: tuple
+    :return: SubjectClasses containing subjects grouped by diagnostic class.
+    :rtype: SubjectClasses
     """
-    normal: list[tuple[str, str]] = []
-    depressed: list[tuple[str, str]] = []
-    anxious: list[tuple[str, str]] = []
+    normal: SubjectList = []
+    anxiety: SubjectList = []
+    depression: SubjectList = []
+    anxiety_depression: SubjectList = []
+
     for subj in subjects:
         if subj.startswith("H "):
             normal.append((dataset_label, subj))
-        elif subj.startswith("MDD "):
-            depressed.append((dataset_label, subj))
         elif subj.startswith("AX "):
-            anxious.append((dataset_label, subj))
+            anxiety.append((dataset_label, subj))
+        elif subj.startswith("DEP "):
+            depression.append((dataset_label, subj))
+        elif subj.startswith("AXDEP "):
+            anxiety_depression.append((dataset_label, subj))
+        elif subj.startswith("MDD "):
+            depression.append((dataset_label, subj))
 
-    if len(normal) > 0:
-        rng.shuffle(normal)
-    if len(depressed) > 0:
-        rng.shuffle(depressed)
-    if len(anxious) > 0:
-        rng.shuffle(anxious)
-    return normal, depressed, anxious
+    # Shuffle each class independently
+    for class_list in [normal, anxiety, depression, anxiety_depression]:
+        if len(class_list) > 0:
+            rng.shuffle(class_list)
+
+    return SubjectClasses(
+        normal=normal,
+        anxiety=anxiety,
+        depression=depression,
+        anxiety_depression=anxiety_depression,
+    )
 
 
-def split_into_folds(subjects: list[tuple[str, str]], n_folds: int) -> list[list[tuple[str, str]]]:
+def split_into_folds(subjects: SubjectList, n_folds: int) -> list[SubjectList]:
     """
     Split subjects into n folds, keeping EC/EO recordings together.
 
@@ -183,7 +214,7 @@ def split_into_folds(subjects: list[tuple[str, str]], n_folds: int) -> list[list
     :return: List of folds, each containing subject tuples.
     :rtype: list
     """
-    mapping: dict[str, list[tuple[str, str]]] = {}
+    mapping: dict[str, SubjectList] = {}
     for dataset, subject in subjects:
         subject_parts = subject.split()
         base = " ".join(subject_parts[:-1])
@@ -199,53 +230,78 @@ def split_into_folds(subjects: list[tuple[str, str]], n_folds: int) -> list[list
     return folds_with_conditions
 
 
+def _merge_dataset_folds(
+    multi_dataset_subjects: MultiDatasetSubjectList, n_folds: int
+) -> list[SubjectList]:
+    """
+    Split subjects from multiple datasets into folds and merge corresponding folds.
+
+    :param MultiDatasetSubjectList multi_dataset_subjects: List of subject lists from multiple
+           datasets, where each inner list contains (dataset_label, subject_id) tuples.
+    :param int n_folds: Number of folds to create.
+    :return: List of merged folds, where each fold contains subjects from all datasets.
+    :rtype: list[SubjectList]
+    """
+    merged_folds: list[SubjectList] = [[] for _ in range(n_folds)]
+    for dataset_subjects in multi_dataset_subjects:
+        if len(dataset_subjects) > 0:
+            tmp_folds = split_into_folds(dataset_subjects, n_folds)
+            for i, fold in enumerate(tmp_folds):
+                merged_folds[i].extend(fold)
+    return merged_folds
+
+
 def create_balanced_folds(
-    mdd_normal: list[tuple[str, str]],
-    mdd_depressed: list[tuple[str, str]],
-    cane_normal: list[tuple[str, str]],
-    cane_depressed: list[tuple[str, str]],
-    cane_anxious: list[tuple[str, str]],
+    normal: MultiDatasetSubjectList,
+    anxiety: MultiDatasetSubjectList,
+    depression: MultiDatasetSubjectList,
+    anxiety_depression: MultiDatasetSubjectList,
     n_folds: int,
-) -> tuple[list[list[tuple[str, str]]], list[list[tuple[str, str]]], list[list[tuple[str, str]]]]:
+) -> tuple[
+    list[SubjectList],  # normal_folds
+    list[SubjectList],  # anxiety_folds
+    list[SubjectList],  # depression_folds
+    list[SubjectList],  # anxiety_depression_folds
+]:
     """
     Create balanced folds ensuring both datasets appear in each fold.
 
     Splits each dataset separately into n_folds, then merges corresponding folds.
     Groups subjects by base ID to keep EC/EO recordings together.
 
-    :param list mdd_normal: List of tuples (dataset_label, subject_id) from MDD normal
-        subjects.
-    :param list mdd_depressed: List of tuples (dataset_label, subject_id) from MDD
-        depressed subjects.
-    :param list cane_normal: List of tuples (dataset_label, subject_id) from CANE normal
-        subjects.
-    :param list cane_depressed: List of tuples (dataset_label, subject_id) from CANE
-        depressed subjects.
-    :param list cane_anxious: List of tuples (dataset_label, subject_id) from CANE anxious
-        subjects.
+    :param list normal: List of lists of tuples (dataset_label, subject_id) from all datasets'
+           normal subjects. Each inner list represents one dataset.
+    :param list anxiety: List of lists of tuples (dataset_label, subject_id) from all datasets'
+           anxiety subjects. Each inner list represents one dataset.
+    :param list depression: List of lists of tuples (dataset_label, subject_id) from all datasets'
+           depression subjects. Each inner list represents one dataset.
+    :param list anxiety_depression: List of lists of tuples (dataset_label, subject_id) from all
+           datasets' anxiety+depression subjects. Each inner list represents one dataset.
     :param int n_folds: Number of folds to create.
-    :return: Tuple of (normal_folds, anxious_folds, mdd_folds).
+    :return: Tuple of (normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds).
     :rtype: tuple
     """
-    empty_folds: list[list[tuple[str, str]]] = [[] for _ in range(n_folds)]
+    # Create separate folds for each class from both datasets
+    normal_folds = _merge_dataset_folds(normal, n_folds)
+    anxiety_folds = _merge_dataset_folds(anxiety, n_folds)
+    depression_folds = _merge_dataset_folds(depression, n_folds)
+    anxiety_depression_folds = _merge_dataset_folds(anxiety_depression, n_folds)
 
-    mdd_normal_folds = split_into_folds(mdd_normal, n_folds)
-    mdd_mdd_folds = split_into_folds(mdd_depressed, n_folds)
-    cane_normal_folds = split_into_folds(cane_normal, n_folds)
-    cane_anxious_folds = split_into_folds(cane_anxious, n_folds)
-    cane_mdd_folds = split_into_folds(cane_depressed, n_folds) if cane_depressed else empty_folds
+    # Count total subjects for each class
+    total_normal = sum(len(dataset_subjects) for dataset_subjects in normal)
+    total_anxiety = sum(len(dataset_subjects) for dataset_subjects in anxiety)
+    total_depression = sum(len(dataset_subjects) for dataset_subjects in depression)
+    total_anxiety_depression = sum(len(dataset_subjects) for dataset_subjects in anxiety_depression)
 
-    normal_folds: list[list[tuple[str, str]]] = []
-    anxious_folds = cane_anxious_folds
-    mdd_folds: list[list[tuple[str, str]]] = []
-    for mn, cn, mm, cm in zip(mdd_normal_folds, cane_normal_folds, mdd_mdd_folds, cane_mdd_folds):
-        normal_folds.append(mn + cn)
-        if len(cm) > 0:
-            mdd_folds.append(mm + cm)
-        else:
-            mdd_folds.append(mm)
+    logger.info(f"Created {n_folds} balanced folds:")
+    logger.info(f"  Normal subjects per fold: ~{total_normal / n_folds:.1f}")
+    logger.info(f"  Anxiety subjects per fold: ~{total_anxiety / n_folds:.1f}")
+    logger.info(f"  Depression subjects per fold: ~{total_depression / n_folds:.1f}")
+    logger.info(
+        f"  Anxiety+Depression subjects per fold: ~{total_anxiety_depression / n_folds:.1f}"
+    )
 
-    return normal_folds, anxious_folds, mdd_folds
+    return normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds
 
 
 def get_indices_from_concat_dataset(
@@ -272,9 +328,10 @@ def get_indices_from_concat_dataset(
 
 def get_datasets_for_fold(
     fold: int,
-    normal_folds: list[list[tuple[str, str]]],
-    mdd_folds: list[list[tuple[str, str]]],
-    anxious_folds: list[list[tuple[str, str]]],
+    normal_folds: list[SubjectList],
+    anxiety_folds: list[SubjectList],
+    depression_folds: list[SubjectList],
+    anxiety_depression_folds: list[SubjectList],
     dataset_type: str,
     mdd_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
     cane_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
@@ -285,8 +342,9 @@ def get_datasets_for_fold(
 
     :param int fold: Fold index.
     :param list normal_folds: Normal subject folds.
-    :param list mdd_folds: MDD subject folds.
-    :param list anxious_folds: Anxious subject folds.
+    :param list anxiety_folds: Anxiety subject folds.
+    :param list depression_folds: Depression subject folds.
+    :param list anxiety_depression_folds: Anxiety+depression subject folds.
     :param str dataset_type: Dataset type ("mdd", "cane", or "both").
     :param mdd_flat_dataset: MDD flattened dataset (for "both" mode).
     :param cane_flat_dataset: CANE flattened dataset (for "both" mode).
@@ -295,20 +353,22 @@ def get_datasets_for_fold(
     :rtype: tuple
     """
     # Determine train/val subjects for this fold from all classes
-    val_subjects_with_dataset: list[tuple[str, str]] = []
-    train_subjects_with_dataset: list[tuple[str, str]] = []
+    val_subjects_with_dataset: SubjectList = []
+    train_subjects_with_dataset: SubjectList = []
 
-    # Collect validation subjects from all classes
+    # Collect validation subjects from all 4 classes
     val_subjects_with_dataset.extend(normal_folds[fold])
-    val_subjects_with_dataset.extend(mdd_folds[fold])
-    val_subjects_with_dataset.extend(anxious_folds[fold])
+    val_subjects_with_dataset.extend(anxiety_folds[fold])
+    val_subjects_with_dataset.extend(depression_folds[fold])
+    val_subjects_with_dataset.extend(anxiety_depression_folds[fold])
 
-    # Collect training subjects from all other folds
+    # Collect training subjects from all other folds (all 4 classes)
     for i in range(len(normal_folds)):
         if i != fold:
             train_subjects_with_dataset.extend(normal_folds[i])
-            train_subjects_with_dataset.extend(mdd_folds[i])
-            train_subjects_with_dataset.extend(anxious_folds[i])
+            train_subjects_with_dataset.extend(anxiety_folds[i])
+            train_subjects_with_dataset.extend(depression_folds[i])
+            train_subjects_with_dataset.extend(anxiety_depression_folds[i])
 
     # Log subject distribution
     val_subjects_clean = [f"{ds}:{subj}" for ds, subj in val_subjects_with_dataset]
