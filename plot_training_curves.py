@@ -384,7 +384,7 @@ def main() -> None:
     log_path = Path(sys.argv[1])
 
     try:
-        output_dir = generate_training_curves(log_path)
+        generate_training_curves(log_path)
         print("Done!")
     except LogFileNotFoundError as e:
         print(f"Error: {e}")

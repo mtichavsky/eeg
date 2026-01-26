@@ -2,6 +2,8 @@
 
 import argparse
 
+from thesis.model import MODEL_REGISTRY
+
 
 def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
     """
@@ -39,10 +41,22 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         type=str,
         choices=list(
             set(MDDDataset.CHANNEL_MAPPING.values()) | set(CANEDataset.CHANNEL_MAPPING.values())
-        ),
-        default="Fp1",
-        help="Single channel to use (e.g., --channel Fp1). "
-        "When a single channel is selected, ICA is automatically skipped.",
+        )
+        + ["all"],
+        default="all",
+        help="Channel to use: specific channel name (Fp1, T7, etc.) or 'all' for all 8 channels. "
+        "When 'all' is selected, model receives 8-channel spectrograms. "
+        "Single channel selection automatically skips ICA.",
+    )
+    preproc_group.add_argument(
+        "--class-mode",
+        type=str,
+        default="2",
+        choices=["2", "4"],
+        help="Classification mode: "
+        "'2' forces binary (healthy vs any-pathological), "
+        "'4' requires --dataset both for all classes. "
+        "Note: not all datasets contain all classes.",
     )
 
 
@@ -57,7 +71,7 @@ def add_model_args(parser: argparse.ArgumentParser) -> None:
         "-m",
         type=str,
         default="CNN_LSTM_DepCap",
-        choices=["CNN_LSTM_DepCap", "Smaller"],
+        choices=MODEL_REGISTRY.keys(),
         help="Model architecture to use: 'CNN_LSTM_DepCap' (default, full model) "
         "or 'Smaller' (reduced model with ~50%% fewer parameters)",
     )

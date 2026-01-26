@@ -26,6 +26,7 @@ jupyter = "*"
 mypy = "*"
 pandas-stubs = "*"
 pytest = "*"
+scipy-stubs = "~=1.16.3"
 
 
 [build-system]

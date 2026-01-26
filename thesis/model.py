@@ -137,6 +137,8 @@ class CNN_LSTM_DepCap(nn.Module):
 
 
 class Smaller(nn.Module):
+    Conv1 = nn.Conv2d  # First convolution
+
     def __init__(
         self,
         input_shape,
@@ -165,7 +167,7 @@ class Smaller(nn.Module):
         """
         super().__init__()
 
-        self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=(10, 10), stride=2, padding=0)  # 64->32
+        self.conv1 = self.Conv1(in_channels, 32, kernel_size=(10, 10), stride=2, padding=0)  # 64->32
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=1)
         self.dropout2d_1 = nn.Dropout2d(dropout)
 
@@ -261,3 +263,15 @@ class Smaller(nn.Module):
         x = F.relu(self.fc2(x))
         logits = self.out(x)
         return logits
+
+
+class SmallerAll(Smaller):
+    Conv1 = nn.Conv3d
+
+
+# Model registry: maps model names to (model_class, default_rnn_hidden)
+MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int]] = {
+    "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
+    "Smaller": (Smaller, 64),
+    "SmallerAll": (SmallerAll, 64),
+}
