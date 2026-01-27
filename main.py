@@ -10,7 +10,7 @@ from typing import Literal
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from plot_training_curves import (
     TrainingCurvesError,
@@ -501,6 +501,32 @@ def create_model(
     return model
 
 
+def compute_class_weights(
+    dataset: Dataset, num_classes: int, device: torch.device
+) -> torch.Tensor:
+    """
+    Compute class weights for weighted loss based on chunk-level class distribution.
+
+    :param Dataset dataset: Dataset to compute weights for (FlattenedSpectrogramDataset).
+    :param int num_classes: Number of classes (2 or 4).
+    :param torch.device device: Device to place weights tensor on.
+    :return: Class weights tensor of shape (num_classes,).
+    :rtype: torch.Tensor
+    """
+    class_counts = torch.zeros(num_classes, dtype=torch.float)
+
+    # Count chunks for each class
+    for idx in range(len(dataset)):
+        _, label, _ = dataset[idx]
+        class_counts[label] += 1
+
+    # Calculate weights: 1 / count, then normalize
+    weights = 1.0 / class_counts
+    weights = weights / weights.sum()
+
+    return weights.to(device)
+
+
 def train_cross_validation(
     dataset_type: Literal["mdd", "cane", "both"] = "mdd",
     condition: str = "EC",
@@ -698,6 +724,10 @@ def train_cross_validation(
             flat_dataset,
         )
 
+        # Compute class weights for balanced loss
+        class_weights = compute_class_weights(train_dataset, num_classes, device)
+        logger.info(f"Fold {fold + 1} | Class weights | {class_weights}")
+
         # Create DataLoaders
         # Small dataset fits in RAM → extra workers add overhead, not speed
         # pin_memory speeds up CPU→GPU transfers, enabling Direct Memory Access
@@ -731,7 +761,7 @@ def train_cross_validation(
             freeze_lstm=freeze_lstm,
         )
 
-        criterion = nn.CrossEntropyLoss()
+        criterion = nn.CrossEntropyLoss(weight=class_weights)
         # Only optimize trainable parameters (important when CNN layers are frozen)
         optimizer = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
