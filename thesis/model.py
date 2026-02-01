@@ -137,7 +137,19 @@ class CNN_LSTM_DepCap(nn.Module):
 
 
 class Smaller(nn.Module):
-    Conv1 = nn.Conv2d  # First convolution
+    Pool1 = nn.MaxPool2d(kernel_size=2, stride=1)
+    Dropout1 = nn.Dropout2d
+
+    @classmethod
+    def Conv1(cls, in_channels: int) -> nn.Module:
+        """
+        Create the first convolutional layer.
+
+        :param int in_channels: Number of input channels.
+        :return: Configured Conv2d layer.
+        :rtype: nn.Module
+        """
+        return nn.Conv2d(in_channels, 32, kernel_size=(10, 10), stride=2, padding=0)
 
     def __init__(
         self,
@@ -167,9 +179,9 @@ class Smaller(nn.Module):
         """
         super().__init__()
 
-        self.conv1 = self.Conv1(in_channels, 32, kernel_size=(10, 10), stride=2, padding=0)  # 64->32
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=1)
-        self.dropout2d_1 = nn.Dropout2d(dropout)
+        self.conv1 = self.Conv1(in_channels)  # Create layer with proper in_channels
+        self.pool1 = self.Pool1
+        self.dropout1 = self.Dropout1(dropout)
 
         self.conv2 = nn.Conv2d(32, 16, kernel_size=(5, 5), stride=1, padding=0)  # 32->16
         self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=1)
@@ -178,7 +190,14 @@ class Smaller(nn.Module):
 
         # Calculate RNN input size by doing a dummy forward pass through conv layers
         with torch.no_grad():
-            dummy_input = torch.zeros(1, in_channels, *input_shape)
+            # For 3D CNN (SmallerAll): input is (B, C=1, D=in_channels, H, W)
+            # For 2D CNN (Smaller): input is (B, C=in_channels, H, W)
+            if isinstance(self.conv1, nn.Conv3d):
+                # 3D case: channels become depth dimension
+                dummy_input = torch.zeros(1, 1, in_channels, *input_shape)
+            else:
+                # 2D case: standard input
+                dummy_input = torch.zeros(1, in_channels, *input_shape)
             conv_output = self._forward_conv_layers(dummy_input)
             _, C, H, W = conv_output.shape
             rnn_input_size = H * C  # Each time step has H*C features
@@ -214,7 +233,7 @@ class Smaller(nn.Module):
         """
         x = self.relu(self.conv1(x))
         x = self.pool1(x)
-        x = self.dropout2d_1(x)
+        x = self.dropout1(x)
         x = self.relu(self.conv2(x))
         x = self.pool2(x)
         x = self.dropout2d_2(x)
@@ -266,7 +285,63 @@ class Smaller(nn.Module):
 
 
 class SmallerAll(Smaller):
-    Conv1 = nn.Conv3d
+    Pool1 = nn.AdaptiveMaxPool3d((1, None, None))
+    Dropout1 = nn.Dropout3d
+
+    @classmethod
+    def Conv1(cls, in_channels: int) -> nn.Module:
+        """
+        Create the first convolutional layer (3D version).
+
+        Takes 1 input channel with depth=in_channels (8 EEG channels).
+        Kernel spans all channels in depth so it processes all EEG channels
+        simultaneously in a single convolution operation.
+
+        :param int in_channels: Number of EEG channels (becomes depth dimension).
+        :return: Configured Conv3d layer for 3D spectrograms.
+        :rtype: nn.Module
+        """
+        return nn.Conv3d(
+            1,  # Input channels = 1 (depth dimension holds the 8 EEG channels)
+            32,  # Output channels
+            kernel_size=(in_channels, 10, 10),  # Depth=in_channels to span all EEG channels
+            stride=(1, 2, 2),  # No stride in depth, stride 2 in H and W
+            padding=0,
+        )
+
+    def forward(self, x):
+        """
+        Forward pass through the network with 3D CNN.
+
+        :param torch.Tensor x: Input tensor of shape (B, C, H, W) where B=batch size,
+                               C=channels (8 for multi-channel EEG),
+                               H=height (frequency bins), W=width (time frames).
+        :return: Class probabilities of shape (B, num_classes) after softmax.
+        :rtype: torch.Tensor
+        """
+        # Reshape for 3D conv: (B, 8, H, W) → (B, 1, 8, H, W)
+        # This makes the 8 channels become the depth dimension
+        x = x.unsqueeze(1)  # (B, 1, 8, H, W)
+
+        # Call parent's forward method which expects 4D output from conv layers
+        return super().forward(x)
+
+    def _forward_conv_layers(self, x):
+        """
+        Pass input through convolutional layers (3D→2D transition).
+
+        :param torch.Tensor x: Input tensor of shape (B, C, D, H, W) for 3D input.
+        :return: Output tensor after convolution and pooling (2D).
+        :rtype: torch.Tensor
+        """
+        x = self.relu(self.conv1(x))
+        x = self.pool1(x)
+        x = self.dropout1(x)
+        x = x.squeeze(2)  # Remove depth dimension: (B, C, 1, H, W) → (B, C, H, W)
+        x = self.relu(self.conv2(x))
+        x = self.pool2(x)
+        x = self.dropout2d_2(x)
+        return x
 
 
 # Model registry: maps model names to (model_class, default_rnn_hidden)
