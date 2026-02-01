@@ -24,7 +24,7 @@ For other helpful targets (such as formatting and type checking), see [Makefile]
 
 ## Dataset
 
-The project supports two EEG datasets that can be used independently or combined:
+The project supports three EEG datasets that can be used independently or combined:
 
 ### MDD Dataset
 
@@ -50,16 +50,30 @@ Expected location at `../CANE/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
 - **Sampling Rate**: 500 Hz
 - **Preprocessing**: Optional artifact removal via `--skip-artifact-removal` flag
 
+### AX_MALIK Dataset
+
+Expected location at `../AX_MALIK/`. Files follow pattern: `{ec|eo}/C{N}.edf`
+
+**Dataset Structure:**
+- **All subjects are anxiety class** (no healthy controls in this dataset)
+- **Conditions**: EC (eyes closed), EO (eyes open) - can train on single or combined (ec+eo)
+- **Channels**: Same 8 channels as MDD dataset (Fp1, Fp2, C3, Cz, C4, T7, T8, O2)
+- **Sampling Rate**: 256 Hz
+- **Duration**: 120 seconds per file
+- **Subjects**: 21 subjects (42 files total - one EC and one EO per subject)
+- **Preprocessing**: Uses MDDDataset preprocessing pipeline via inheritance
+
 ### Multi-Dataset Training
 
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
-- `--dataset both`: Combined (supports 2-class and 4-class modes)
+- `--dataset ax_malik`: AX_MALIK only (anxiety subjects only - no healthy controls in this dataset)
+- `--dataset all`: Combined (supports 2-class and 4-class modes)
 
 ### Classification Modes
 
 - `--class-mode 2`: Binary classification (healthy vs any-pathological) - works with all datasets
-- `--class-mode 4`: Multi-class (normal/anxiety/depression/comorbid) - requires `--dataset both`
+- `--class-mode 4`: Multi-class (normal/anxiety/depression/comorbid) - requires `--dataset all`
 
 ## Usage
 
@@ -98,9 +112,9 @@ poetry run python main.py train \
 poetry run python main.py train --skip-ica \
   --channel all \
   --class-mode 4 \
-  --dataset both \
+  --dataset all \
   --condition ec \
-  --checkpoint-dir=experiments/both_001_all_ec_4class
+  --checkpoint-dir=experiments/all_001_all_ec_4class
 ```
 
 Training creates checkpoints in the specified directory with the following structure:
@@ -223,10 +237,10 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 
 ## Important Notes
 
-- Dataset paths are hardcoded in `thesis/dataset.py` as `MDD_DIR` and `CANE_DIR`
+- Dataset paths are hardcoded in `thesis/dataset.py` as `MDD_DIR`, `CANE_DIR`, and `AX_MALIK_DIR`
 - Channel selection: Use `--channel all` (default) for 8 channels or specify single channel (Fp1, T7, etc.)
 - Multi-channel mode uses SmallerAll model with Conv3D for spatial feature learning
-- 4-class mode requires `--dataset both` (normal/anxiety/depression/comorbid)
+- 4-class mode requires `--dataset all` (normal/anxiety/depression/comorbid)
 - Channel naming standardized: T3→T7, T4→T8 for cross-dataset compatibility
 - STFT parameters: `nperseg=256`, `noverlap=192` → output shape (129, 41)
 - artifact removal are now optional for faster iteration (`--skip-artifact-removal`)
