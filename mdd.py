@@ -25,8 +25,7 @@ test_file = MDD_DIR / "MDD S5 EC.edf"
 logger.info(f"Testing MDD preprocessing with file: {test_file}")
 
 # Load and preprocess using the static method
-# Skip ICA since we're processing a single channel (ICA requires multiple channels)
-chunks = MDDDataset.load_and_preprocess_mdd_raw_file(test_file, channel="Fp1", skip_ica=True)
+chunks = MDDDataset.load_and_preprocess_mdd_raw_file(test_file, channel="Fp1")
 
 
 logger.info(f"Chunks shape: {chunks.shape}")

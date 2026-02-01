@@ -60,7 +60,6 @@ class MDDDataset(Dataset):
         labels: Optional[list[str]] = None,
         cache_size: Optional[int] = 100,
         transform: Optional[Callable] = None,
-        skip_ica: bool = True,
         channel: str = "all",
         test_mode: bool = False,
     ):
@@ -77,7 +76,6 @@ class MDDDataset(Dataset):
         :param int cache_size: Number of preprocessed files to cache in memory. If None,
                cache is not used
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
-        :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
         :param Optional[str] channel: Channel to use: specific channel name (e.g., "Fp1") or
                "all" for all 8 channels (excludes A2-A1 reference).
         :param bool test_mode: If True, load only one file per class for debugging.
@@ -85,7 +83,6 @@ class MDDDataset(Dataset):
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
-        self.skip_ica = skip_ica
         self.test_mode = test_mode
         self.files = self._discover_files(
             condition.upper() if condition is not None else None, subjects, labels
@@ -166,7 +163,7 @@ class MDDDataset(Dataset):
         Load an EDF file from disk, preprocess it, and return chunks. This contains all the
         preprocessing logic in this class.
 
-        Applies the full preprocessing pipeline: filtering, artifact removal (no ICA), and chunking.
+        Applies the full preprocessing pipeline: filtering and chunking.
 
         :param Path file_path: Path to the EDF file to preprocess.
         :param str channel: Channel to use: specific channel name (e.g., "Fp1") or

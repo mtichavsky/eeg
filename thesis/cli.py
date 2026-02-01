@@ -26,11 +26,6 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         "Examples: --condition ec, --condition ec+eo",
     )
     preproc_group.add_argument(
-        "--skip-ica",
-        action="store_true",
-        help="Skip ICA artifact removal (faster but less clean data)",
-    )
-    preproc_group.add_argument(
         "--skip-artifact-removal",
         action="store_true",
         help="Skip artifact interpolation and clipping in CANE dataset "
@@ -45,8 +40,7 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         + ["all"],
         default="all",
         help="Channel to use: specific channel name (Fp1, T7, etc.) or 'all' for all 8 channels. "
-        "When 'all' is selected, model receives 8-channel spectrograms. "
-        "Single channel selection automatically skips ICA.",
+        "When 'all' is selected, model receives 8-channel spectrograms.",
     )
     preproc_group.add_argument(
         "--class-mode",
