@@ -1,12 +1,16 @@
 # EXPERIMENTS
 
-| model                         | accuracy                          | sensitivity (Recall)                   | specificity                      | directory                                                      |
-|-------------------------------|-----------------------------------|----------------------------------------|----------------------------------|----------------------------------------------------------------|
-| binary, in-ear                | 80.79% ± 4.77%                    | 94.53% ± 2.36%                         | 55.48% ± 13.52%                  | all3-014b-inear-binary-smaller                                 |
-| 4-class, in-ear               |                                   |                                        |                                  |                                                                |
-| binary, 8-channel, MDD+CANE   | 78.88% ± 3.70%, (72.72% - 83.90%) | 95.69% ± 6.60% (Min: 81.82% - 100.00%) | 51.81% ± 6.95% (40.00% - 59.92%) | both-012-all-binary-smallerall                                 |
-| binary, 8-channel, 3 datasets | 79.72% ± 3.51%                    | 93.56% ± 5.03%                         | 54.75% ± 10.13%                  | all3-014b-all-binary-smallerallall3-014b-all-binary-smallerall |
-| 4-class, 8-channel, 3 dts.    | 64.58% ± 6.64%                    |                                        |                                  | all3-014b-all-4class-smallerall                                |
+| model                      | accuracy                        | sensitivity (Recall) | specificity    | directory                                       |
+|----------------------------|---------------------------------|----------------------|----------------|-------------------------------------------------|
+| binary, in-ear, 3 dts.     | 76.86% ± 2.84% x 77.79% ± 2.74% | 86.23% ± 4.29%       | 63.90% ± 4.66% | all3-016-inear-binary-smaller                   |
+| 4-class, in-ear, 3 dts.    | 63.62% ± 4.45%                  |                      |                | all3-016-inear-4class-smaller                   | 
+| binary, 8-channel, 3 dts.  | 76.83% ± 2.12%                  | 88.72% ± 2.86%       | 58.25% ± 6.44% | all3-017-all-binary-smallerall-weighted-sampler |
+| 4-class, 8-channel, 3 dts. | ---                             |                      |                |                                                 |
+
+
+CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-017-inear-binary-smaller-weighted-sampler
+CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-017-all-binary-smallerall-weighted-sampler
+
 
 
 ### all3-014b-all-binary-smallerall

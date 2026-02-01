@@ -4,6 +4,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from thesis.labels import get_display_names
+
 
 def _metrics_to_json_dict(metrics: dict, num_classes: int, include_confusion: bool = False) -> dict:
     """Convert a classification_metrics() dict to a compact JSON-friendly dict.
@@ -33,8 +35,8 @@ def _metrics_to_json_dict(metrics: dict, num_classes: int, include_confusion: bo
 
     # Multi-class: per-class precision and recall
     out = {"acc": round(float(metrics["accuracy"]), 4)}
-    class_names = ["normal", "anxiety", "depression", "anxiety+depression"]
-    for name in class_names:
+    display_names = get_display_names(num_classes)
+    for name in display_names.values():
         prec_key = f"precision_{name}"
         rec_key = f"recall_{name}"
         if prec_key in metrics:
