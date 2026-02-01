@@ -282,6 +282,60 @@ def _write_metrics_block(
             writer(_format_metric_line(f"{level} Recall ({class_name.capitalize()}) Mean", values))
 
 
+def _format_confusion_matrix(
+    confusion_matrices: list[np.ndarray],
+    num_classes: int,
+    writer: Callable[[str], Any],
+) -> None:
+    """
+    Aggregate confusion matrices across folds and format for output.
+
+    :param list[np.ndarray] confusion_matrices: List of confusion matrices from each fold.
+    :param int num_classes: Number of classes (2 or 4).
+    :param Callable[[str], Any] writer: Function to write output (e.g., logger.info or file.write).
+    :return: None
+    :rtype: None
+    """
+    # Sum confusion matrices across folds
+    aggregated_cm = np.sum(confusion_matrices, axis=0)
+
+    # Class names
+    if num_classes == 2:
+        class_names = ["Healthy", "Pathological"]
+    elif num_classes == 4:
+        class_names = ["Normal", "Anxiety", "Depression", "Anxiety+Depression"]
+    else:
+        class_names = [f"Class {i}" for i in range(num_classes)]
+
+    # Format output
+    writer("\nAggregated Confusion Matrix (sum across all folds):\n")
+
+    # Header row
+    header = "                "  # spacing for row labels
+    for name in class_names:
+        header += f"{name:>15} "
+    writer(header + "\n")
+
+    # Separator
+    writer("-" * (15 + 16 * num_classes) + "\n")
+
+    # Data rows
+    for i, row_name in enumerate(class_names):
+        row_str = f"{row_name:>15} "
+        for j in range(num_classes):
+            row_str += f"{int(aggregated_cm[i, j]):>15} "
+        writer(row_str + "\n")
+
+    # Additional statistics
+    writer("\n")
+    total_predictions = np.sum(aggregated_cm)
+    correct_predictions = np.trace(aggregated_cm)
+    overall_acc = correct_predictions / total_predictions if total_predictions > 0 else 0.0
+    writer(f"Total Predictions: {int(total_predictions)}\n")
+    writer(f"Correct Predictions: {int(correct_predictions)}\n")
+    writer(f"Overall Accuracy: {overall_acc:.4f} ({overall_acc * 100:.2f}%)\n")
+
+
 def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> None:
     """
     Write cross-validation results summary.
@@ -290,12 +344,14 @@ def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> 
     For binary classification: shows accuracy, sensitivity, specificity.
     For multi-class: shows accuracy and per-class recall.
     All values formatted as percentages.
+    Also displays aggregated confusion matrix summed across all folds.
 
     :param Callable[[str], Any] writer: Function to write output (e.g., logger.info or file.write).
     :param dict[str, list] cv_results: Cross-validation results containing:
         - fold_chunk_metrics: List of chunk-level metric dicts
         - fold_subject_metrics: List of subject-level metric dicts
         - fold_eval_combined_acc: List of combined accuracy values
+        - fold_chunk_confusion_matrices: List of confusion matrices from each fold
     :return: None
     :rtype: None
     """
@@ -310,3 +366,9 @@ def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> 
             "COMBINED Accuracy Mean (chunk×subject)", cv_results["fold_eval_combined_acc"]
         )
     )
+
+    # Add aggregated confusion matrix
+    chunk_cms = cv_results.get("fold_chunk_confusion_matrices", [])
+    if chunk_cms and len(chunk_cms) > 0:
+        num_classes = chunk_cms[0].shape[0]  # Infer from matrix shape
+        _format_confusion_matrix(chunk_cms, num_classes, writer)
