@@ -34,7 +34,7 @@ Expected location at `../MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {
 - **H** = Healthy control subjects
 - **MDD** = Major Depressive Disorder subjects
 - **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
-- **Channels**: 20 channels available, using only some of them 
+- **Channels**: 8 channels used (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) with standardized 10-20 naming
 - **Sampling Rate**: 250 Hz (SFREQ = 1000/4)
 - **Segments**: 10-second chunks (2,500 samples each)
 
@@ -46,15 +46,20 @@ Expected location at `../CANE/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
 - **H** = Healthy control subjects
 - **AX** = Anxiety disorder subjects
 - **Conditions**: ec (eyes closed), eo (eyes open) - can train on single or combined (ec+eo)
-- **Channels**: Similar 6 channels as MDD dataset
+- **Channels**: Same 8 channels as MDD dataset with standardized naming (T3→T7, T4→T8)
 - **Sampling Rate**: 500 Hz
-- **Preprocessing**: Uses artifact detection instead of ICA
+- **Preprocessing**: Optional artifact removal via `--skip-artifact-removal` flag
 
 ### Multi-Dataset Training
 
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
-- `--dataset both`: Combined (3 classes: normal vs depressed vs anxious)
+- `--dataset both`: Combined (supports 2-class and 4-class modes)
+
+### Classification Modes
+
+- `--class-mode 2`: Binary classification (healthy vs any-pathological) - works with all datasets
+- `--class-mode 4`: Multi-class (normal/anxiety/depression/comorbid) - requires `--dataset both`
 
 ## Usage
 
@@ -63,26 +68,39 @@ Expected location at `../CANE/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
 Train the CNN-LSTM model using 10-fold cross-validation on the Eyes Closed (EC) condition:
 
 ```bash
-# Standard training with ICA artifact removal
+# Standard training
 poetry run python main.py train
 
-# Faster training without ICA (for debugging/development)
-poetry run python main.py train --skip-ica
+# Test mode - loads only one file per class for rapid debugging
+poetry run python main.py train --test-mode
 
-# Single-channel training (Fp1 channel, automatically skips ICA)
-poetry run python main.py train --channel Fp1
-
-# Full example with all major configuration options
+# Multi-channel training (default: all 8 channels)
 poetry run python main.py train --skip-ica \
+  --channel all \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/mdd_001_all_ec \
+  --dataset mdd \
+  --condition ec
+
+# Single-channel training (Fp1 channel)
+poetry run python main.py train \
   --channel Fp1 \
   --batch-size 32 \
-  --checkpoint-dir=experiments/my_experiment \
+  --checkpoint-dir=experiments/mdd_001_fp1_ec \
   --dataset mdd \
   --condition ec \
   --n-folds 10 \
   --dropout 0.5 \
   --weight-decay 1e-4 \
   --val-every 1
+
+# 4-class classification with multi-channel input
+poetry run python main.py train --skip-ica \
+  --channel all \
+  --class-mode 4 \
+  --dataset both \
+  --condition ec \
+  --checkpoint-dir=experiments/both_001_all_ec_4class
 ```
 
 Training creates checkpoints in the specified directory with the following structure:
@@ -123,15 +141,29 @@ The inference script outputs:
 
 ## Model Architecture
 
-**CNN-LSTM-DepCap Model:**
-- Input: STFT spectrograms (129 × 41) from 10-second EEG segments
-- Conv2D layers: 64 filters (10×10), 32 filters (5×5) with MaxPooling
-- Spatial Dropout (`nn.Dropout2d`): Applied after each pooling layer for CNN regularization
-- LSTM/GRU layer: hidden size = 100, treating spectrograms as time sequences
-- Standard Dropout: Applied in classifier layers
-- Dense classifier: 64 → 32 → num_classes
-- Output: Classification (2-class: Healthy/MDD or Healthy/Anxious, 3-class: Healthy/MDD/Anxious)
-- Regularization: Configurable dropout (default 0.5) and L2 weight decay (default 1e-4)
+**Available Model Architectures:**
+
+1. **CNN_LSTM_DepCap** (default, single-channel):
+   - Input: STFT spectrograms (129 × 41) from 10-second EEG segments
+   - Conv2D layers: 64 filters (10×10), 32 filters (5×5) with MaxPooling
+   - Spatial Dropout (`nn.Dropout2d`): Applied after each pooling layer
+   - LSTM/GRU layer: hidden size = 100
+   - Dense classifier: 64 → 32 → num_classes
+
+2. **Smaller** (reduced model, ~50% fewer parameters):
+   - Lighter architecture for faster experimentation
+   - Same structure as CNN_LSTM_DepCap but with fewer filters
+
+3. **SmallerAll** (multi-channel, uses `--channel all`):
+   - Input: 8-channel spectrograms (8 × 129 × 41)
+   - Conv3D layers: Process all 8 EEG channels simultaneously
+   - Learns spatial correlations between electrode positions
+   - Automatically selected when using `--channel all`
+
+**Common Features:**
+- Configurable dropout (default 0.5) and L2 weight decay (default 1e-4)
+- Supports 2-class or 4-class classification modes
+- Transfer learning support via `--pretrained-checkpoint`
 
 ## Preprocessing Pipeline
 
@@ -140,12 +172,13 @@ Each EDF file undergoes the following preprocessing (see `thesis/dataset.py`):
 1. Load EDF file
 2. Bandpass filter: 1-70 Hz (IIR)
 3. Notch filter: 50 Hz (remove power line noise)
-4. Channel selection: 6 channels or single channel
-5. Average reference
-6. ICA with ICLabel: Artifact removal (optional, can be skipped)
-7. Segmentation: 10-second chunks
-8. STFT transformation: Convert to spectrograms
-9. Normalization: Log-magnitude spectrograms
+4. Channel selection: 8 channels (all) or single specific channel
+5. Channel name standardization: T3→T7, T4→T8 for cross-dataset compatibility
+6. Average reference
+8. Optional artifact removal for CANE: (`--skip-artifact-removal` to disable)
+9. Segmentation: 10-second chunks
+10. STFT transformation: Convert to spectrograms
+11. Normalization: Log-magnitude spectrograms
 
 ## Development
 
@@ -182,16 +215,22 @@ Spectrograms will be saved into `spectogram_(mdd|cane).png` files.
 
 The project uses **subject-level stratified K-fold cross-validation** (default K=10):
 - Prevents data leakage (all chunks from same subject stay together)
-- Maintains class balance (normal/depressed/anxious) across folds
+- Maintains class balance across folds (2-class or 4-class stratification)
 - For multi-dataset training, ensures each fold contains subjects from both datasets
 - Standard approach in EEG depression/anxiety classification literature
 - Early stopping based on chunk-level validation accuracy
+- Comprehensive metrics: accuracy, precision, recall, specificity, sensitivity
 
 ## Important Notes
 
 - Dataset paths are hardcoded in `thesis/dataset.py` as `MDD_DIR` and `CANE_DIR`
-- Single-channel mode automatically skips ICA (ICA requires multiple channels)
+- Channel selection: Use `--channel all` (default) for 8 channels or specify single channel (Fp1, T7, etc.)
+- Multi-channel mode uses SmallerAll model with Conv3D for spatial feature learning
+- 4-class mode requires `--dataset both` (normal/anxiety/depression/comorbid)
+- Channel naming standardized: T3→T7, T4→T8 for cross-dataset compatibility
 - STFT parameters: `nperseg=256`, `noverlap=192` → output shape (129, 41)
+- artifact removal are now optional for faster iteration (`--skip-artifact-removal`)
+- Test mode available: `--test-mode` loads one file per class for rapid debugging
 - Model expects preprocessed spectrograms, not raw EEG directly
 - Checkpoint directories are auto-generated with random suffixes if they exist
 - All logging uses Python's `logging` module, not print statements
