@@ -1,6 +1,4 @@
-
-- online x offline (ICA, common noise)
-  - user raw, focus on one channel
+Implement the plan: docs/plans/2026-02-01-ax-malik-dataset-design.md
 
 batch normalization?
 

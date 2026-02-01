@@ -54,7 +54,9 @@ for fold, (train_loader, val_loader, _, _) in enumerate(create_cross_validation_
 - **Healthy**: 28 files
 - **MDD**: 26 files
 - **Subjects**: 54 unique subjects
-- **Chunk size**: 6 channels × 2,500 samples (10 seconds at 250 Hz)
+- **Chunk size**:
+  - Single channel: 1 channel × 2,500 samples (10 seconds at 250 Hz)
+  - Multi-channel: 8 channels × 2,500 samples (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz)
 
 ## Preload vs Lazy Loading
 
@@ -118,8 +120,12 @@ loader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
 ## Data Format
 
 Each batch is a dictionary with:
-- `eeg`: Tensor of shape `(batch_size, channels, samples)` where channels=6, samples=2500
-- `label`: Integer tensor `(batch_size,)` - 0=Healthy, 1=MDD
+- `eeg`: Tensor of shape `(batch_size, channels, samples)` where:
+  - Single channel: `channels=1, samples=2500`
+  - Multi-channel: `channels=8, samples=2500` (ordered: Fp1, Fp2, T7, T8, C3, C4, Cz, Oz)
+- `label`: Integer tensor `(batch_size,)`
+  - 2-class mode: 0=Healthy, 1=MDD (or Anxious for CANE)
+  - 4-class mode (--dataset both only): 0=Normal, 1=Anxiety, 2=Depression, 3=Comorbid
 - `subject`: List of subject IDs (e.g., "H S1", "MDD S15")
 - `condition`: List of conditions (e.g., "EC", "EO", "TASK")
 
@@ -129,8 +135,18 @@ Applied to each file:
 1. Load EDF file
 2. Bandpass filter 1-70 Hz
 3. Notch filter at 50 Hz
-4. Select 6 channels: Fp1, Fp2, C3, C4, O2, Cz
-5. Average reference
-6. ICA with artifact removal (non-brain components)
-7. Chunk into 10-second segments
-8. Convert to PyTorch tensors
+4. Select channels:
+   - Single channel mode: specified channel (e.g., `--channel Fp1`)
+   - Multi-channel mode: 8 channels (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) when `--channel all`
+5. Channel name standardization: T3→T7, T4→T8 for cross-dataset compatibility
+6. Average reference
+7. Optional ICA with artifact removal (`--skip-ica` to disable)
+8. Optional artifact removal for CANE dataset (`--skip-artifact-removal` to disable)
+9. Chunk into 10-second segments
+10. Convert to PyTorch tensors
+
+**Key Updates:**
+- **8-channel support**: Now uses all 8 electrodes (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) by default
+- **Channel standardization**: Automatic T3→T7, T4→T8 mapping ensures compatibility across MDD and CANE datasets
+- **Flexible preprocessing**: ICA and artifact removal are now optional flags for faster experimentation
+- **Single channel mode**: Automatically skips ICA (which requires multiple channels)
