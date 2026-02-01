@@ -56,6 +56,7 @@ def prepare_mdd_dataset(
     channel: str,
     rng: np.random.RandomState,
     augmentation: Callable | None = None,
+    test_mode: bool = False,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
     Prepare MDD dataset with spectrograms and split subjects by class.
@@ -64,6 +65,7 @@ def prepare_mdd_dataset(
     :param str channel: Channel to use (e.g., "Fp1" or "all").
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param bool test_mode: If True, load only one file per class for debugging.
     :return: Tuple of (flat_dataset, SubjectClasses).
              Note: anxiety and anxiety_depression are empty for MDD dataset.
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
@@ -75,6 +77,7 @@ def prepare_mdd_dataset(
         mdd_dataset = MDDDataset(
             condition=condition,
             channel=channel,
+            test_mode=test_mode,
         )
         mdd_spec_dataset = SpectrogramDataset(
             mdd_dataset, fs=MDDDataset.FS, augmentation=augmentation
@@ -108,6 +111,7 @@ def prepare_cane_dataset(
     label_mapping: Optional[dict[int, int]] = None,
     skip_artifact_removal: bool = False,
     augmentation: Callable | None = None,
+    test_mode: bool = False,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
     Prepare CANE dataset with spectrograms and split subjects by class.
@@ -119,6 +123,7 @@ def prepare_cane_dataset(
            (e.g., {0:0, 1:1, 2:1, 3:1}).
     :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param bool test_mode: If True, load only one file per class for debugging.
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
     """
@@ -131,6 +136,7 @@ def prepare_cane_dataset(
             channel=channel,
             skip_extreme_artifacts=True,
             skip_artifact_removal=skip_artifact_removal,
+            test_mode=test_mode,
         )
         cane_spec_dataset = SpectrogramDataset(
             cane_dataset,
