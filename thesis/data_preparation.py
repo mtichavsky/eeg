@@ -9,6 +9,7 @@ import torch
 from torch.utils.data import ConcatDataset, Subset
 
 from thesis.dataset import (
+    AX_MALIKDataset,
     CANEDataset,
     FlattenedSpectrogramDataset,
     MDDDataset,
@@ -51,6 +52,67 @@ def determine_num_classes(class_mode: str) -> tuple[int, Optional[dict[int, int]
         raise ValueError(f"Invalid class_mode: {class_mode}")
 
 
+def _prepare_dataset_generic(
+    dataset_class: type[MDDDataset] | type[AX_MALIKDataset],
+    dataset_label: str,
+    conditions: list[str],
+    channel: str,
+    rng: np.random.RandomState,
+    fs: float,
+    augmentation: Callable | None = None,
+    test_mode: bool = False,
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
+    """
+    Generic dataset preparation for datasets following the MDD pattern.
+
+    Used by prepare_mdd_dataset and prepare_ax_malik_dataset to reduce code duplication.
+
+    :param type dataset_class: Dataset class to instantiate (MDDDataset or AX_MALIKDataset).
+    :param str dataset_label: Label for dataset ("mdd" or "ax_malik").
+    :param list[str] conditions: EEG conditions to load.
+    :param str channel: Channel to use (e.g., "Fp1" or "all").
+    :param np.random.RandomState rng: Random number generator for shuffling.
+    :param float fs: Sampling frequency for STFT.
+    :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param bool test_mode: If True, load only one file per class for debugging.
+    :return: Tuple of (flat_dataset, SubjectClasses).
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
+    """
+    all_flat_datasets = []
+    all_subjects = []
+
+    for condition in conditions:
+        # Instantiate dataset
+        dataset = dataset_class(
+            condition=condition,
+            channel=channel,
+            test_mode=test_mode,
+        )
+
+        # Create spectrogram dataset
+        spec_dataset = SpectrogramDataset(dataset, fs=fs, augmentation=augmentation)
+        flat_dataset = FlattenedSpectrogramDataset(spec_dataset)
+
+        # Validate shape
+        spec_shape = flat_dataset[0][0].shape[1:]
+        assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+            f"Expected (129, 41), got {spec_shape}. "
+            f"The neural net was designed using this assumption."
+        )
+
+        all_flat_datasets.append(flat_dataset)
+        all_subjects.extend(dataset.get_sorted_subjects())
+
+    # Combine datasets if multiple conditions
+    if len(all_flat_datasets) == 1:
+        combined_flat_dataset = all_flat_datasets[0]
+    else:
+        combined_flat_dataset = ConcatDataset(all_flat_datasets)
+
+    subject_classes = split_subjects_into_classes(all_subjects, dataset_label, rng)
+    return combined_flat_dataset, subject_classes
+
+
 def prepare_mdd_dataset(
     conditions: list[Literal["EC", "EO", "TASK"]],
     channel: str,
@@ -70,38 +132,16 @@ def prepare_mdd_dataset(
              Note: anxiety and anxiety_depression are empty for MDD dataset.
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
     """
-    all_flat_datasets = []
-    all_subjects = []
-
-    for condition in conditions:
-        mdd_dataset = MDDDataset(
-            condition=condition,
-            channel=channel,
-            test_mode=test_mode,
-        )
-        mdd_spec_dataset = SpectrogramDataset(
-            mdd_dataset, fs=MDDDataset.FS, augmentation=augmentation
-        )
-        mdd_flat_dataset = FlattenedSpectrogramDataset(mdd_spec_dataset)
-
-        spec_shape = mdd_flat_dataset[0][0].shape[1:]
-        assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-            f"Expected (129, 41), got {spec_shape}. "
-            f"The neural net was designed using this assumption."
-        )
-
-        all_flat_datasets.append(mdd_flat_dataset)
-        all_subjects.extend(mdd_dataset.get_sorted_subjects())
-
-    # Combine datasets if multiple conditions
-    if len(all_flat_datasets) == 1:
-        combined_flat_dataset = all_flat_datasets[0]
-    else:
-        combined_flat_dataset = ConcatDataset(all_flat_datasets)
-
-    subject_classes = split_subjects_into_classes(all_subjects, "mdd", rng)
-    # anxiety and anxiety_depression will be empty lists for MDD
-    return combined_flat_dataset, subject_classes
+    return _prepare_dataset_generic(
+        dataset_class=MDDDataset,
+        dataset_label="mdd",
+        conditions=conditions,
+        channel=channel,
+        rng=rng,
+        fs=MDDDataset.FS,
+        augmentation=augmentation,
+        test_mode=test_mode,
+    )
 
 
 def prepare_cane_dataset(
@@ -167,6 +207,38 @@ def prepare_cane_dataset(
 
     subject_classes = split_subjects_into_classes(all_subjects, "cane", rng)
     return cane_combined_flat, subject_classes
+
+
+def prepare_ax_malik_dataset(
+    conditions: list[Literal["EC", "EO"]],
+    channel: str,
+    rng: np.random.RandomState,
+    augmentation: Callable | None = None,
+    test_mode: bool = False,
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
+    """
+    Prepare AX_MALIK dataset with spectrograms and split subjects by class.
+
+    :param list[str] conditions: EEG conditions to load (e.g., ["EC", "EO"]).
+    :param str channel: Channel to use (e.g., "Fp1" or "all").
+    :param np.random.RandomState rng: Random number generator for shuffling.
+    :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param bool test_mode: If True, load only one file per class for debugging.
+    :return: Tuple of (flat_dataset, SubjectClasses).
+             Note: All subjects are anxiety class; normal, depression, and
+             anxiety_depression will be empty.
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
+    """
+    return _prepare_dataset_generic(
+        dataset_class=AX_MALIKDataset,
+        dataset_label="ax_malik",
+        conditions=conditions,
+        channel=channel,
+        rng=rng,
+        fs=AX_MALIKDataset.FS,
+        augmentation=augmentation,
+        test_mode=test_mode,
+    )
 
 
 def split_subjects_into_classes(
@@ -341,6 +413,7 @@ def get_datasets_for_fold(
     dataset_type: str,
     mdd_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
     cane_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
+    ax_malik_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
     flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
 ) -> tuple[ConcatDataset | Subset, ConcatDataset | Subset]:
     """
@@ -351,10 +424,11 @@ def get_datasets_for_fold(
     :param list anxiety_folds: Anxiety subject folds.
     :param list depression_folds: Depression subject folds.
     :param list anxiety_depression_folds: Anxiety+depression subject folds.
-    :param str dataset_type: Dataset type ("mdd", "cane", or "both").
-    :param mdd_flat_dataset: MDD flattened dataset (for "both" mode).
-    :param cane_flat_dataset: CANE flattened dataset (for "both" mode).
-    :param flat_dataset: Single dataset (for "mdd" or "cane" mode).
+    :param str dataset_type: Dataset type ("mdd", "cane", "ax_malik", or "all").
+    :param mdd_flat_dataset: MDD flattened dataset (for "all" mode).
+    :param cane_flat_dataset: CANE flattened dataset (for "all" mode).
+    :param ax_malik_flat_dataset: AX_MALIK flattened dataset (for "all" mode).
+    :param flat_dataset: Single dataset (for "mdd", "cane", or "ax_malik" mode).
     :return: Tuple of (train_dataset, val_dataset).
     :rtype: tuple
     """
@@ -384,55 +458,72 @@ def get_datasets_for_fold(
 
     # Get indices for train/val based on subjects (chunk-level indices)
     # Need to handle combined dataset differently
-    if dataset_type == "both":
-        assert mdd_flat_dataset is not None
-        assert cane_flat_dataset is not None
-        # Split by dataset source
-        mdd_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "mdd"]
-        mdd_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "mdd"]
-        cane_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "cane"]
-        cane_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "cane"]
+    if dataset_type == "all":
+        # Combine all available datasets
+        train_subsets = []
+        val_subsets = []
+        train_chunk_counts = {}
+        val_chunk_counts = {}
 
-        # Handle case where datasets might be ConcatDataset (multiple conditions)
-        if isinstance(mdd_flat_dataset, ConcatDataset):
+        # Process MDD dataset if available
+        if mdd_flat_dataset is not None:
+            mdd_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "mdd"]
+            mdd_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "mdd"]
+
             mdd_train_indices = get_indices_from_concat_dataset(
                 mdd_flat_dataset, mdd_train_subjects
             )
             mdd_val_indices = get_indices_from_concat_dataset(mdd_flat_dataset, mdd_val_subjects)
-        else:
-            mdd_train_indices = mdd_flat_dataset.get_indices_for_subjects(mdd_train_subjects)
-            mdd_val_indices = mdd_flat_dataset.get_indices_for_subjects(mdd_val_subjects)
 
-        if isinstance(cane_flat_dataset, ConcatDataset):
+            train_subsets.append(Subset(mdd_flat_dataset, mdd_train_indices))
+            val_subsets.append(Subset(mdd_flat_dataset, mdd_val_indices))
+            train_chunk_counts["MDD"] = len(mdd_train_indices)
+            val_chunk_counts["MDD"] = len(mdd_val_indices)
+
+        # Process CANE dataset if available
+        if cane_flat_dataset is not None:
+            cane_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "cane"]
+            cane_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "cane"]
+
             cane_train_indices = get_indices_from_concat_dataset(
                 cane_flat_dataset, cane_train_subjects
             )
             cane_val_indices = get_indices_from_concat_dataset(cane_flat_dataset, cane_val_subjects)
-        else:
-            cane_train_indices = cane_flat_dataset.get_indices_for_subjects(cane_train_subjects)
-            cane_val_indices = cane_flat_dataset.get_indices_for_subjects(cane_val_subjects)
 
-        train_dataset = ConcatDataset(
-            [
-                Subset(mdd_flat_dataset, mdd_train_indices),
-                Subset(cane_flat_dataset, cane_train_indices),
-            ]
-        )
-        val_dataset = ConcatDataset(
-            [
-                Subset(mdd_flat_dataset, mdd_val_indices),
-                Subset(cane_flat_dataset, cane_val_indices),
-            ]
-        )
+            train_subsets.append(Subset(cane_flat_dataset, cane_train_indices))
+            val_subsets.append(Subset(cane_flat_dataset, cane_val_indices))
+            train_chunk_counts["CANE"] = len(cane_train_indices)
+            val_chunk_counts["CANE"] = len(cane_val_indices)
 
-        logger.info(
-            f"Training chunks: MDD={len(mdd_train_indices)}, CANE={len(cane_train_indices)}, "
-            f"Total={len(train_dataset)}"
-        )
-        logger.info(
-            f"Validation chunks: MDD={len(mdd_val_indices)}, CANE={len(cane_val_indices)}, "
-            f"Total={len(val_dataset)}"
-        )
+        # Process AX_MALIK dataset if available
+        if ax_malik_flat_dataset is not None:
+            ax_malik_train_subjects = [
+                subj for ds, subj in train_subjects_with_dataset if ds == "ax_malik"
+            ]
+            ax_malik_val_subjects = [
+                subj for ds, subj in val_subjects_with_dataset if ds == "ax_malik"
+            ]
+
+            ax_malik_train_indices = get_indices_from_concat_dataset(
+                ax_malik_flat_dataset, ax_malik_train_subjects
+            )
+            ax_malik_val_indices = get_indices_from_concat_dataset(
+                ax_malik_flat_dataset, ax_malik_val_subjects
+            )
+
+            train_subsets.append(Subset(ax_malik_flat_dataset, ax_malik_train_indices))
+            val_subsets.append(Subset(ax_malik_flat_dataset, ax_malik_val_indices))
+            train_chunk_counts["AX_MALIK"] = len(ax_malik_train_indices)
+            val_chunk_counts["AX_MALIK"] = len(ax_malik_val_indices)
+
+        train_dataset = ConcatDataset(train_subsets)
+        val_dataset = ConcatDataset(val_subsets)
+
+        # Log chunk counts
+        train_count_str = ", ".join([f"{k}={v}" for k, v in train_chunk_counts.items()])
+        val_count_str = ", ".join([f"{k}={v}" for k, v in val_chunk_counts.items()])
+        logger.info(f"Training chunks: {train_count_str}, Total={len(train_dataset)}")
+        logger.info(f"Validation chunks: {val_count_str}, Total={len(val_dataset)}")
     else:
         assert flat_dataset is not None
         # Single dataset: extract just the subject names

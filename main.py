@@ -23,6 +23,7 @@ from thesis.data_preparation import (
     create_balanced_folds,
     determine_num_classes,
     get_datasets_for_fold,
+    prepare_ax_malik_dataset,
     prepare_cane_dataset,
     prepare_mdd_dataset,
     split_into_folds,
@@ -501,9 +502,7 @@ def create_model(
     return model
 
 
-def compute_class_weights(
-    dataset: Dataset, num_classes: int, device: torch.device
-) -> torch.Tensor:
+def compute_class_weights(dataset: Dataset, num_classes: int, device: torch.device) -> torch.Tensor:
     """
     Compute class weights for weighted loss based on chunk-level class distribution.
 
@@ -528,7 +527,7 @@ def compute_class_weights(
 
 
 def train_cross_validation(
-    dataset_type: Literal["mdd", "cane", "both"] = "mdd",
+    dataset_type: Literal["mdd", "cane", "ax_malik", "all"] = "mdd",
     condition: str = "EC",
     class_mode: str = "2",
     n_folds: int = 10,
@@ -554,7 +553,7 @@ def train_cross_validation(
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
 
-    :param str dataset_type: Dataset to use ("mdd", "cane", or "both").
+    :param str dataset_type: Dataset to use ("mdd", "cane", "ax_malik", or "all").
     :param str condition: EEG condition to use ("EC", "EO", "TASK", or "EC+EO").
     :param str class_mode: Classification mode ("2", or "4").
     :param int n_folds: Number of cross-validation folds.
@@ -615,7 +614,12 @@ def train_cross_validation(
     if label_mapping:
         logger.info(f"Label mapping: {label_mapping} (collapsing to binary)")
 
-    mdd_flat_dataset, cane_flat_dataset, flat_dataset = None, None, None
+    mdd_flat_dataset, cane_flat_dataset, ax_malik_flat_dataset, flat_dataset = (
+        None,
+        None,
+        None,
+        None,
+    )
     if dataset_type == "mdd":
         flat_dataset, subject_classes = prepare_mdd_dataset(
             conditions, channel, rng, augmentation=augmentation, test_mode=test_mode
@@ -649,7 +653,8 @@ def train_cross_validation(
             f"CANE dataset: {len(normal)} normal, {len(anxiety)} anxiety, "
             f"{len(depression)} depression, {len(anxiety_depression)} anxiety+depression subjects"
         )
-    elif dataset_type == "both":
+    elif dataset_type == "all":
+        # Load MDD dataset
         # T3=T7 and T4=T8 for these purposes, otherwise I couldn't combine the datasets
         if channel in ["T7", "T8"]:
             channel = {"T7": "T3", "T8": "T4"}[channel]
@@ -664,6 +669,8 @@ def train_cross_validation(
         )
         if channel in ["T3", "T4"]:
             channel = {"T3": "T7", "T4": "T8"}[channel]
+
+        # Load CANE dataset
         cane_conditions = [c.lower() for c in conditions]
         cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
             cane_conditions,
@@ -681,20 +688,31 @@ def train_cross_validation(
             cane_subject_classes.anxiety_depression,
         )
 
+        # Load AX_MALIK dataset
+        ax_malik_flat_dataset, ax_malik_subject_classes = prepare_ax_malik_dataset(
+            conditions, channel, rng, augmentation=augmentation, test_mode=test_mode
+        )
+        ax_malik_normal, ax_malik_anxiety, ax_malik_depression, ax_malik_anxiety_depression = (
+            ax_malik_subject_classes.normal,
+            ax_malik_subject_classes.anxiety,
+            ax_malik_subject_classes.depression,
+            ax_malik_subject_classes.anxiety_depression,
+        )
+
     # Create folds for each class separately (stratified)
-    if dataset_type == "both":
+    if dataset_type == "all":
         # For combined dataset, stratify each dataset separately then merge corresponding folds
         normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds = (
             create_balanced_folds(
-                [mdd_normal, cane_normal],
-                [mdd_anxiety, cane_anxiety],
-                [mdd_depression, cane_depression],
-                [mdd_anxiety_depression, cane_anxiety_depression],
+                [mdd_normal, cane_normal, ax_malik_normal],
+                [mdd_anxiety, cane_anxiety, ax_malik_anxiety],
+                [mdd_depression, cane_depression, ax_malik_depression],
+                [mdd_anxiety_depression, cane_anxiety_depression, ax_malik_anxiety_depression],
                 n_folds,
             )
         )
         logger.info(
-            f"Created {n_folds} balanced folds with subjects from both MDD and CANE datasets"
+            f"Created {n_folds} balanced folds with subjects from MDD, CANE, and AX_MALIK datasets"
         )
     else:
         # Single dataset: some classes may be empty
@@ -721,6 +739,7 @@ def train_cross_validation(
             dataset_type,
             mdd_flat_dataset,
             cane_flat_dataset,
+            ax_malik_flat_dataset,
             flat_dataset,
         )
 
@@ -965,7 +984,7 @@ def run(args: argparse.Namespace) -> None:
 
     # Preprocess EDF file
     logger.info("Preprocessing EDF file...")
-    chunks = MDDDataset.load_and_preprocess_mdd_raw_file(edf_file, args.channel)
+    chunks = MDDDataset.load_and_preprocess_edf_file(edf_file, args.channel, fs=250)
     logger.info(f"Extracted {len(chunks)} chunks from EDF file")
     if len(chunks) == 0:
         raise RuntimeError("No valid chunks extracted from EDF file")

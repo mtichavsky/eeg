@@ -14,7 +14,7 @@ This is a thesis project for EEG-based depression (MDD) & anxiety detection usin
 
 ## Datasets
 
-The project supports two EEG datasets that can be used independently or combined:
+The project supports three EEG datasets that can be used independently or combined:
 
 ### 1. MDD Dataset
 Located at `/home/milan/Documents/diplomka/MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {EC|EO|TASK}.edf`
@@ -37,15 +37,27 @@ Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern:
 - **Sampling**: 500 Hz
 - **Preprocessing**: Artifact removal optional via `--skip-artifact-removal` flag
 
+### 3. AX_MALIK Dataset
+Located at `/home/milan/Documents/diplomka/AX_MALIK/`. Files follow pattern: `{ec|eo}/C{N}.edf`
+
+- **All subjects are anxiety class** (no healthy controls in this dataset)
+- **Conditions**: EC (eyes closed), EO (eyes open) - can train on single or combined (ec+eo)
+- **Channels**: Same 8 channels as MDD (Fp1, Fp2, C3, Cz, C4, T7, T8, O2) - standardized 10-20 nomenclature
+- **Sampling**: 256 Hz
+- **Duration**: 120 seconds per file
+- **Subjects**: 21 subjects (42 files total - one EC and one EO per subject)
+- **Inheritance**: Uses MDDDataset preprocessing pipeline via inheritance for maximum code reuse
+
 ### Multi-Dataset Training
 The system supports training on:
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
-- `--dataset both`: Combined (supports both 2-class and 4-class modes)
+- `--dataset ax_malik`: AX_MALIK only (2 classes: normal vs anxious)
+- `--dataset all`: Combined (supports both 2-class and 4-class modes)
 
 ### Classification Modes
 - `--class-mode 2`: Binary classification (healthy vs any-pathological)
-- `--class-mode 4`: Multi-class classification (normal/anxiety/depression/comorbid) - requires `--dataset both`
+- `--class-mode 4`: Multi-class classification (normal/anxiety/depression/comorbid) - requires `--dataset all`
 
 For detailed dataset usage, see DATASET_USAGE.md and context.md.
 
@@ -94,13 +106,13 @@ poetry run python main.py train --skip-ica \
   --weight-decay 1e-4 \
   --val-every 1
 
-# 4-class classification (requires --dataset both)
+# 4-class classification (requires --dataset all)
 poetry run python main.py train --skip-ica \
   --channel all \
   --class-mode 4 \
-  --dataset both \
+  --dataset all \
   --condition ec \
-  --checkpoint-dir=experiments/both_001_all_ec
+  --checkpoint-dir=experiments/all_001_all_ec
 ```
 
 ### Transfer Learning
@@ -144,7 +156,7 @@ All experiment directories **MUST** follow this naming pattern:
 ```
 
 **Components:**
-- `<dataset>`: Dataset identifier (`mdd`, `cane`, or `both`)
+- `<dataset>`: Dataset identifier (`mdd`, `cane`, `ax_malik`, or `all`)
 - `<version>`: Experiment version/iteration (e.g., `006`, `007`)
 - `<channel>`: EEG channel used (e.g., `fp1`, `t7`, `t8`, `all` for 8-channel)
 - `<condition>`: Recording condition (`ec`, `eo`, or `ec+eo`)
@@ -152,8 +164,9 @@ All experiment directories **MUST** follow this naming pattern:
 **Examples:**
 - `experiments/mdd_006_fp1_ec` - MDD dataset, version 006, Fp1 channel, eyes closed
 - `experiments/cane_006_t7_ec+eo` - CANE dataset, version 006, T7 channel, combined conditions
-- `experiments/both_007_all_ec` - Both datasets, version 007, all 8 channels, eyes closed
-- `experiments/both_012b_all_ec+eo` - Both datasets, multi-channel, combined conditions
+- `experiments/ax_malik_001_all_ec` - AX_MALIK dataset, version 001, all 8 channels, eyes closed
+- `experiments/all_007_all_ec` - All datasets, version 007, all 8 channels, eyes closed
+- `experiments/all_012b_all_ec+eo` - All datasets, multi-channel, combined conditions
 
 **Why this matters:**
 - Ensures consistent organization across all experiments
@@ -249,9 +262,10 @@ The `MDDDataset` supports two modes:
 **Labels (2-class mode):**
 - MDD dataset: 0 = Healthy, 1 = Depressed
 - CANE dataset: 0 = Healthy, 1 = Anxious
-- Both dataset: 0 = Healthy, 1 = Any pathological
+- AX_MALIK dataset: All subjects are labeled as 1 (Anxious) - no healthy controls
+- All datasets: 0 = Healthy, 1 = Any pathological
 
-**Labels (4-class mode, requires --dataset both):**
+**Labels (4-class mode, requires --dataset all):**
 - 0 = Healthy (normal)
 - 1 = Anxiety only
 - 2 = Depression only
@@ -262,7 +276,7 @@ The `MDDDataset` supports two modes:
 **Cross-Validation Architecture:**
 - **Subject-level splits**: All chunks from same subject stay together to prevent data leakage
 - **Stratified folding**: Maintains class balance (normal/depressed/anxious) across folds
-- **Balanced multi-dataset folding**: When using `--dataset both`, each fold contains subjects from BOTH MDD and CANE datasets (not just mixed randomly). This is achieved via `create_balanced_folds()` which stratifies each dataset independently then merges corresponding folds.
+- **Balanced multi-dataset folding**: When using `--dataset all`, each fold contains subjects from all datasets (MDD, CANE, AX_MALIK) (not just mixed randomly). This is achieved via `create_balanced_folds()` which stratifies each dataset independently then merges corresponding folds.
 - **Standard**: 10-fold CV as per EEG depression literature
 
 **Design Principles:**
@@ -352,7 +366,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
   - Channel standardization: T3→T7, T4→T8 mapping for cross-dataset compatibility
   - Canonical 8-channel ordering: Fp1, Fp2, T7, T8, C3, C4, Cz, Oz
 - **4-class classification** (Jan 2026): `--class-mode 4` for normal/anxiety/depression/comorbid classification
-  - Requires `--dataset both` for access to all classes
+  - Requires `--dataset all` for access to all classes
   - Label remapping logic handles dataset-specific class availability
   - Binary mode (`--class-mode 2`) remains available for comparison
 - **Simplified preprocessing** (Jan 2026): artifact removal now optional

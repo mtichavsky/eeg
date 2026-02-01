@@ -4,6 +4,7 @@ experiments/**/fold_*_loss_curves.png
 .idea/
 spectrogram_*.png
 visualized_*.png
+drawio
 
 ### Python template
 # Byte-compiled / optimized / DLL files
