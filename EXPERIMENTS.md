@@ -1,12 +1,11 @@
 # EXPERIMENTS
 
-| model | accuracy | sensitivity | specificity | recall |
+| model | accuracy | sensitivity (Recall) | specificity | directory |
 | --- | ---|
 | binary, in-ear |
 | 4-class, in-ear |
-| binary, 8-channel |
+| binary, 8-channel | 78.88% ± 3.70%, (72.72% - 83.90%) | 95.69% ± 6.60% (Min: 81.82% - 100.00%) |  51.81% ± 6.95% (40.00% - 59.92%) |  experiments/both-testing00_ckk/ |
 | 4-class, 8-channel |
-
 
 Make sure I get all the necessary stats.
 Run something to figure out impact of adding weights to cross entropy.
