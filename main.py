@@ -284,6 +284,7 @@ def train_one_fold(
 
     best_chunk_metrics: dict[str, float] = {}
     best_subject_metrics: dict[str, float] = {}
+    best_chunk_confusion_matrix: np.ndarray = np.zeros((num_classes, num_classes), dtype=int)
 
     fold_history = {
         "train_loss": [],
@@ -368,6 +369,8 @@ def train_one_fold(
                 # Capture metrics including accuracy
                 best_chunk_metrics = extract_classification_metrics(chunk_metrics, num_classes)
                 best_subject_metrics = extract_classification_metrics(subject_metrics, num_classes)
+                best_chunk_confusion_matrix = chunk_metrics["confusion_matrix"]
+
                 best_model_path = checkpoint_dir / f"fold_{fold + 1}_best.pth"
                 torch.save(
                     {
@@ -417,6 +420,7 @@ def train_one_fold(
         "history": fold_history,
         "chunk_metrics": best_chunk_metrics,
         "subject_metrics": best_subject_metrics,
+        "chunk_confusion_matrix": best_chunk_confusion_matrix,
     }
 
 
@@ -602,6 +606,7 @@ def train_cross_validation(
         "fold_final_epoch": [],
         "fold_chunk_metrics": [],
         "fold_subject_metrics": [],
+        "fold_chunk_confusion_matrices": [],
     }
 
     rng = np.random.RandomState(RANDOM_SEED)
@@ -810,6 +815,7 @@ def train_cross_validation(
         cv_results["fold_final_epoch"].append(fold_result["final_epoch"])
         cv_results["fold_chunk_metrics"].append(fold_result["chunk_metrics"])
         cv_results["fold_subject_metrics"].append(fold_result["subject_metrics"])
+        cv_results["fold_chunk_confusion_matrices"].append(fold_result["chunk_confusion_matrix"])
 
     # Print final cross-validation results
     logger.info(f"{'=' * 80}")
