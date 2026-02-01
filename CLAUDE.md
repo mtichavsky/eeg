@@ -22,7 +22,8 @@ Located at `/home/milan/Documents/diplomka/MDD/`. Files follow the naming patter
 - **H** = Healthy control
 - **MDD** = Major Depressive Disorder
 - **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
-- **Channels**: 6 channels used (Fp1, Fp2, C3, C4, O2, Cz)
+- **Channels**: 8 channels available (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) - can use all or select specific channel
+- **Channel Naming**: Standardized to 10-20 system (T3→T7, T4→T8 for cross-dataset compatibility)
 - **Sampling**: 250 Hz (SFREQ = 1000/4)
 - **Segments**: 10-second chunks (2500 samples each)
 
@@ -32,15 +33,19 @@ Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern:
 - **H** = Healthy control
 - **AX** = Anxiety disorder
 - **Conditions**: ec (eyes closed), eo (eyes open) - lowercase, can train on single or combined (ec+eo)
-- **Channels**: Same 6 channels as MDD
+- **Channels**: Same 8 channels as MDD (standardized naming)
 - **Sampling**: 500 Hz
-- **Preprocessing**: Uses `skip_extreme_artifacts=True` instead of ICA
+- **Preprocessing**: Artifact removal optional via `--skip-artifact-removal` flag
 
 ### Multi-Dataset Training
 The system supports training on:
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
-- `--dataset both`: Combined (3 classes: normal vs depressed vs anxious)
+- `--dataset both`: Combined (supports both 2-class and 4-class modes)
+
+### Classification Modes
+- `--class-mode 2`: Binary classification (healthy vs any-pathological)
+- `--class-mode 4`: Multi-class classification (normal/anxiety/depression/comorbid) - requires `--dataset both`
 
 For detailed dataset usage, see DATASET_USAGE.md and context.md.
 
@@ -66,10 +71,18 @@ make format
 # Main training script with cross-validation
 poetry run python main.py train
 
-# Faster, debug run, skipping the ICA
-poetry run python main.py train --skip-ica
+# Test mode - load only one file per class for rapid debugging
+poetry run python main.py train --test-mode
 
-# Full example with all major options (following naming convention)
+# Multi-channel training (default, uses all 8 channels)
+poetry run python main.py train \ 
+  --channel all \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/mdd_007_all_ec \
+  --dataset mdd \
+  --condition ec
+
+# Single-channel training example
 poetry run python main.py train --skip-ica \
   --channel Fp1 \
   --batch-size 32 \
@@ -80,12 +93,20 @@ poetry run python main.py train --skip-ica \
   --dropout 0.5 \
   --weight-decay 1e-4 \
   --val-every 1
+
+# 4-class classification (requires --dataset both)
+poetry run python main.py train --skip-ica \
+  --channel all \
+  --class-mode 4 \
+  --dataset both \
+  --condition ec \
+  --checkpoint-dir=experiments/both_001_all_ec
 ```
 
 ### Transfer Learning
 ```bash
 # Fine-tune a pretrained MDD model on CANE dataset
-poetry run python main.py train --skip-ica \
+poetry run python main.py train \
   --channel Fp1 \
   --batch-size 32 \
   --checkpoint-dir=experiments/cane_009_fp1_ec_transfer \
@@ -96,7 +117,7 @@ poetry run python main.py train --skip-ica \
   --freeze-cnn
 
 # Transfer learning with all layers trainable (no freezing)
-poetry run python main.py train --skip-ica \
+poetry run python main.py train \
   --channel Fp1 \
   --checkpoint-dir=experiments/cane_009_fp1_ec_finetune \
   --dataset cane \
@@ -125,13 +146,14 @@ All experiment directories **MUST** follow this naming pattern:
 **Components:**
 - `<dataset>`: Dataset identifier (`mdd`, `cane`, or `both`)
 - `<version>`: Experiment version/iteration (e.g., `006`, `007`)
-- `<channel>`: EEG channel used (e.g., `fp1`, `t4`, `t3`, `t7`)
+- `<channel>`: EEG channel used (e.g., `fp1`, `t7`, `t8`, `all` for 8-channel)
 - `<condition>`: Recording condition (`ec`, `eo`, or `ec+eo`)
 
 **Examples:**
 - `experiments/mdd_006_fp1_ec` - MDD dataset, version 006, Fp1 channel, eyes closed
 - `experiments/cane_006_t7_ec+eo` - CANE dataset, version 006, T7 channel, combined conditions
-- `experiments/both_007_fp1_ec` - Both datasets, version 007, Fp1 channel, eyes closed
+- `experiments/both_007_all_ec` - Both datasets, version 007, all 8 channels, eyes closed
+- `experiments/both_012b_all_ec+eo` - Both datasets, multi-channel, combined conditions
 
 **Why this matters:**
 - Ensures consistent organization across all experiments
@@ -162,21 +184,26 @@ Run with: `poetry run jupyter notebook`
    - `MDDDataset`: PyTorch Dataset with lazy/preload modes, LRU caching
    - `create_cross_validation_splits()`: Subject-level stratified K-fold CV
    - `get_preprocessed_chunks()`: Legacy function for single-file processing
-   - Preprocessing pipeline: bandpass filter (1-70 Hz) → notch filter (50 Hz) → ICA artifact removal → 10s chunking
+   - Preprocessing pipeline: bandpass filter (1-70 Hz) → notch filter (50 Hz) → optional artifact removal → 10s chunking
+   - CANE artifact removal can be skipped with `--skip-artifact-removal` flag
 
 2. **`thesis/model.py`** - Neural network architectures
-   - `CNN_LSTM_DepCap`: Main model implementing the paper's architecture
+   - `CNN_LSTM_DepCap`: Main model implementing the paper's architecture (2D convolutions for single-channel)
      - Conv2D layers (64 filters 10x10, 32 filters 5x5) with MaxPool
      - Spatial Dropout (nn.Dropout2d) after each pooling layer for better CNN regularization
      - LSTM/GRU layer (hidden=100) treating spectrograms as time sequences
      - Dense classifier (64 → 32 → num_classes) with standard dropout
+   - `Smaller`: Reduced model (~50% fewer parameters) for faster experimentation
+   - `SmallerAll`: Multi-channel variant using Conv3d to process all 8 EEG channels simultaneously
+     - Conv3D kernel spans all channels for spatial feature learning
+     - Enables learning cross-channel correlations
 
 ### Training Scripts
 
 **`main.py`** - Primary training script
 - Contains `SpectrogramDataset` for converting EEG to spectrograms
 - Uses STFT (Short-Time Fourier Transform) for time-frequency representation
-- Implements training/evaluation loops with metrics (accuracy, precision, recall, specificity)
+- Implements training/evaluation loops with comprehensive metrics (accuracy, precision, recall, specificity, sensitivity)
 - Supports training on single condition (EC/EO) or combined (EC+EO)
 - Early stopping based on chunk-level accuracy (not combined metric)
 - Configurable hyperparameters: dropout (default 0.5), weight decay/L2 (default 1e-4)
@@ -208,18 +235,27 @@ The `MDDDataset` supports two modes:
 ## Model Input/Output
 
 **Raw EEG Input:**
-- Shape: `(batch_size, 6, 2500)` - 6 channels × 2500 samples
-- Output from `MDDDataset` as `batch['eeg']`
+- Single channel: `(batch_size, 1, 2500)` - 1 channel × 2500 samples
+- Multi-channel: `(batch_size, 8, 2500)` - 8 channels × 2500 samples
+- Output from datasets as `batch['eeg']`
 
-**Spectrogram Input (for CNN_LSTM_DepCap):**
-- Shape: `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
+**Spectrogram Input:**
+- Single channel (CNN_LSTM_DepCap, Smaller): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
+- Multi-channel (SmallerAll): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
 - Current default: `(129, 41)` with nperseg=256, noverlap=192
 - Paper target: `(254, 342)` (may require parameter tuning)
 - Created via STFT in `SpectrogramDataset` or preprocessing
 
-**Labels:**
-- 0 = Healthy (H)
-- 1 = MDD
+**Labels (2-class mode):**
+- MDD dataset: 0 = Healthy, 1 = Depressed
+- CANE dataset: 0 = Healthy, 1 = Anxious
+- Both dataset: 0 = Healthy, 1 = Any pathological
+
+**Labels (4-class mode, requires --dataset both):**
+- 0 = Healthy (normal)
+- 1 = Anxiety only
+- 2 = Depression only
+- 3 = Comorbid (both anxiety and depression)
 
 ## Key Implementation Details
 
@@ -234,20 +270,23 @@ The `MDDDataset` supports two modes:
 2. **Extensibility**: Adding new datasets requires implementing a prepare function following the same pattern
 3. **Data leakage prevention**: Never split chunks from the same subject across train/val
 4. **Reproducibility**: Fixed random seed (42) for deterministic fold creation
-5. **Dataset independence**: When combining datasets, maintain separate preprocessing pipelines (e.g., MDD uses ICA, CANE uses artifact detection)
+5. **Dataset independence**: When combining datasets, maintain separate preprocessing pipelines
+6. **Channel standardization**: Unified 8-channel ordering (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) with automatic T3→T7, T4→T8 mapping for cross-dataset compatibility
 
 **Preprocessing Pipeline (in `thesis/dataset.py`):**
-```python
-# Applied to each .edf file:
+
+Applied to each .edf file:
+
 1. Load EDF
 2. Bandpass filter 1-70 Hz (IIR)
 3. Notch filter 50 Hz (remove power line noise)
-4. Select 6 channels
+4. Select channels (8 channels or specific channel)
 5. Average reference
-6. ICA with ICLabel for artifact removal (remove non-brain components)
+6. Optional: Artifact interpolation/clipping for CANE (--skip-artifact-removal to disable)
 7. Chunk into 10-second segments
 8. Convert to PyTorch tensors
-```
+
+**Note:** Preprocessing is now more flexible - artifact removal can be skipped for faster iteration. The model can learn to handle artifacts directly from the data.
 
 **Spectrogram Generation:**
 - Uses `scipy.signal.stft()` with Hamming window
@@ -297,25 +336,36 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Artificially inflated performance metrics
 
 **Why Separate Dataset Classes?**
-- Different preprocessing requirements (MDD: ICA, CANE: artifact detection)
+- Different preprocessing requirements (CANE uses artifact detection with interpolation/clipping, MDD uses simpler pipeline)
 - Different STFT parameters (though standardized to same output shape)
 - Different channel names/orderings in raw files
+- Different sampling rates (MDD: 250 Hz, CANE: 500 Hz)
+- Different channel naming in raw files (requires mapping to canonical names)
 - Allows independent evolution of preprocessing pipelines
+- Channel standardization: Both datasets now use unified 8-channel canonical ordering
 
 ## Code Evolution Notes
 
 **Recent Major Changes:**
-- **Transfer learning**: Load pretrained weights via `--pretrained-checkpoint` and freeze CNN layers with `--freeze-cnn`
+- **Multi-channel EEG support** (Jan 2026): Can use all 8 channels (`--channel all`) or single channel
+  - New `SmallerAll` model with Conv3d for multi-channel spatial feature learning
+  - Channel standardization: T3→T7, T4→T8 mapping for cross-dataset compatibility
+  - Canonical 8-channel ordering: Fp1, Fp2, T7, T8, C3, C4, Cz, Oz
+- **4-class classification** (Jan 2026): `--class-mode 4` for normal/anxiety/depression/comorbid classification
+  - Requires `--dataset both` for access to all classes
+  - Label remapping logic handles dataset-specific class availability
+  - Binary mode (`--class-mode 2`) remains available for comparison
+- **Simplified preprocessing** (Jan 2026): artifact removal now optional
+  - `--skip-artifact-removal` for CANE dataset
+  - Model learns to handle artifacts directly from data
+- **Test mode** (Feb 2026): `--test-mode` flag for rapid debugging with single file per class
+- **Enhanced metrics** (Dec 2025): Added sensitivity/specificity/recall to cv_results.txt
+- **Transfer learning**: Load pretrained weights via `--pretrained-checkpoint` and freeze layers with `--freeze-cnn`/`--freeze-lstm`
 - **Model registry**: `MODEL_REGISTRY` dict centralizes model class lookups; `create_model()` factory handles instantiation
 - **Multi-condition support**: Can now train on combined EC+EO conditions using `--condition ec+eo`
 - **Spatial Dropout**: Added `nn.Dropout2d` after CNN pooling layers for better feature map regularization
 - **L2 Regularization**: Added weight decay parameter (default 1e-4) for L2 penalty on weights
-- **Early stopping metric**: Changed from combined metric to chunk-level accuracy for more stable training
-- **Configurable hyperparameters**: Dropout and weight decay now exposed as CLI arguments
 - **Training visualization**: Added `plot_training_curves.py` for analyzing fold performance
-- Refactored from single-dataset to multi-dataset support
-- Moved from simple array splits to balanced stratified folding
-- Introduced dataset-aware subject tuples: `(dataset_label, subject_id)` for cross-dataset training
 
 **Deprecated Patterns:**
 - ~~Direct use of `MDDDataset` for training~~ → Use `prepare_mdd_dataset()`
