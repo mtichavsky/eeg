@@ -49,7 +49,7 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         choices=["2", "4"],
         help="Classification mode: "
         "'2' forces binary (healthy vs any-pathological), "
-        "'4' requires --dataset both for all classes. "
+        "'4' requires --dataset all for all classes. "
         "Note: not all datasets contain all classes.",
     )
     preproc_group.add_argument(
@@ -97,10 +97,11 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--dataset",
         type=str,
         default="mdd",
-        choices=["mdd", "cane", "both"],
+        choices=["mdd", "cane", "all"],
         help="Dataset to train on: 'mdd' (2 classes: normal, mdd), "
-        "'cane' (2-3 classes: normal, anxious[, mdd]), "
-        "or 'both' (3 classes: normal, mdd, anxious)",
+        "'cane' (2-4 classes: normal, anxious, mdd, comorbid), "
+        "'ax_malik' (not an option rn, only anxious class), "
+        "or 'all' (combined datasets with 2-4 classes)",
     )
     add_model_args(train_parser)
     train_parser.add_argument(

@@ -1,6 +1,7 @@
 import logging
 import re
 import warnings
+from collections import Counter
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable, Literal, Optional
@@ -19,6 +20,7 @@ warnings.filterwarnings("ignore")
 
 CANE_DIR = Path("/home/milan/Documents/diplomka/CANE/")
 MDD_DIR = Path("/home/milan/Documents/diplomka/MDD/")
+AX_MALIK_DIR = Path("/home/milan/Documents/diplomka/AX_MALIK/")
 
 CHUNK_DURATION_SEC = 10
 
@@ -29,6 +31,7 @@ CANONICAL_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2/Oz"]
 # Dataset-specific channel mappings to canonical order
 MDD_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]  # T3→T7, T4→T8
 CANE_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "Oz"]
+AX_MALIK_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]
 
 
 class MDDDataset(Dataset):
@@ -96,11 +99,11 @@ class MDDDataset(Dataset):
 
         if cache_size:
             self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
-                MDDDataset.load_and_preprocess_mdd_raw_file
+                MDDDataset.load_and_preprocess_edf_file
             )
         else:
             self._load_and_preprocess_mdd_raw_file_cached = (
-                MDDDataset.load_and_preprocess_mdd_raw_file
+                lambda path, channel, fs: MDDDataset.load_and_preprocess_edf_file(path, channel, fs)
             )
 
     def _discover_files(
@@ -155,9 +158,10 @@ class MDDDataset(Dataset):
         return files
 
     @staticmethod
-    def load_and_preprocess_mdd_raw_file(
+    def load_and_preprocess_edf_file(
         file_path: Path,
         channel: str,
+        fs: float,
     ) -> torch.Tensor:
         """
         Load an EDF file from disk, preprocess it, and return chunks. This contains all the
@@ -168,9 +172,13 @@ class MDDDataset(Dataset):
         :param Path file_path: Path to the EDF file to preprocess.
         :param str channel: Channel to use: specific channel name (e.g., "Fp1") or
                "all" for all 8 channels.
+        :param float fs: Sampling frequency in Hz (e.g., 250 for MDD, 256 for AX_MALIK).
         :return: Tensor of preprocessed EEG chunks with shape (num_chunks, channels, samples).
         :rtype: torch.Tensor
         """
+        # Calculate chunk samples from passed fs, not class attribute
+        chunk_samples = int(CHUNK_DURATION_SEC * fs)
+
         raw = mne.io.read_raw_edf(file_path, preload=True, verbose=False)
         raw = raw.filter(l_freq=1, h_freq=70, method="iir", verbose=False)
         raw = raw.notch_filter(freqs=50, verbose=False)
@@ -190,8 +198,9 @@ class MDDDataset(Dataset):
         data = raw.get_data()
         n_samples = data.shape[1]
         chunks_list: list[np.ndarray] = []
-        for i in range(0, n_samples - MDDDataset.CHUNK_SAMPLES + 1, MDDDataset.CHUNK_SAMPLES):
-            chunk = data[:, i : i + MDDDataset.CHUNK_SAMPLES]
+        # Use chunk_samples variable instead of MDDDataset.CHUNK_SAMPLES
+        for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
+            chunk = data[:, i : i + chunk_samples]
             chunk = zscore(chunk, axis=1)
             chunks_list.append(chunk)
 
@@ -214,7 +223,9 @@ class MDDDataset(Dataset):
         """
         file_info = self.files[idx]
 
-        chunks = self._load_and_preprocess_mdd_raw_file_cached(file_info["path"], self.channel)
+        chunks = self._load_and_preprocess_mdd_raw_file_cached(
+            file_info["path"], self.channel, self.FS
+        )
 
         if self.transform:
             eeg_tensor = self.transform(chunks)
@@ -736,6 +747,148 @@ class CANEDataset(Dataset):
             "total_files": len(self.files),
             "normal_files": normal_count,
             "anxiety_files": anxiety_count,
+            "conditions": conditions,
+            "subjects": len(self.get_sorted_subjects()),
+        }
+
+
+class AX_MALIKDataset(MDDDataset):
+    """
+    PyTorch Dataset for AX_MALIK EEG data (anxiety detection).
+
+    Inherits preprocessing pipeline from MDDDataset. All subjects are anxiety class.
+    """
+
+    FS = 256  # Hz (vs MDD's 250 Hz)
+    CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)  # 2560 samples per chunk
+
+    CHANNEL_MAPPING = {
+        # AX_MALIK uses standard 10-20 channel names - identity mapping
+        "Fp1": "Fp1",
+        "Fp2": "Fp2",
+        "C3": "C3",
+        "Cz": "Cz",
+        "C4": "C4",
+        "T7": "T7",
+        "T8": "T8",
+        "O2": "O2",
+    }
+
+    def __init__(
+        self,
+        data_dir: Path = AX_MALIK_DIR,
+        condition: Optional[Literal["EC", "EO"]] = None,
+        subjects: Optional[list[str]] = None,
+        cache_size: Optional[int] = 100,
+        transform: Optional[Callable] = None,
+        skip_ica: bool = True,
+        channel: str = "all",
+    ):
+        """
+        Initialize the AX_MALIK EEG dataset.
+
+        :param Path data_dir: Path to directory containing .edf files.
+        :param Optional[Literal["EC", "EO"]] condition: Filter by condition or None for all.
+        :param Optional[list[str]] subjects: List of subject IDs to include. None = all.
+        :param int cache_size: Number of preprocessed files to cache in memory.
+        :param Optional[Callable] transform: Optional transform function to apply to EEG data.
+        :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
+        :param str channel: Channel to use: specific channel name or "all" for all 8 channels.
+        """
+        self.data_dir = Path(data_dir)
+        self.condition = condition
+        self.transform = transform
+        self.skip_ica = skip_ica
+        self.files = self._discover_files(
+            condition.upper() if condition is not None else None,
+            subjects,
+            None,  # labels parameter ignored
+        )
+
+        # Handle channel selection
+        self.channel = channel
+        self.channel_names = (
+            AX_MALIK_CHANNEL_ORDER if channel == "all" else ([channel] if channel else [])
+        )
+
+        # Set up caching (same pattern as MDDDataset)
+        if cache_size:
+            self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
+                MDDDataset.load_and_preprocess_edf_file
+            )
+        else:
+            self._load_and_preprocess_mdd_raw_file_cached = (
+                lambda path, channel, fs: MDDDataset.load_and_preprocess_edf_file(path, channel, fs)
+            )
+
+    def _discover_files(
+        self,
+        condition: Optional[Literal["EC", "EO"]],
+        subjects: Optional[list[str]],
+        labels: Optional[list[str]],  # Ignored - all are anxiety
+    ) -> list[dict[str, Any]]:
+        """
+        Discover all .edf files matching the criteria.
+
+        Files are organized in: {ec|eo}/C{N}.edf
+
+        :param Optional[Literal["EC", "EO"]] condition: Condition filter or None.
+        :param Optional[list[str]] subjects: List of subject IDs to include or None for all.
+        :param Optional[list[str]] labels: Ignored (all subjects are anxiety).
+        :return: List of dictionaries containing file metadata.
+        :rtype: list[dict]
+        """
+        files = []
+        pattern = re.compile(r"C(\d+)\.edf")
+
+        for condition_dir in ["ec", "eo"]:
+            # Filter by condition if specified
+            if condition and condition_dir.upper() != condition:
+                continue
+
+            condition_path = self.data_dir / condition_dir
+            if not condition_path.exists():
+                continue
+
+            for file_path in sorted(condition_path.glob("*.edf")):
+                match = pattern.match(file_path.name)
+                if not match:
+                    logger.warning(f"Skipping file with unexpected name: {file_path.name}")
+                    continue
+
+                subject_num = match.group(1)
+                subject_id = f"AX S{subject_num} {condition_dir.upper()}"
+
+                # Filter by subjects if specified
+                if subjects and subject_id not in subjects:
+                    continue
+
+                files.append(
+                    {
+                        "path": file_path,
+                        "label": "AX",
+                        "subject": subject_id,
+                        "condition": condition_dir.upper(),
+                        "label_int": 1,  # Anxiety class (consistent with CANE)
+                    }
+                )
+
+        logger.info(f"Discovered {len(files)} AX_MALIK files")
+        return files
+
+    def get_statistics(self) -> dict[str, Any]:
+        """
+        Get dataset statistics.
+
+        :return: Dictionary containing total files, anxiety file count,
+                 conditions breakdown, and number of unique subjects.
+        :rtype: dict[str, Any]
+        """
+        conditions: dict[str, int] = Counter(f["condition"] for f in self.files)
+
+        return {
+            "total_files": len(self.files),
+            "ax_files": len(self.files),  # All are anxiety
             "conditions": conditions,
             "subjects": len(self.get_sorted_subjects()),
         }
