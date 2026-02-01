@@ -30,8 +30,6 @@ from thesis.data_preparation import (
     split_into_folds,
 )
 from thesis.dataset import (
-    MDDDataset,
-    SpectrogramDataset,
     collate_spectrograms,
 )
 from thesis.early_stopping import EarlyStopping
@@ -43,7 +41,7 @@ from thesis.metrics import (
     extract_classification_metrics,
     write_results,
 )
-from thesis.model import MODEL_REGISTRY
+from thesis.model_factory import create_model
 
 RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -431,86 +429,6 @@ def train_one_fold(
     }
 
 
-def create_model(
-    model_name: str,
-    spec_shape: tuple[int, int],
-    dropout: float,
-    num_classes: int,
-    device: torch.device,
-    in_channels: int = 1,
-    pretrained_checkpoint: str | None = None,
-    freeze_cnn: bool = False,
-    freeze_lstm: bool = False,
-) -> nn.Module:
-    """
-    Create and initialize a model, optionally loading pretrained weights.
-
-    :param str model_name: Model architecture ("CNN_LSTM_DepCap" or "Smaller").
-    :param tuple spec_shape: Input spectrogram shape (height, width).
-    :param float dropout: Dropout rate.
-    :param int num_classes: Number of output classes.
-    :param torch.device device: Device to place model on.
-    :param int in_channels: Number of input channels (1 for single-channel, 8 for multi-channel).
-    :param str | None pretrained_checkpoint: Path to pretrained checkpoint for transfer learning.
-    :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
-    :param bool freeze_lstm: If True, freeze LSTM layer during training.
-    :return: Initialized model.
-    :rtype: nn.Module
-    """
-    # Get model class and default parameters from registry
-    if model_name not in MODEL_REGISTRY:
-        raise ValueError(f"Unknown model: {model_name}. Available: {list(MODEL_REGISTRY.keys())}")
-
-    model_class, rnn_hidden = MODEL_REGISTRY[model_name]
-
-    model = model_class(
-        input_shape=spec_shape,
-        in_channels=in_channels,
-        rnn_type="LSTM",
-        rnn_hidden=rnn_hidden,
-        dropout=dropout,
-        num_classes=num_classes,
-    ).to(device)
-
-    # Transfer learning: load pretrained weights if provided
-    if pretrained_checkpoint:
-        logger.info(f"Loading pretrained weights from: {pretrained_checkpoint}")
-        saved = torch.load(pretrained_checkpoint, weights_only=False, map_location=device)
-
-        # Load state dict (strict=False allows for num_classes mismatch in final layer)
-        model.load_state_dict(saved["model_state_dict"], strict=False)
-        logger.info("Pretrained weights loaded successfully")
-
-        if freeze_cnn:
-            # Freeze CNN layers (conv1, conv2 and their dropout layers)
-            for param in model.conv1.parameters():
-                param.requires_grad = False
-            for param in model.conv2.parameters():
-                param.requires_grad = False
-            for param in model.dropout2d_1.parameters():
-                param.requires_grad = False
-            for param in model.dropout2d_2.parameters():
-                param.requires_grad = False
-
-        if freeze_lstm:
-            # Freeze LSTM layer
-            for param in model.rnn.parameters():
-                param.requires_grad = False
-
-        # Log which layers are frozen
-        if freeze_cnn or freeze_lstm:
-            all_params, trainable_params = model.count_parameters()
-            frozen_parts = []
-            if freeze_cnn:
-                frozen_parts.append("CNN")
-            if freeze_lstm:
-                frozen_parts.append("LSTM")
-            logger.info(
-                f"{'+'.join(frozen_parts)} layers frozen. "
-                f"Trainable params: {trainable_params}/{all_params}"
-            )
-
-    return model
 
 
 def compute_class_weights(dataset: Dataset, num_classes: int, device: torch.device) -> torch.Tensor:
@@ -1006,6 +924,8 @@ def run(args: argparse.Namespace) -> None:
 
     :param argparse.Namespace args: Command-line arguments.
     """
+    from thesis.inference import preprocess_and_infer
+
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
@@ -1021,85 +941,61 @@ def run(args: argparse.Namespace) -> None:
     if not edf_file.exists():
         raise IllegalPathError(f"EDF file not found: {edf_file}")
 
+    num_classes = int(args.class_mode)
+    in_channels = 8 if args.channel == "all" else 1
+
     logger.info("Running Inference")
     logger.info(f"{'=' * 80}")
     logger.info(f"Model: {model_path}")
     logger.info(f"EDF File: {edf_file}")
     logger.info(f"Channel: {args.channel}")
+    logger.info(f"Classes: {num_classes}")
     logger.info(f"Device: {device}")
     logger.info(f"{'=' * 80}")
 
+    # Load model via create_model with pretrained_checkpoint (handles weight loading)
     logger.info("Loading model checkpoint...")
-    # Load model checkpoint (dropout=0 and model.eval() ensure no dropout during inference)
     model = create_model(
         model_name=args.model,
         spec_shape=EXPECTED_SPECTROGRAM_SHAPE,
         dropout=0,
-        num_classes=2,
+        num_classes=num_classes,
         device=device,
+        in_channels=in_channels,
+        pretrained_checkpoint=str(model_path),
     )
-
-    # Note: weights_only=False is required to load optimizer state and other training info
-    saved = torch.load(model_path, weights_only=False)
-    model.load_state_dict(saved["model_state_dict"])
-    model.eval()  # Set model to evaluation mode (deactivates dropout, batch norm, etc.)
+    model.eval()
     logger.info("Model loaded successfully")
 
-    # Preprocess EDF file
-    logger.info("Preprocessing EDF file...")
-    chunks = MDDDataset.load_and_preprocess_edf_file(edf_file, args.channel, fs=250)
-    logger.info(f"Extracted {len(chunks)} chunks from EDF file")
-    if len(chunks) == 0:
-        raise RuntimeError("No valid chunks extracted from EDF file")
-    spectograms = SpectrogramDataset.convert_to_spectrograms(
-        chunks, nperseg=256, fs=250, noverlap=192, window="hamming"
+    # Run shared inference pipeline
+    file_format = edf_file.suffix.lower()
+    result = preprocess_and_infer(
+        file_path=edf_file,
+        model=model,
+        device=device,
+        channel=args.channel,
+        sampling_rate=250,
+        file_format=file_format,
+        num_classes=num_classes,
     )
 
-    logger.info("\nRunning inference on each chunk:")
+    # Log per-chunk results
     logger.info(f"{'Chunk':<8} {'Prediction':<12} {'Class':<10}")
     logger.info("-" * 50)
+    for cr in result.chunk_results:
+        logger.info(f"{cr.chunk_index + 1:<8} {cr.predicted_class:<12} {cr.class_name:<10}")
 
-    chunk_predictions = []
-
-    # TODO reviewed code till here
-    with torch.no_grad():
-        for chunk_idx, spec in enumerate(spectograms):
-            # Add batch dimension (spec already has shape (1, H, W))
-            spec_tensor = spec.unsqueeze(0)  # (1, 1, H, W)
-            spec_tensor = spec_tensor.to(device)
-
-            # Run inference
-            logits = model(spec_tensor)
-            pred = logits.argmax(dim=1).item()
-
-            chunk_predictions.append(pred)
-            class_name = "Healthy" if pred == 0 else "MDD"
-            logger.info(f"{chunk_idx + 1:<8} {pred:<12} {class_name:<10}")
-
-    # Aggregate predictions using majority voting
-    if len(chunk_predictions) == 0:
-        logger.error("No valid predictions generated")
-        return
-
-    chunk_predictions = np.array(chunk_predictions)
-
-    # Count predictions
-    healthy_count = np.sum(chunk_predictions == 0)
-    mdd_count = np.sum(chunk_predictions == 1)
-
-    # Majority vote
-    final_prediction = np.bincount(chunk_predictions).argmax()
-    final_class = "Healthy" if final_prediction == 0 else "MDD"
-
-    # Print final results
+    # Log final results
     logger.info("-" * 50)
     logger.info("FINAL RESULT (Majority Voting)")
     logger.info("-" * 50)
-    logger.info(f"Total chunks analyzed: {len(chunk_predictions)}")
-    healthy_pct = healthy_count / len(chunk_predictions) * 100
-    logger.info(f"Healthy predictions: {healthy_count} ({healthy_pct:.1f}%)")
-    logger.info(f"MDD predictions: {mdd_count} ({mdd_count / len(chunk_predictions) * 100:.1f}%)")
-    logger.info(f"Final Prediction: {final_class} (Class {final_prediction})")
+    logger.info(f"Total chunks analyzed: {result.total_chunks}")
+    for name, count in result.class_distribution.items():
+        pct = result.class_percentages[name]
+        logger.info(f"{name} predictions: {count} ({pct:.1f}%)")
+    logger.info(
+        f"Final Prediction: {result.final_class_name} (Class {result.final_prediction})"
+    )
 
 
 def main() -> None:

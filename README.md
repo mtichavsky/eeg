@@ -314,3 +314,129 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 - All logging uses Python's `logging` module, not print statements
 - Default regularization: dropout=0.5, weight_decay=1e-4 (L2 penalty)
 - See `EXPERIMENTS.md` for experiment tracking and results
+
+## Container Deployment (API)
+
+The inference API can be deployed as a container image using Podman (or Docker). The image is
+built on Fedora 43 and includes only the dependencies needed for serving predictions.
+
+### Prerequisites
+
+- **Podman** (or Docker) installed on the host
+- **nvidia-container-toolkit** for GPU inference (optional — CPU works too)
+- **Trained model checkpoints** (`.pth` files from cross-validation experiments)
+
+### Model Files
+
+The API serves 4 model variants. Place checkpoint files in a `models/` directory following this
+naming convention:
+
+| File | Electrode Setup | Classification | Architecture |
+|------|-----------------|----------------|--------------|
+| `model_single_2class.pth` | in-ear          | Binary (healthy vs pathological) | CNN_LSTM_DepCap |
+| `model_single_4class.pth` | in-ear          | 4-class (normal/anxiety/depression/comorbid) | CNN_LSTM_DepCap |
+| `model_8channel_2class.pth` | All 8 channels  | Binary | SmallerAll |
+| `model_8channel_4class.pth` | All 8 channels  | 4-class | SmallerAll |
+
+Copy the best fold checkpoint from your experiment directory:
+
+```bash
+mkdir -p models/
+cp experiments/mdd_007_fp1_ec/fold_1_best.pth    models/model_single_2class.pth
+cp experiments/all_012_fp1_ec/fold_1_best.pth     models/model_single_4class.pth
+cp experiments/mdd_007_all_ec/fold_1_best.pth     models/model_8channel_2class.pth
+cp experiments/all_012_all_ec/fold_1_best.pth     models/model_8channel_4class.pth
+```
+
+> **Note:** Not all 4 models are required. Missing models are reported as unavailable in the
+> `/health` endpoint (status becomes `"degraded"`) but the API still serves requests for
+> loaded models.
+
+### Build the Image
+
+```bash
+podman build -t eeg-api -f api.Containerfile .
+```
+
+### Run with GPU
+
+Requires [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+configured for Podman via the CDI (Container Device Interface) method:
+
+```bash
+podman run -d \
+    --name eeg-api \
+    --device nvidia.com/gpu=all \
+    -p 8000:8000 \
+    -v ./models:/app/models:ro,Z \
+    eeg-api
+```
+
+### Run on CPU Only
+
+```bash
+podman run -d \
+    --name eeg-api \
+    -p 8000:8000 \
+    -v ./models:/app/models:ro,Z \
+    -e DEVICE=cpu \
+    eeg-api
+```
+
+### Environment Variables
+
+All configuration can be overridden via environment variables (`-e KEY=value`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MODEL_DIR` | `/app/models` | Path to model checkpoint directory |
+| `DEVICE` | `auto` | PyTorch device: `auto`, `cuda`, or `cpu` |
+| `MODEL_LOADING` | `startup` | `startup` (load all on start) or `on_demand` (lazy) |
+| `LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `JSON_PRETTY_PRINT` | `false` | Set `true` for colored human-readable logs; default is JSON output |
+| `MAX_FILE_SIZE_MB` | `100` | Maximum upload file size in MB |
+| `RATE_LIMIT_TIMES` | `10` | Number of requests allowed per rate-limit window |
+| `RATE_LIMIT_SECONDS` | `10` | Rate-limit window duration in seconds |
+
+### Verify the Deployment
+
+```bash
+# Health check
+curl -s http://localhost:8000/health | python3 -m json.tool
+
+# Run a prediction
+curl -X POST http://localhost:8000/predict \
+    -F "eeg_recording=@recording.edf" \
+    -F "electrode_setup=single" \
+    -F "classification_task=2class" \
+    -F "sampling_rate=250" \
+    -F "request_id=$(uuidgen)" \
+    -F "user_id=$(uuidgen)"
+```
+
+### HTTPS / TLS
+
+The app itself speaks plain HTTP. To serve HTTPS, put a reverse proxy (e.g. Nginx, Caddy) in
+front that handles TLS termination and forwards plain HTTP to the container on port 8000.
+
+If you do this, the rate limiter will see the proxy's IP instead of the real client IP. Fix it
+by adding `ProxyHeadersMiddleware` in `api/app.py` and configuring the proxy to set
+`X-Forwarded-For` / `X-Forwarded-Proto` headers:
+
+```python
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
+```
+
+### Baking Models into the Image
+
+Instead of mounting models at runtime, you can embed them during build. Place the `.pth` files
+in `models/` before building:
+
+```bash
+# Copy models, then build — they will be included in the image
+cp experiments/...  models/model_single_2class.pth
+podman build -t eeg-api -f api.Containerfile .
+```
+
+To use baked-in models, simply omit the `-v` volume mount when running.

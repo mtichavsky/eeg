@@ -184,14 +184,14 @@ class TestClassificationMetricsMulticlass:
         metrics = classification_metrics(y_true, y_pred, num_classes=4)
 
         assert metrics["accuracy"] == 1.0
-        assert metrics["recall_normal"] == 1.0
-        assert metrics["recall_anxiety"] == 1.0
-        assert metrics["recall_depression"] == 1.0
-        assert metrics["recall_anxiety+depression"] == 1.0
-        assert metrics["precision_normal"] == 1.0
-        assert metrics["precision_anxiety"] == 1.0
-        assert metrics["precision_depression"] == 1.0
-        assert metrics["precision_anxiety+depression"] == 1.0
+        assert metrics["recall_Healthy"] == 1.0
+        assert metrics["recall_Anxiety"] == 1.0
+        assert metrics["recall_Depression"] == 1.0
+        assert metrics["recall_Comorbid"] == 1.0
+        assert metrics["precision_Healthy"] == 1.0
+        assert metrics["precision_Anxiety"] == 1.0
+        assert metrics["precision_Depression"] == 1.0
+        assert metrics["precision_Comorbid"] == 1.0
 
     def test_partial_4class_errors_hand_calculated(self):
         """Verify per-class recall with known confusion matrix.
@@ -202,10 +202,10 @@ class TestClassificationMetricsMulticlass:
         Confusion Matrix:
                       Predicted
                       0   1   2   3
-        Actual 0  [   2   1   0   0 ]  -> recall_normal = 2/3
-               1  [   0   2   1   0 ]  -> recall_anxiety = 2/3
-               2  [   1   0   2   0 ]  -> recall_depression = 2/3
-               3  [   1   0   0   2 ]  -> recall_anxiety+depression = 2/3
+        Actual 0  [   2   1   0   0 ]  -> recall_Healthy = 2/3
+               1  [   0   2   1   0 ]  -> recall_Anxiety = 2/3
+               2  [   1   0   2   0 ]  -> recall_Depression = 2/3
+               3  [   1   0   0   2 ]  -> recall_Comorbid = 2/3
 
         accuracy = 8/12 = 0.6667
         """
@@ -215,10 +215,10 @@ class TestClassificationMetricsMulticlass:
         metrics = classification_metrics(y_true, y_pred, num_classes=4)
 
         assert metrics["accuracy"] == pytest.approx(8 / 12)
-        assert metrics["recall_normal"] == pytest.approx(2 / 3)
-        assert metrics["recall_anxiety"] == pytest.approx(2 / 3)
-        assert metrics["recall_depression"] == pytest.approx(2 / 3)
-        assert metrics["recall_anxiety+depression"] == pytest.approx(2 / 3)
+        assert metrics["recall_Healthy"] == pytest.approx(2 / 3)
+        assert metrics["recall_Anxiety"] == pytest.approx(2 / 3)
+        assert metrics["recall_Depression"] == pytest.approx(2 / 3)
+        assert metrics["recall_Comorbid"] == pytest.approx(2 / 3)
 
     def test_confusion_matrix_shape_and_values(self):
         """Returned confusion matrix is 4x4 with correct values."""
@@ -258,10 +258,10 @@ class TestClassificationMetricsMulticlass:
         metrics = classification_metrics(y_true, y_pred, num_classes=4)
 
         assert metrics["accuracy"] == pytest.approx(2 / 8)
-        assert metrics["recall_normal"] == 1.0  # Both class 0 correct
-        assert metrics["recall_anxiety"] == 0.0  # None of class 1 predicted
-        assert metrics["recall_depression"] == 0.0  # None of class 2 predicted
-        assert metrics["recall_anxiety+depression"] == 0.0  # None of class 3 predicted
+        assert metrics["recall_Healthy"] == 1.0  # Both class 0 correct
+        assert metrics["recall_Anxiety"] == 0.0  # None of class 1 predicted
+        assert metrics["recall_Depression"] == 0.0  # None of class 2 predicted
+        assert metrics["recall_Comorbid"] == 0.0  # None of class 3 predicted
 
 
 class TestAggregateSubjectPredictions:

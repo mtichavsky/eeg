@@ -223,3 +223,30 @@ class LabelUtils:
                     raise ValueError(
                         f"AX_MALIK should only have label {expected_int}, but found: {labels}"
                     )
+
+
+# Display names for API/CLI output and metrics
+BINARY_DISPLAY_NAMES: dict[int, str] = {
+    BinaryLabel.HEALTHY: "Healthy",
+    BinaryLabel.PATHOLOGICAL: "Pathological",
+}
+
+CANONICAL_DISPLAY_NAMES: dict[int, str] = {
+    CanonicalLabel.HEALTHY: "Healthy",
+    CanonicalLabel.ANXIETY_ONLY: "Anxiety",
+    CanonicalLabel.DEPRESSION_ONLY: "Depression",
+    CanonicalLabel.COMORBID: "Comorbid",
+}
+
+
+def get_display_names(num_classes: int) -> dict[int, str]:
+    """
+    Return the appropriate display name dict for 2 or 4 classes.
+
+    :param int num_classes: Number of classes (2 or 4).
+    :return: Mapping from class index to human-readable display name.
+    :rtype: dict[int, str]
+    """
+    if num_classes == 2:
+        return dict(BINARY_DISPLAY_NAMES)
+    return dict(CANONICAL_DISPLAY_NAMES)
