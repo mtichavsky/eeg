@@ -52,7 +52,6 @@ Located at `/home/milan/Documents/diplomka/AX_MALIK/`. Files follow pattern: `{e
 The system supports training on:
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
-- `--dataset ax_malik`: AX_MALIK only (2 classes: normal vs anxious)
 - `--dataset all`: Combined (supports both 2-class and 4-class modes)
 
 ### Classification Modes
