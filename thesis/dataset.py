@@ -62,6 +62,7 @@ class MDDDataset(Dataset):
         transform: Optional[Callable] = None,
         skip_ica: bool = True,
         channel: str = "all",
+        test_mode: bool = False,
     ):
         """
         Initialize the MDD EEG dataset.
@@ -79,11 +80,13 @@ class MDDDataset(Dataset):
         :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
         :param Optional[str] channel: Channel to use: specific channel name (e.g., "Fp1") or
                "all" for all 8 channels (excludes A2-A1 reference).
+        :param bool test_mode: If True, load only one file per class for debugging.
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
         self.skip_ica = skip_ica
+        self.test_mode = test_mode
         self.files = self._discover_files(
             condition.upper() if condition is not None else None, subjects, labels
         )
@@ -120,7 +123,10 @@ class MDDDataset(Dataset):
         :rtype: list[dict]
         """
         files = []
-        pattern = re.compile(r"(H|MDD) S(\d+) (EC|EO|TASK)\.edf")
+        if self.test_mode:
+            pattern = re.compile(r"(H|MDD) S(1) (EC|EO|TASK)\.edf")
+        else:
+            pattern = re.compile(r"(H|MDD) S(\d+) (EC|EO|TASK)\.edf")
 
         for file_path in sorted(self.data_dir.glob("*.edf")):
             match = pattern.match(file_path.name)
@@ -311,6 +317,7 @@ class CANEDataset(Dataset):
         apply_car: bool = True,
         skip_extreme_artifacts: bool = False,
         skip_artifact_removal: bool = False,
+        test_mode: bool = False,
     ):
         """
         Initialize the CANE EEG dataset.
@@ -334,6 +341,7 @@ class CANEDataset(Dataset):
         :param bool skip_extreme_artifacts: If True, completely removes chunks with >10% artifacts.
         :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping
                (let the neural network learn to handle artifacts).
+        :param bool test_mode: If True, load only one file per class for debugging.
         """
         self.data_dir = Path(data_dir)
         self.condition = str(condition).lower()
@@ -344,6 +352,7 @@ class CANEDataset(Dataset):
         self.apply_car = apply_car
         self.skip_extreme_artifacts = skip_extreme_artifacts
         self.skip_artifact_removal = skip_artifact_removal
+        self.test_mode = test_mode
 
         # Set channel_names for verification
         if channel == "all":
@@ -382,11 +391,16 @@ class CANEDataset(Dataset):
         :return: List of dictionaries containing file metadata.
         :rtype: list[dict]
         """
-        files = []
-        # Pattern to match filenames like "0041_Ec.csv", "1005_EC.csv", or "1001EC.csv"
-        # (with or without underscore)
-        pattern = re.compile(r"(\d+)_?(EC|EO|Ec|Eo|ec|eo)\.csv", re.IGNORECASE)
+        # Test mode: match specific subject IDs
+        # (0012=normal, 0041=anxiety, 0016=depression, 0013=anxiety-depression)
+        if self.test_mode:
+            pattern = re.compile(r"(0041|0013|0012|0016)_?(EC|EO|Ec|Eo|ec|eo)\.csv", re.IGNORECASE)
+        else:
+            # Pattern to match filenames like "0041_Ec.csv", "1005_EC.csv", or "1001EC.csv"
+            # (with or without underscore)
+            pattern = re.compile(r"(\d+)_?(EC|EO|Ec|Eo|ec|eo)\.csv", re.IGNORECASE)
 
+        files = []
         # Traverse the directory structure: {label}/{condition}/*.csv
         condition_map = {"ec": "EC", "eo": "EO"}
         for label_dir in self.CLASS_DIRECTORIES:
