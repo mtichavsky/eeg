@@ -58,6 +58,12 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         "'4' requires --dataset both for all classes. "
         "Note: not all datasets contain all classes.",
     )
+    preproc_group.add_argument(
+        "--test-mode",
+        action="store_true",
+        help="Test mode: load only one file from each class (hardcoded filenames) "
+        "for faster debugging. Skips full dataset preprocessing.",
+    )
 
 
 def add_model_args(parser: argparse.ArgumentParser) -> None:

@@ -528,6 +528,7 @@ def train_cross_validation(
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
     augmentation: Callable | None = None,
+    test_mode: bool = False,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -557,6 +558,7 @@ def train_cross_validation(
     :param bool freeze_lstm: If True, freeze LSTM layer during training.
         Can be used alone or with freeze_cnn.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG during training.
+    :param bool test_mode: If True, load only one file per class for debugging.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
     :rtype: dict
@@ -597,7 +599,7 @@ def train_cross_validation(
     mdd_flat_dataset, cane_flat_dataset, flat_dataset = None, None, None
     if dataset_type == "mdd":
         flat_dataset, subject_classes = prepare_mdd_dataset(
-            conditions, channel, rng, augmentation=augmentation
+            conditions, channel, rng, augmentation=augmentation, test_mode=test_mode
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -616,6 +618,7 @@ def train_cross_validation(
             label_mapping=label_mapping,
             skip_artifact_removal=skip_artifact_removal,
             augmentation=augmentation,
+            test_mode=test_mode,
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -632,7 +635,7 @@ def train_cross_validation(
         if channel in ["T7", "T8"]:
             channel = {"T7": "T3", "T8": "T4"}[channel]
         mdd_flat_dataset, mdd_subject_classes = prepare_mdd_dataset(
-            conditions, channel, rng, augmentation=augmentation
+            conditions, channel, rng, augmentation=augmentation, test_mode=test_mode
         )
         mdd_normal, mdd_anxiety, mdd_depression, mdd_anxiety_depression = (
             mdd_subject_classes.normal,
@@ -650,6 +653,7 @@ def train_cross_validation(
             label_mapping=label_mapping,
             skip_artifact_removal=skip_artifact_removal,
             augmentation=augmentation,
+            test_mode=test_mode,
         )
         cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
             cane_subject_classes.normal,
@@ -818,6 +822,7 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Freeze CNN: {args.freeze_cnn}")
     logger.info(f"  Freeze LSTM: {args.freeze_lstm}")
     logger.info(f"  Class mode: {args.class_mode}")
+    logger.info(f"  Test mode: {args.test_mode}")
     logger.info(f"  Device: {device}")
     logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
     logger.info(f"  Log File: {log_path}")
@@ -846,6 +851,7 @@ def train(args: argparse.Namespace) -> None:
         freeze_cnn=args.freeze_cnn,
         freeze_lstm=args.freeze_lstm,
         augmentation=augmentation,
+        test_mode=args.test_mode,
     )
 
     # Save final results to file
