@@ -34,7 +34,7 @@ Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern:
 - **Conditions**: ec (eyes closed), eo (eyes open) - lowercase, can train on single or combined (ec+eo)
 - **Channels**: Same 6 channels as MDD
 - **Sampling**: 500 Hz
-- **Preprocessing**: Uses `skip_extreme_artifacts=True` instead of ICA
+- **Preprocessing**: Uses artifact detection with interpolation/clipping
 
 ### Multi-Dataset Training
 The system supports training on:
@@ -66,11 +66,8 @@ make format
 # Main training script with cross-validation
 poetry run python main.py train
 
-# Faster, debug run, skipping the ICA
-poetry run python main.py train --skip-ica
-
 # Full example with all major options (following naming convention)
-poetry run python main.py train --skip-ica \
+poetry run python main.py train \
   --channel Fp1 \
   --batch-size 32 \
   --checkpoint-dir=experiments/mdd_007_fp1_ec \
@@ -85,7 +82,7 @@ poetry run python main.py train --skip-ica \
 ### Transfer Learning
 ```bash
 # Fine-tune a pretrained MDD model on CANE dataset
-poetry run python main.py train --skip-ica \
+poetry run python main.py train \
   --channel Fp1 \
   --batch-size 32 \
   --checkpoint-dir=experiments/cane_009_fp1_ec_transfer \
@@ -96,7 +93,7 @@ poetry run python main.py train --skip-ica \
   --freeze-cnn
 
 # Transfer learning with all layers trainable (no freezing)
-poetry run python main.py train --skip-ica \
+poetry run python main.py train \
   --channel Fp1 \
   --checkpoint-dir=experiments/cane_009_fp1_ec_finetune \
   --dataset cane \
@@ -162,7 +159,7 @@ Run with: `poetry run jupyter notebook`
    - `MDDDataset`: PyTorch Dataset with lazy/preload modes, LRU caching
    - `create_cross_validation_splits()`: Subject-level stratified K-fold CV
    - `get_preprocessed_chunks()`: Legacy function for single-file processing
-   - Preprocessing pipeline: bandpass filter (1-70 Hz) → notch filter (50 Hz) → ICA artifact removal → 10s chunking
+   - Preprocessing pipeline: bandpass filter (1-70 Hz) → notch filter (50 Hz) → 10s chunking
 
 2. **`thesis/model.py`** - Neural network architectures
    - `CNN_LSTM_DepCap`: Main model implementing the paper's architecture
@@ -234,7 +231,7 @@ The `MDDDataset` supports two modes:
 2. **Extensibility**: Adding new datasets requires implementing a prepare function following the same pattern
 3. **Data leakage prevention**: Never split chunks from the same subject across train/val
 4. **Reproducibility**: Fixed random seed (42) for deterministic fold creation
-5. **Dataset independence**: When combining datasets, maintain separate preprocessing pipelines (e.g., MDD uses ICA, CANE uses artifact detection)
+5. **Dataset independence**: When combining datasets, maintain separate preprocessing pipelines (CANE uses artifact detection with interpolation/clipping)
 
 **Preprocessing Pipeline (in `thesis/dataset.py`):**
 ```python
@@ -243,10 +240,9 @@ The `MDDDataset` supports two modes:
 2. Bandpass filter 1-70 Hz (IIR)
 3. Notch filter 50 Hz (remove power line noise)
 4. Select 6 channels
-5. Average reference
-6. ICA with ICLabel for artifact removal (remove non-brain components)
-7. Chunk into 10-second segments
-8. Convert to PyTorch tensors
+5. Chunk into 10-second segments
+6. Z-score normalization
+7. Convert to PyTorch tensors
 ```
 
 **Spectrogram Generation:**
@@ -297,7 +293,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Artificially inflated performance metrics
 
 **Why Separate Dataset Classes?**
-- Different preprocessing requirements (MDD: ICA, CANE: artifact detection)
+- Different preprocessing requirements (CANE uses artifact detection with interpolation/clipping, MDD uses simpler pipeline)
 - Different STFT parameters (though standardized to same output shape)
 - Different channel names/orderings in raw files
 - Allows independent evolution of preprocessing pipelines

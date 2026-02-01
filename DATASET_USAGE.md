@@ -130,7 +130,6 @@ Applied to each file:
 2. Bandpass filter 1-70 Hz
 3. Notch filter at 50 Hz
 4. Select 6 channels: Fp1, Fp2, C3, C4, O2, Cz
-5. Average reference
-6. ICA with artifact removal (non-brain components)
-7. Chunk into 10-second segments
-8. Convert to PyTorch tensors
+5. Chunk into 10-second segments
+6. Z-score normalization
+7. Convert to PyTorch tensors

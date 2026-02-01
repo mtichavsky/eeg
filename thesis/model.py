@@ -167,7 +167,9 @@ class Smaller(nn.Module):
         """
         super().__init__()
 
-        self.conv1 = self.Conv1(in_channels, 32, kernel_size=(10, 10), stride=2, padding=0)  # 64->32
+        self.conv1 = self.Conv1(
+            in_channels, 32, kernel_size=(10, 10), stride=2, padding=0
+        )  # 64->32
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=1)
         self.dropout2d_1 = nn.Dropout2d(dropout)
 
