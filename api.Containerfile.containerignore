@@ -1,0 +1,45 @@
+# Version control
+.git
+.gitignore
+
+# IDE / editor
+.idea
+.vscode
+
+# Python caches
+__pycache__
+*.pyc
+*.pyo
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# Training artifacts (not needed for inference)
+experiments/
+docs/
+tests/
+htmlcov/
+.coverage
+.worktrees/
+
+# Training scripts
+train_cv_example.py
+plot_training_curves.py
+mdd.py
+cane.py
+
+# Build / packaging
+Makefile
+*.egg-info
+
+# Images / media
+*.png
+
+# Misc
+yo.txt
+EXPERIMENTS.md
+EXPERIMENTS-FIRST-SEMESTER.md

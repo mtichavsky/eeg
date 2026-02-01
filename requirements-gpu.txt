@@ -1,0 +1,6 @@
+# Pinned torch — installed with all its deps so pip brings the exact CUDA
+# runtime versions torch was compiled against (nvidia-* packages).
+# The host provides only the CUDA driver via --device nvidia.com/gpu=all.
+# On CPU-only hosts torch falls back to CPU automatically.
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch==2.10.0+cu126

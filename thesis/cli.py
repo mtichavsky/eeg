@@ -174,11 +174,18 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     # Run subcommand
-    run_parser = subparsers.add_parser("run", help="Run inference on a single EDF file")
+    run_parser = subparsers.add_parser("run", help="Run inference on a single EEG file (.edf or .csv)")
     add_preprocessing_args(run_parser)
     run_parser.add_argument("model_path", type=str, help="Path to trained model checkpoint (.pth)")
-    run_parser.add_argument("edf_file", type=str, help="Path to EDF file to classify")
+    run_parser.add_argument("file", type=str, help="Path to EEG file to classify (.edf or .csv)")
     add_model_args(run_parser)
+    run_parser.add_argument(
+        "--fs",
+        type=int,
+        default=None,
+        dest="fs",
+        help="Sampling rate in Hz (auto-detected from file if omitted)",
+    )
     run_parser.add_argument(
         "--device",
         type=str,

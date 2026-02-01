@@ -85,8 +85,11 @@ The system supports training on:
 
 ### Environment Setup
 ```bash
-# Install dependencies with Poetry
+# Install core + dev dependencies
 poetry install --with dev
+
+# Install with API dependencies (for running the inference server)
+poetry install --with dev,api
 
 # Or use Makefile shortcut
 make venv
@@ -253,6 +256,22 @@ Run with: `poetry run jupyter notebook`
      - Conv3D kernel spans all channels for spatial feature learning
      - Enables learning cross-channel correlations
 
+3. **`thesis/model_factory.py`** - Model creation factory
+   - `create_model()`: Instantiates models from `MODEL_REGISTRY`, optionally loads pretrained weights, and freezes layers
+   - Used by both CLI (`main.py`) and API (`api/model_manager.py`)
+
+4. **`thesis/inference.py`** - Shared inference pipeline
+   - `preprocess_file()`: Preprocesses EDF/CSV files into EEG chunks
+   - `run_chunk_inference()`: Runs per-chunk model inference
+   - `aggregate_predictions()`: Majority-vote aggregation
+   - `preprocess_and_infer()`: High-level convenience combining all steps
+   - `ChunkResult` / `InferenceResult`: Dataclasses for structured results
+   - Used by both CLI (`main.py run`) and API (`api/app.py /predict`)
+
+5. **`thesis/version.py`** - Version management
+   - Reads version from `pyproject.toml` (single source of truth)
+   - Used by API (`api/app.py`, `api/__init__.py`)
+
 ### Training Scripts
 
 **`main.py`** - Primary training script
@@ -264,8 +283,8 @@ Run with: `poetry run jupyter notebook`
 - Configurable hyperparameters: dropout (default 0.5), weight decay/L2 (default 1e-4)
 - Current setup: 10-fold CV (configurable with --n-folds)
 - **Transfer learning support**: Load pretrained weights and optionally freeze CNN layers
-- **Model registry**: `MODEL_REGISTRY` dict maps model names to (class, default_rnn_hidden) tuples
-- **Model factory**: `create_model()` handles model instantiation, weight loading, and layer freezing
+- **Model registry**: `MODEL_REGISTRY` dict in `thesis/model.py` maps model names to (class, default_rnn_hidden) tuples
+- **Model factory**: `create_model()` in `thesis/model_factory.py` handles model instantiation, weight loading, and layer freezing
 
 **`train_cv_example.py`** - Clean reference implementation
 - Shows proper 10-fold cross-validation pattern
@@ -487,9 +506,18 @@ Use today's date and a short title derived from the task. Existing plans in that
 - `EXPERIMENTS.md` - Log of experiment configurations and results
 - `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, IDUNDataset, AX_MALIKDataset, SpectrogramDataset)
 - `thesis/data_preparation.py` - Dataset preparation functions (prepare_mdd_dataset, prepare_cane_dataset, prepare_idun_dataset, prepare_ax_malik_dataset)
+- `thesis/inference.py` - Shared inference pipeline (preprocess, infer, aggregate) for CLI and API
+- `thesis/model_factory.py` - `create_model()` factory used by CLI and API
+- `thesis/version.py` - Single source of truth for version string (reads from pyproject.toml)
+- `thesis/labels.py` - Centralized label definitions, display names, and mappings
 - `thesis/cli.py` - CLI argument parser with all training options
 - `main.py` - Training orchestration, cross-validation logic, transfer learning support, and CANE/IDUN swap logic
 - `plot_training_curves.py` - Training curve visualization utility
+
+## API Configuration
+- **API dependencies**: Install with `poetry install --with api`
+- **Model loading strategy**: Set `MODEL_LOADING=on_demand` env var to defer model loading until first request (default: `startup` loads all 4 models immediately)
+- **Version**: API reads version from `pyproject.toml` via `thesis/version.py`
 
 ## Important Implementation Notes
 - **IDUN/CANE replacement**: When using `--channel in-ear` with `--dataset cane` or `--dataset all`, CANE is automatically replaced with IDUN real in-ear data
