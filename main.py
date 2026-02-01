@@ -81,15 +81,12 @@ def get_unique_checkpoint_dir(checkpoint_dir: Path, suffix_length: int = 3) -> P
     return new_dir
 
 
-def setup_logging(
-    checkpoint_dir: Path, condition: str, skip_ica: bool, channel: str | None = None
-) -> Path:
+def setup_logging(checkpoint_dir: Path, condition: str, channel: str | None = None) -> Path:
     """
     Configure logging to output to both console and a timestamped log file.
 
     :param Path checkpoint_dir: Directory to save log files.
     :param str condition: EEG condition being trained on.
-    :param bool skip_ica: Whether ICA was skipped.
     :param str | None channel: Single channel being used (if applicable).
     :return: Path to the log file.
     :rtype: Path
@@ -99,8 +96,7 @@ def setup_logging(
     # Create timestamped log filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     channel_suffix = f"_{channel}" if channel else ""
-    ica_suffix = "_noica" if skip_ica else ""
-    log_filename = f"training_{condition}{channel_suffix}{ica_suffix}_{timestamp}.log"
+    log_filename = f"training_{condition}{channel_suffix}_{timestamp}.log"
     log_path = checkpoint_dir / log_filename
 
     # Get root logger
@@ -520,7 +516,6 @@ def train_cross_validation(
     weight_decay: float = 0.0,
     checkpoint_dir: Path = Path("checkpoints"),
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    skip_ica: bool = False,
     channel: str | None = None,
     model_name: str = "CNN_LSTM_DepCap",
     skip_artifact_removal: bool = False,
@@ -547,7 +542,6 @@ def train_cross_validation(
     :param float weight_decay: Weight decay (L2 penalty).
     :param Path checkpoint_dir: Directory to save checkpoints.
     :param torch.device device: Device to train on.
-    :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
     :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
     :param str model_name: Model architecture to use ("CNN_LSTM_DepCap" or "Smaller").
     :param bool skip_artifact_removal: If True, skip artifact interpolation/clipping in CANE.
@@ -575,7 +569,6 @@ def train_cross_validation(
     logger.info(f"Dataset: {dataset_type}, Condition(s): {conditions}")
     logger.info(f"Batch Size: {batch_size}, LR: {learning_rate}")
     logger.info(f"Device: {device}")
-    logger.info(f"Skip ICA: {skip_ica}")
     logger.info(f"{'=' * 80}")
 
     cv_results: dict[str, list] = {
@@ -794,7 +787,7 @@ def train(args: argparse.Namespace) -> None:
     checkpoint_dir = get_unique_checkpoint_dir(Path(args.checkpoint_dir))
 
     # Setup logging to both console and file
-    log_path = setup_logging(checkpoint_dir, args.condition, args.skip_ica, args.channel)
+    log_path = setup_logging(checkpoint_dir, args.condition, args.channel)
 
     logger.info("Starting EEG Classification Training")
     logger.info("Hyperparameters:")
@@ -810,7 +803,6 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Validation Every: {args.val_every} epochs")
     logger.info(f"  Save Checkpoint Every: {args.save_every} epochs")
     logger.info(f"  Early Stopping Patience: {args.patience} epochs")
-    logger.info(f"  Skip ICA: {args.skip_ica}")
     logger.info(f"  Skip Artifact Removal: {args.skip_artifact_removal}")
     if args.augment_data is not None:
         augmentation: EEGAugmentation | None = EEGAugmentation(p_aug=args.augment_data)
@@ -843,7 +835,6 @@ def train(args: argparse.Namespace) -> None:
         weight_decay=args.weight_decay,
         checkpoint_dir=checkpoint_dir,
         device=device,
-        skip_ica=args.skip_ica,
         channel=args.channel,
         model_name=args.model,
         skip_artifact_removal=args.skip_artifact_removal,
@@ -865,7 +856,6 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"Learning Rate: {args.lr}\n")
         f.write(f"Dropout: {args.dropout}\n")
         f.write(f"Weight Decay (L2 regularization): {args.weight_decay}\n")
-        f.write(f"Skip ICA: {args.skip_ica}\n")
         f.write(f"Skip Artifact Removal: {args.skip_artifact_removal}\n")
         if args.augment_data is not None:
             f.write(f"Data Augmentation: enabled (p={args.augment_data})\n")
@@ -924,7 +914,6 @@ def run(args: argparse.Namespace) -> None:
     logger.info(f"Model: {model_path}")
     logger.info(f"EDF File: {edf_file}")
     logger.info(f"Channel: {args.channel}")
-    logger.info(f"Skip ICA: {args.skip_ica}")
     logger.info(f"Device: {device}")
     logger.info(f"{'=' * 80}")
 
