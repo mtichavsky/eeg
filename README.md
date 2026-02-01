@@ -1,8 +1,8 @@
 # EEG-Based Depression Detection
 
 > This thesis project implements a CNN-LSTM deep learning model for EEG-based depression (MDD)
-and anxiety detection. The model architecture is inspired by the DepCap research paper and uses
-STFT spectrograms as input features derived from preprocessed EEG signals.
+> and anxiety detection. The model architecture is inspired by the DepCap research paper and uses
+> STFT spectrograms as input features derived from preprocessed EEG signals.
 
 ## Development Setup
 
@@ -20,83 +20,22 @@ poetry install --with dev
 poetry shell
 ```
 
-For other helpful targets (such as formatting and type checking), see [Makefile](Makefile).
+For other helpful targets (such as formatting and type checking), see [Makefile](Makefile), e.g:
 
-## Dataset
+```bash
+make test  # Execute unit tests
+make format  # Format code with ruff
+make typecheck  # Run type checking with mypy
+```
 
-The project supports three EEG datasets that can be used independently or combined:
+## Datasets
 
-### MDD Dataset
+The project supports three EEG datasets that can be used independently or combined. For training,
+they have to be available at `../MDD/`, `../CANE/`, `../IDUN_IN_EAR/` and `../SAD/` locations
+(can be overwritten in code). For more info, see [docs/DATASETS.md](docs/DATASETS.md)
+and [docs/MODEL_CARD.md](docs/MODEL_CARD.md) files.
 
-Expected location at `../MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {EC|EO|TASK}.edf`
-
-**Dataset Structure:**
-- **H** = Healthy control subjects
-- **MDD** = Major Depressive Disorder subjects
-- **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
-- **Channels**: 8 channels used (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) with standardized 10-20 naming, plus synthetic in-ear option
-- **Sampling Rate**: 250 Hz (SFREQ = 1000/4)
-- **Segments**: 10-second chunks (2,500 samples each)
-
-### CANE Dataset
-
-Expected location at `../CANE/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
-
-**Dataset Structure:**
-- **H** = Healthy control subjects
-- **AX** = Anxiety disorder subjects
-- **Conditions**: ec (eyes closed), eo (eyes open) - can train on single or combined (ec+eo)
-- **Channels**: Same 8 channels as MDD dataset with standardized naming (T3→T7, T4→T8), plus synthetic in-ear option
-- **Sampling Rate**: 500 Hz
-- **Preprocessing**: Optional artifact removal via `--skip-artifact-removal` flag
-
-**Note:** When using `--channel in-ear`, CANE is automatically replaced with the IDUN dataset (see below) for real in-ear EEG recordings.
-
-### IDUN Dataset
-
-Expected location at `../IDUN_IN_EAR/`. Files follow pattern: `{class_dir}/{subject_id}/eeg_{subject_id}{condition}.csv`
-
-**Dataset Structure:**
-- **Real in-ear EEG recordings** from IDUN device (single-channel CSV format)
-- **Classes**: normals (17), anxiety (20), depression (1), comorbid (15) - 53 usable subjects
-- **Conditions**: ec (eyes closed), eo (eyes open) - case-insensitive
-- **Channel**: Single in-ear channel (no multi-channel support)
-- **Sampling Rate**: 250 Hz (verified from timestamps)
-- **Quality Metrics**: Signal quality data available in `quality_*.csv` files (0=not measured, 90+=good)
-- **Preprocessing**: z-score → detrend → bandpass 1-70 Hz → notch 50 Hz → 10s chunking → quality-based rejection
-
-**Usage:**
-- IDUN is **automatically used** when `--channel in-ear` is specified with `--dataset cane` or `--dataset all`
-- Provides real in-ear EEG instead of synthetic bipolar derivations (T8-T7)
-- Occupies the "CANE" slot in fold creation, so logs may report "CANE" but IDUN data is actually used
-- Quality threshold (default 0.0) rejects chunks with unmeasured signal quality
-
-### AX_MALIK Dataset
-
-Expected location at `../AX_MALIK/`. Files follow pattern: `{ec|eo}/C{N}.edf`
-
-**Dataset Structure:**
-- **All subjects are anxiety class** (no healthy controls in this dataset)
-- **Conditions**: EC (eyes closed), EO (eyes open) - can train on single or combined (ec+eo)
-- **Channels**: Same 8 channels as MDD dataset (Fp1, Fp2, C3, Cz, C4, T7, T8, O2), plus synthetic in-ear option
-- **Sampling Rate**: 256 Hz
-- **Duration**: 120 seconds per file
-- **Subjects**: 21 subjects (42 files total - one EC and one EO per subject)
-- **Preprocessing**: Uses MDDDataset preprocessing pipeline via inheritance
-
-### Multi-Dataset Training
-
-- `--dataset mdd`: MDD only (2 classes: normal vs depressed)
-- `--dataset cane`: CANE only (2 classes: normal vs anxious)
-  - **With `--channel in-ear`**: Automatically uses IDUN real in-ear data instead
-- `--dataset ax_malik`: AX_MALIK only (anxiety subjects only - no healthy controls in this dataset)
-- `--dataset all`: Combined (supports 2-class and 4-class modes)
-  - **With `--channel in-ear`**: Uses MDD (synthetic T8-T7) + IDUN (real in-ear) + AX_MALIK (synthetic T8-T7)
-
-### Classification Modes
-
-- `--class-mode 2`: Binary classification (healthy vs any-pathological) - works with all datasets
-- `--class-mode 4`: Multi-class (normal/anxiety/depression/comorbid) - requires `--dataset all`
+Details on how are these files preprocessed are available at [docs/PREPROCESSING.md](docs/PREPROCESSING.md).
 
 ## Usage
 
@@ -161,6 +100,20 @@ checkpoints/
 └── cv_results.json          # Cross-validation results summary
 ```
 
+### Multi-Dataset Training
+
+- `--dataset mdd`: MDD only (2 classes: normal vs depressed)
+- `--dataset cane`: CANE only (2 classes: normal vs anxious)
+    - **With `--channel in-ear`**: Automatically uses IDUN real in-ear data instead
+- `--dataset ax_malik`: AX_MALIK only (anxiety subjects only - no healthy controls in this dataset)
+- `--dataset all`: Combined (supports 2-class and 4-class modes)
+    - **With `--channel in-ear`**: Uses MDD (synthetic T8-T7) + IDUN (real in-ear) + AX_MALIK (synthetic T8-T7)
+
+### Classification Modes
+
+- `--class-mode 2`: Binary classification (healthy vs any-pathological) - works with all datasets
+- `--class-mode 4`: Multi-class (normal/anxiety/depression/comorbid) - requires `--dataset all`
+
 ### Training Analysis
 
 Visualize training and validation loss curves across folds:
@@ -222,59 +175,7 @@ The inference script outputs:
 - Supports 2-class or 4-class classification modes
 - Transfer learning support via `--pretrained-checkpoint`
 
-## Preprocessing Pipeline
-
-### MDD/CANE/AX_MALIK Preprocessing
-Each EDF file undergoes the following preprocessing (see `thesis/dataset.py`):
-
-1. Load EDF file
-2. Bandpass filter: 1-70 Hz (IIR)
-3. Notch filter: 50 Hz (remove power line noise)
-4. Channel selection:
-   - 8 channels (when `--channel all`)
-   - Specific single channel (e.g., `--channel Fp1`)
-   - Synthetic in-ear: Load T7 and T8, compute bipolar derivation T8 - T7 (when `--channel in-ear`)
-5. Channel name standardization: T3→T7, T4→T8 for cross-dataset compatibility
-6. Average reference
-7. Optional artifact removal for CANE: (`--skip-artifact-removal` to disable)
-8. Segmentation: 10-second chunks
-9. For in-ear: Apply 50% sign flip augmentation per chunk during training
-10. STFT transformation: Convert to spectrograms
-11. Normalization: Log-magnitude spectrograms
-
-### IDUN Preprocessing
-IDUN CSV files undergo a separate preprocessing pipeline (see `IDUNDataset.load_and_preprocess_idun_file()`):
-
-1. Load CSV file (timestamp, ch1 columns)
-2. Z-score normalize raw values
-3. Detrend (linear)
-4. Bandpass filter: 1-70 Hz (IIR)
-5. Notch filter: 50 Hz (remove power line noise)
-6. Segmentation: 10-second chunks (2500 samples at 250 Hz)
-7. Quality-based chunk rejection (threshold=0.0 by default, rejects unmeasured chunks)
-8. Per-chunk z-score normalization
-9. Apply 50% sign flip augmentation per chunk during training
-10. STFT transformation: Convert to spectrograms
-11. Normalization: Log-magnitude spectrograms
-
 ## Development
-
-### Executing tests
-
-```
-make test
-```
-
-### Formatting and Linting
-
-```bash
-# Format code with ruff
-make format
-
-# Run type checking with mypy
-make typecheck
-```
-
 
 ### Viewing Spectrograms
 
@@ -314,6 +215,166 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 - All logging uses Python's `logging` module, not print statements
 - Default regularization: dropout=0.5, weight_decay=1e-4 (L2 penalty)
 - See `EXPERIMENTS.md` for experiment tracking and results
+
+## Container Deployment (API)
+
+The inference API can be deployed as a container image using Podman (or Docker). The image is
+built on Fedora 41 and includes only the dependencies needed for serving predictions.
+
+### Prerequisites
+
+- **Podman** (or Docker) installed on the host
+- **nvidia-container-toolkit** for GPU inference (optional — CPU works too)
+- **Trained model checkpoints** (`.pth` files from cross-validation experiments)
+
+### Model Files
+
+The API serves 4 model variants. Place checkpoint files in a `models/` directory following this
+naming convention:
+
+| File                        | Electrode Setup | Classification                               | Architecture    |
+|-----------------------------|-----------------|----------------------------------------------|-----------------|
+| `model_inear_2class.pth`    | in-ear          | Binary (healthy vs pathological)             | CNN_LSTM_DepCap |
+| `model_inear_4class.pth`    | in-ear          | 4-class (normal/anxiety/depression/comorbid) | CNN_LSTM_DepCap |
+| `model_8channel_2class.pth` | All 8 channels  | Binary                                       | SmallerAll      |
+| `model_8channel_4class.pth` | All 8 channels  | 4-class                                      | SmallerAll      |
+
+Copy the best fold checkpoint from your experiment directory:
+
+```bash
+mkdir -p models/
+cp experiments/mdd_007_fp1_ec/fold_1_best.pth    models/model_single_2class.pth
+cp experiments/all_012_fp1_ec/fold_1_best.pth     models/model_single_4class.pth
+cp experiments/mdd_007_all_ec/fold_1_best.pth     models/model_8channel_2class.pth
+cp experiments/all_012_all_ec/fold_1_best.pth     models/model_8channel_4class.pth
+```
+
+> **Note:** Not all 4 models are required. Missing models are reported as unavailable in the
+> `/health` endpoint (status becomes `"degraded"`) but the API still serves requests for
+> loaded models.
+
+### Dependency Management
+
+The NVIDIA driver version (`nvidia-smi` command) constraints what maximum CUDA version you can use, which in turn
+constraints maximum PyTorch version, which constraints the Python version itself.
+
+The project uses two separate dependency tracks:
+
+- **Development** — managed by Poetry (`pyproject.toml` / `poetry.lock`). Includes dev tools,
+  Jupyter, type stubs, etc. Use `make venv` to set up.
+- **Container** - TODO
+
+### Build the Image
+
+```bash
+# Regenerate pinned requirements (only needed when requirements.in changes)
+make container-reqs
+
+# Build
+podman build --format docker -t eeg-api -f api.Containerfile .
+```
+
+### Publish to Docker Hub and Pull it
+
+```bash
+podman login docker.io -u mtichavsky
+podman tag eeg-api docker.io/mtichavsky/eeg-classifier-api:latest
+podman push docker.io/mtichavsky/eeg-classifier-api:latest
+```
+The published image is available at:
+`docker.io/mtichavsky/eeg-classifier-api`, which you can pull like this:
+
+```bash
+podman pull docker.io/mtichavsky/eeg-classifier-api:latest
+```
+
+### Run with GPU
+
+Requires [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+configured for Podman via the CDI (Container Device Interface) method:
+
+```bash
+podman run -d \
+    --name eeg-api \
+    --device nvidia.com/gpu=all \
+    -p 8000:8000 \
+    -v ./models:/app/models:ro,Z \
+    eeg-api
+```
+
+### Run on CPU Only
+
+```bash
+podman run -d \
+    --name eeg-api \
+    -p 8000:8000 \
+    -v ./models:/app/models:ro,Z \
+    -e DEVICE=cpu \
+    eeg-api
+```
+
+### Environment Variables
+
+All configuration can be overridden via environment variables (`-e KEY=value`):
+
+| Variable             | Default       | Description                                                        |
+|----------------------|---------------|--------------------------------------------------------------------|
+| `MODEL_DIR`          | `/app/models` | Path to model checkpoint directory                                 |
+| `DEVICE`             | `auto`        | PyTorch device: `auto`, `cuda`, or `cpu`                           |
+| `MODEL_LOADING`      | `startup`     | `startup` (load all on start) or `on_demand` (lazy)                |
+| `LOG_LEVEL`          | `INFO`        | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)                |
+| `JSON_PRETTY_PRINT`  | `false`       | Set `true` for colored human-readable logs; default is JSON output |
+| `MAX_FILE_SIZE_MB`   | `100`         | Maximum upload file size in MB                                     |
+| `RATE_LIMIT_TIMES`   | `10`          | Number of requests allowed per rate-limit window                   |
+| `RATE_LIMIT_SECONDS` | `10`          | Rate-limit window duration in seconds                              |
+
+### Verify the Deployment
+poetry run uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
+
+
+```bash
+# Health check
+curl -s http://localhost:8000/health | jq 
+
+# Run a prediction
+curl -X POST http://localhost:8000/predict \
+    -F "eeg_recording=@../MDD/MDD S1 EO.edf" \
+    -F "sampling_rate=256" \
+    -F "electrode_setup=in-ear" \
+    -F "classification_task=4class" \
+    -F "request_id=$(uuidgen)" \
+    -F "user_id=$(uuidgen)" | jq
+```
+
+http://localhost:8000/docs - docs
+
+### HTTPS / TLS
+
+The app itself speaks plain HTTP. To serve HTTPS, put a reverse proxy (e.g. Nginx, Caddy) in
+front that handles TLS termination and forwards plain HTTP to the container on port 8000.
+
+If you do this, the rate limiter will see the proxy's IP instead of the real client IP. Fix it
+by adding `ProxyHeadersMiddleware` in `api/app.py` and configuring the proxy to set
+`X-Forwarded-For` / `X-Forwarded-Proto` headers:
+
+```python
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
+```
+
+### Baking Models into the Image
+
+Instead of mounting models at runtime, you can embed them during build. Place the `.pth` files
+in `models/` before building:
+
+```bash
+# Copy models, then build — they will be included in the image
+cp experiments/...  models/model_single_2class.pth
+podman build --format docker -t eeg-api -f api.Containerfile .
+```
+
+To use baked-in models, simply omit the `-v` volume mount when running.
+
 
 ## FIT Server Setup
 

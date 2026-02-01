@@ -1,0 +1,23 @@
+# Container runtime requirements.
+# Compile to a pinned requirements.txt with:
+#   make container-reqs
+
+--extra-index-url https://download.pytorch.org/whl/cu126
+
+# Core ML / EEG
+numpy
+scipy
+scikit-learn
+pandas
+mne
+mne-icalabel
+librosa
+
+# Inference API
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+slowapi>=0.1.9
+structlog>=24.1.0

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "thesis"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = ["Milan Tichavský <milantichavsky@seznam.cz>"]
 readme = "README.md"
@@ -17,6 +17,19 @@ matplotlib = "*"
 mne = "*"
 mne-icalabel = "*"
 librosa = "*"
+pip-tools = "^7.5.3"
+
+[tool.poetry.group.api]
+optional = true
+
+[tool.poetry.group.api.dependencies]
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+python-multipart = "*"
+pydantic = "*"
+pydantic-settings = "*"
+slowapi = "*"
+structlog = "*"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
@@ -25,7 +38,8 @@ jupyter = "*"
 mypy = "*"
 pandas-stubs = "*"
 pytest = "*"
-scipy-stubs = "~=1.16.3"
+scipy-stubs = "*"
+pip-tools = "*"
 
 
 [build-system]
@@ -38,7 +52,7 @@ lint.select = ["I", "E", "F"]
 fix = true
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -58,4 +72,6 @@ module = [
     "sklearn.*",
     "matplotlib.*",
     "librosa.*",
+    "slowapi.*",
+    "structlog.*",
 ]

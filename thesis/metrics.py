@@ -6,6 +6,8 @@ import numpy as np
 from numpy.typing import NDArray
 from sklearn.metrics import confusion_matrix
 
+from thesis.labels import get_display_names
+
 
 def classification_metrics(
     y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 2
@@ -64,14 +66,8 @@ def classification_metrics(
             precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
 
-            if num_classes == 4:
-                class_names = ["normal", "anxiety", "depression", "anxiety+depression"]
-            else:
-                raise Exception("Unexpected number of classes")
-
-            class_name = (
-                class_names[class_idx] if class_idx < len(class_names) else f"class_{class_idx}"
-            )
+            display_names = get_display_names(num_classes)
+            class_name = display_names.get(class_idx, f"class_{class_idx}")
 
             metrics[f"precision_{class_name}"] = precision
             metrics[f"recall_{class_name}"] = recall
@@ -155,10 +151,11 @@ def format_metrics_for_logging(metrics: dict[str, float | int], num_classes: int
     else:
         # Multi-class: show per-class precision and recall
         parts = [f"Acc: {metrics['accuracy']:.4f}"]
-        for class_name in ["normal", "mdd", "anxious"]:
-            if f"precision_{class_name}" in metrics:
-                prec = metrics[f"precision_{class_name}"]
-                rec = metrics[f"recall_{class_name}"]
+        for key in metrics:
+            if key.startswith("precision_"):
+                class_name = key.replace("precision_", "")
+                prec = metrics[key]
+                rec = metrics.get(f"recall_{class_name}", 0.0)
                 parts.append(f"{class_name}: P={prec:.3f} R={rec:.3f}")
         return " | ".join(parts)
 
@@ -182,13 +179,11 @@ def extract_classification_metrics(metrics: dict[str, float], num_classes: int) 
             "specificity": metrics["specificity"],
         }
     elif num_classes == 4:
-        return {
-            "accuracy": metrics["accuracy"],
-            "recall_normal": metrics.get("recall_normal", 0.0),
-            "recall_anxiety": metrics.get("recall_anxiety", 0.0),
-            "recall_depression": metrics.get("recall_depression", 0.0),
-            "recall_anxiety+depression": metrics.get("recall_anxiety+depression", 0.0),
-        }
+        display_names = get_display_names(num_classes)
+        result: dict[str, float] = {"accuracy": metrics["accuracy"]}
+        for name in display_names.values():
+            result[f"recall_{name}"] = metrics.get(f"recall_{name}", 0.0)
+        return result
     else:
         raise ValueError(f"Unsupported num_classes: {num_classes}")
 
@@ -267,7 +262,7 @@ def _write_metrics_block(
         writer(_format_metric_line(f"{level} Specificity Mean", spec_values))
 
     # Multi-class: per-class recall (detect class names dynamically)
-    elif "recall_normal" in metrics[0]:
+    elif "recall_Healthy" in metrics[0]:
         # Extract all recall_* keys from first metrics dict
         class_keys = [k for k in metrics[0].keys() if k.startswith("recall_")]
         for key in class_keys:
@@ -293,12 +288,8 @@ def _format_confusion_matrix(
     # Sum confusion matrices across folds
     aggregated_cm = np.sum(confusion_matrices, axis=0)
 
-    if num_classes == 2:
-        class_names = ["Healthy", "Pathological"]
-    elif num_classes == 4:
-        class_names = ["Normal", "Anxiety", "Depression", "Anxiety+Depression"]
-    else:
-        class_names = [f"Class {i}" for i in range(num_classes)]
+    display_names = get_display_names(num_classes)
+    class_names = [display_names.get(i, f"Class {i}") for i in range(num_classes)]
 
     writer("\nAggregated Chunk Confusion Matrix (across folds; TN, FP, FN, TP):\n\n")
 

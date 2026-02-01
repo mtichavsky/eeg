@@ -1,5 +1,4 @@
-
-.PHONY: venv lock format typecheck test
+.PHONY: venv lock format typecheck test container-reqs
 
 test:
 	poetry run pytest .
@@ -16,4 +15,11 @@ venv:
 
 lock:
 	poetry lock
+
+container-reqs: .venv-pip-tools/bin/pip-compile
+	.venv-pip-tools/bin/pip-compile requirements.in -o requirements.txt --strip-extras
+
+.venv-pip-tools/bin/pip-compile:
+	python3.12 -m venv .venv-pip-tools
+	.venv-pip-tools/bin/pip install --quiet pip-tools
 
