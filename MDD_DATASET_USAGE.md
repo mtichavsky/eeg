@@ -140,10 +140,9 @@ Applied to each file:
    - Multi-channel mode: 8 channels (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) when `--channel all`
 5. Channel name standardization: T3→T7, T4→T8 for cross-dataset compatibility
 6. Average reference
-7. Optional ICA with artifact removal (`--skip-ica` to disable)
-8. Optional artifact removal for CANE dataset (`--skip-artifact-removal` to disable)
-9. Chunk into 10-second segments
-10. Convert to PyTorch tensors
+7. Optional artifact removal
+8. Chunk into 10-second segments
+9. Convert to PyTorch tensors
 
 **Key Updates:**
 - **8-channel support**: Now uses all 8 electrodes (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) by default
