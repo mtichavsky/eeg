@@ -2,7 +2,7 @@ import logging
 import re
 import warnings
 from collections import Counter
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, Callable, Literal, Optional
 
@@ -34,14 +34,65 @@ CANE_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "Oz"]
 AX_MALIK_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]
 
 
+def load_and_preprocess_edf_file(
+    file_path: Path,
+    channel: str,
+    fs: float,
+    channel_mapping: dict[str, str],
+    channel_order: list[str],
+) -> torch.Tensor:
+    """
+    Load an EDF file from disk, preprocess it, and return chunks.
+
+    Applies the full preprocessing pipeline: filtering and chunking.
+
+    :param Path file_path: Path to the EDF file to preprocess.
+    :param str channel: Channel to use: specific channel name (e.g., "Fp1") or
+           "all" for all 8 channels.
+    :param float fs: Sampling frequency in Hz (e.g., 250 for MDD, 256 for AX_MALIK).
+    :param dict[str, str] channel_mapping: Mapping from raw channel names to canonical names
+           (e.g., {"EEG Fp1-LE": "Fp1"}).
+    :param list[str] channel_order: Canonical channel order for "all" channel mode
+           (e.g., ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]).
+    :return: Tensor of preprocessed EEG chunks with shape (num_chunks, channels, samples).
+    :rtype: torch.Tensor
+    """
+    # Calculate chunk samples from passed fs
+    chunk_samples = int(CHUNK_DURATION_SEC * fs)
+
+    raw = mne.io.read_raw_edf(file_path, preload=True, verbose=False)
+    raw = raw.filter(l_freq=1, h_freq=70, method="iir", verbose=False)
+    raw = raw.notch_filter(freqs=50, verbose=False)
+
+    raw = raw.pick(list(channel_mapping.keys()))
+    raw = raw.rename_channels(channel_mapping)
+
+    if channel == "all":
+        # Pick channels in canonical order (excludes A2-A1 reference)
+        # This ensures consistent channel ordering across datasets
+        raw = raw.pick(channel_order)
+    elif channel is not None:
+        raw = raw.pick([channel])
+    else:
+        raise RuntimeError("Must specify 'channel' parameter")
+
+    data = raw.get_data()
+    n_samples = data.shape[1]
+    chunks_list: list[np.ndarray] = []
+    for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
+        chunk = data[:, i : i + chunk_samples]
+        chunk = zscore(chunk, axis=1)
+        chunks_list.append(chunk)
+
+    chunks_tensor = torch.stack([torch.from_numpy(chunk).float() for chunk in chunks_list])
+    return chunks_tensor
+
+
 class MDDDataset(Dataset):
     """
     PyTorch Dataset for MDD EEG data.
     """
-
-    FS = 1000 / 4
-    CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)
-
+    # MDD channel mapping from raw EDF names to canonical names
     CHANNEL_MAPPING = {
         "EEG A2-A1": "A2-A1",
         "EEG C3-LE": "C3",
@@ -54,6 +105,28 @@ class MDDDataset(Dataset):
         "EEG T3-LE": "T7",
         "EEG T4-LE": "T8",
     }
+
+    FS = 1000 / 4
+    CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)
+
+    @staticmethod
+    def _log_file_discovery(files: list[dict[str, Any]], dataset_name: str) -> None:
+        """
+        Log discovery statistics for a list of discovered files.
+
+        :param list[dict[str, Any]] files: List of file metadata dictionaries.
+        :param str dataset_name: Name of the dataset for logging purposes.
+        :rtype: None
+        """
+        if files:
+            label_counts = Counter(f["label"] for f in files)
+            condition_counts = Counter(f["condition"] for f in files)
+            logger.info(
+                f"Discovered {len(files)} {dataset_name} files: "
+                f"{dict(label_counts)} labels, {dict(condition_counts)} conditions"
+            )
+        else:
+            logger.warning(f"No {dataset_name} files discovered matching criteria")
 
     def __init__(
         self,
@@ -97,14 +170,19 @@ class MDDDataset(Dataset):
             MDD_CHANNEL_ORDER if channel == "all" else ([channel] if channel else [])
         )
 
+        # Bind dataset-specific parameters to the preprocessing function
+        preprocess_func = partial(
+            load_and_preprocess_edf_file,
+            channel_mapping=self.CHANNEL_MAPPING,
+            channel_order=MDD_CHANNEL_ORDER,
+        )
+
         if cache_size:
             self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
-                MDDDataset.load_and_preprocess_edf_file
+                preprocess_func
             )
         else:
-            self._load_and_preprocess_mdd_raw_file_cached = (
-                lambda path, channel, fs: MDDDataset.load_and_preprocess_edf_file(path, channel, fs)
-            )
+            self._load_and_preprocess_mdd_raw_file_cached = preprocess_func
 
     def _discover_files(
         self,
@@ -155,57 +233,9 @@ class MDDDataset(Dataset):
                     "label_int": 0 if label == "H" else 1,  # H=0 (healthy), MDD=1
                 }
             )
+
+        MDDDataset._log_file_discovery(files, "MDD")
         return files
-
-    @staticmethod
-    def load_and_preprocess_edf_file(
-        file_path: Path,
-        channel: str,
-        fs: float,
-    ) -> torch.Tensor:
-        """
-        Load an EDF file from disk, preprocess it, and return chunks. This contains all the
-        preprocessing logic in this class.
-
-        Applies the full preprocessing pipeline: filtering and chunking.
-
-        :param Path file_path: Path to the EDF file to preprocess.
-        :param str channel: Channel to use: specific channel name (e.g., "Fp1") or
-               "all" for all 8 channels.
-        :param float fs: Sampling frequency in Hz (e.g., 250 for MDD, 256 for AX_MALIK).
-        :return: Tensor of preprocessed EEG chunks with shape (num_chunks, channels, samples).
-        :rtype: torch.Tensor
-        """
-        # Calculate chunk samples from passed fs, not class attribute
-        chunk_samples = int(CHUNK_DURATION_SEC * fs)
-
-        raw = mne.io.read_raw_edf(file_path, preload=True, verbose=False)
-        raw = raw.filter(l_freq=1, h_freq=70, method="iir", verbose=False)
-        raw = raw.notch_filter(freqs=50, verbose=False)
-
-        raw = raw.pick(list(MDDDataset.CHANNEL_MAPPING.keys()))
-        raw = raw.rename_channels(MDDDataset.CHANNEL_MAPPING)
-
-        if channel == "all":
-            # Pick channels in canonical order (excludes A2-A1 reference)
-            # This ensures consistent channel ordering across datasets
-            raw = raw.pick(MDD_CHANNEL_ORDER)
-        elif channel is not None:
-            raw = raw.pick([channel])
-        else:
-            raise RuntimeError("Must specify 'channel' parameter")
-
-        data = raw.get_data()
-        n_samples = data.shape[1]
-        chunks_list: list[np.ndarray] = []
-        # Use chunk_samples variable instead of MDDDataset.CHUNK_SAMPLES
-        for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
-            chunk = data[:, i : i + chunk_samples]
-            chunk = zscore(chunk, axis=1)
-            chunks_list.append(chunk)
-
-        chunks_tensor = torch.stack([torch.from_numpy(chunk).float() for chunk in chunks_list])
-        return chunks_tensor
 
     def __len__(self) -> int:
         return len(self.files)
@@ -455,7 +485,7 @@ class CANEDataset(Dataset):
                         }
                     )
 
-        logger.info(f"Discovered {len(files)} CANE files")
+        MDDDataset._log_file_discovery(files, "CANE")
         return files
 
     @staticmethod
@@ -763,7 +793,6 @@ class AX_MALIKDataset(MDDDataset):
     CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)  # 2560 samples per chunk
 
     CHANNEL_MAPPING = {
-        # AX_MALIK uses standard 10-20 channel names - identity mapping
         "Fp1": "Fp1",
         "Fp2": "Fp2",
         "C3": "C3",
@@ -781,8 +810,8 @@ class AX_MALIKDataset(MDDDataset):
         subjects: Optional[list[str]] = None,
         cache_size: Optional[int] = 100,
         transform: Optional[Callable] = None,
-        skip_ica: bool = True,
         channel: str = "all",
+        test_mode: bool = False,
     ):
         """
         Initialize the AX_MALIK EEG dataset.
@@ -792,13 +821,13 @@ class AX_MALIKDataset(MDDDataset):
         :param Optional[list[str]] subjects: List of subject IDs to include. None = all.
         :param int cache_size: Number of preprocessed files to cache in memory.
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
-        :param bool skip_ica: If True, skip ICA artifact removal during preprocessing.
         :param str channel: Channel to use: specific channel name or "all" for all 8 channels.
+        :param bool test_mode: If True, load only C1.edf files for debugging.
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
-        self.skip_ica = skip_ica
+        self.test_mode = test_mode
         self.files = self._discover_files(
             condition.upper() if condition is not None else None,
             subjects,
@@ -811,15 +840,20 @@ class AX_MALIKDataset(MDDDataset):
             AX_MALIK_CHANNEL_ORDER if channel == "all" else ([channel] if channel else [])
         )
 
+        # Bind dataset-specific parameters to the preprocessing function
+        preprocess_func = partial(
+            load_and_preprocess_edf_file,
+            channel_mapping=self.CHANNEL_MAPPING,
+            channel_order=AX_MALIK_CHANNEL_ORDER,
+        )
+
         # Set up caching (same pattern as MDDDataset)
         if cache_size:
             self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
-                MDDDataset.load_and_preprocess_edf_file
+                preprocess_func
             )
         else:
-            self._load_and_preprocess_mdd_raw_file_cached = (
-                lambda path, channel, fs: MDDDataset.load_and_preprocess_edf_file(path, channel, fs)
-            )
+            self._load_and_preprocess_mdd_raw_file_cached = preprocess_func
 
     def _discover_files(
         self,
@@ -839,7 +873,10 @@ class AX_MALIKDataset(MDDDataset):
         :rtype: list[dict]
         """
         files = []
-        pattern = re.compile(r"C(\d+)\.edf")
+        if self.test_mode:
+            pattern = re.compile(r"C(1)\.edf")
+        else:
+            pattern = re.compile(r"C(\d+)\.edf")
 
         for condition_dir in ["ec", "eo"]:
             # Filter by condition if specified
@@ -873,7 +910,7 @@ class AX_MALIKDataset(MDDDataset):
                     }
                 )
 
-        logger.info(f"Discovered {len(files)} AX_MALIK files")
+        MDDDataset._log_file_discovery(files, "AX_MALIK")
         return files
 
     def get_statistics(self) -> dict[str, Any]:
@@ -1008,7 +1045,7 @@ class SpectrogramDataset(Dataset):
                 spectograms.append(spec_tensor)
 
         if spectograms:
-            logger.info(
+            logger.debug(
                 f"Created {len(spectograms)} spectrograms with shape {spectograms[0].shape}"
             )
         else:
