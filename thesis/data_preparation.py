@@ -382,18 +382,23 @@ def create_balanced_folds(
     return normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds
 
 
-def get_indices_from_concat_dataset(
-    concat_dataset: ConcatDataset, subject_list: list[str]
+def get_indices_from_dataset(
+    concat_dataset: ConcatDataset | FlattenedSpectrogramDataset, subject_list: list[str]
 ) -> list[int]:
     """
-    Get indices for subjects from a ConcatDataset.
+    Get indices for subjects from a ConcatDataset or FlattenedSpectrogramDataset.
 
-    :param ConcatDataset concat_dataset: ConcatDataset containing multiple
-        FlattenedSpectrogramDatasets.
+    :param ConcatDataset | FlattenedSpectrogramDataset concat_dataset: Dataset containing
+        EEG data, either concatenated or flattened.
     :param list[str] subject_list: List of subject IDs.
-    :return: List of indices in the concatenated dataset.
+    :return: List of indices in the dataset.
     :rtype: list[int]
     """
+    # Handle FlattenedSpectrogramDataset directly
+    if isinstance(concat_dataset, FlattenedSpectrogramDataset):
+        return concat_dataset.get_indices_for_subjects(subject_list)
+
+    # Handle ConcatDataset by iterating through subdatasets
     all_indices: list[int] = []
     offset = 0
     for dataset in concat_dataset.datasets:
@@ -470,10 +475,10 @@ def get_datasets_for_fold(
             mdd_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "mdd"]
             mdd_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "mdd"]
 
-            mdd_train_indices = get_indices_from_concat_dataset(
+            mdd_train_indices = get_indices_from_dataset(
                 mdd_flat_dataset, mdd_train_subjects
             )
-            mdd_val_indices = get_indices_from_concat_dataset(mdd_flat_dataset, mdd_val_subjects)
+            mdd_val_indices = get_indices_from_dataset(mdd_flat_dataset, mdd_val_subjects)
 
             train_subsets.append(Subset(mdd_flat_dataset, mdd_train_indices))
             val_subsets.append(Subset(mdd_flat_dataset, mdd_val_indices))
@@ -485,10 +490,10 @@ def get_datasets_for_fold(
             cane_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "cane"]
             cane_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "cane"]
 
-            cane_train_indices = get_indices_from_concat_dataset(
+            cane_train_indices = get_indices_from_dataset(
                 cane_flat_dataset, cane_train_subjects
             )
-            cane_val_indices = get_indices_from_concat_dataset(cane_flat_dataset, cane_val_subjects)
+            cane_val_indices = get_indices_from_dataset(cane_flat_dataset, cane_val_subjects)
 
             train_subsets.append(Subset(cane_flat_dataset, cane_train_indices))
             val_subsets.append(Subset(cane_flat_dataset, cane_val_indices))
@@ -504,10 +509,10 @@ def get_datasets_for_fold(
                 subj for ds, subj in val_subjects_with_dataset if ds == "ax_malik"
             ]
 
-            ax_malik_train_indices = get_indices_from_concat_dataset(
+            ax_malik_train_indices = get_indices_from_dataset(
                 ax_malik_flat_dataset, ax_malik_train_subjects
             )
-            ax_malik_val_indices = get_indices_from_concat_dataset(
+            ax_malik_val_indices = get_indices_from_dataset(
                 ax_malik_flat_dataset, ax_malik_val_subjects
             )
 
@@ -532,8 +537,8 @@ def get_datasets_for_fold(
 
         # Handle case where dataset might be ConcatDataset (multiple conditions)
         if isinstance(flat_dataset, ConcatDataset):
-            train_indices = get_indices_from_concat_dataset(flat_dataset, train_subjects)
-            val_indices = get_indices_from_concat_dataset(flat_dataset, val_subjects)
+            train_indices = get_indices_from_dataset(flat_dataset, train_subjects)
+            val_indices = get_indices_from_dataset(flat_dataset, val_subjects)
         else:
             train_indices = flat_dataset.get_indices_for_subjects(train_subjects)
             val_indices = flat_dataset.get_indices_for_subjects(val_subjects)
