@@ -37,10 +37,11 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         choices=list(
             set(MDDDataset.CHANNEL_MAPPING.values()) | set(CANEDataset.CHANNEL_MAPPING.values())
         )
-        + ["all"],
+        + ["all", "in-ear"],
         default="all",
-        help="Channel to use: specific channel name (Fp1, T7, etc.) or 'all' for all 8 channels. "
-        "When 'all' is selected, model receives 8-channel spectrograms.",
+        help="Channel to use: specific channel name (Fp1, T7, etc.), 'all' for all 8 channels, "
+        "or 'in-ear' for synthetic in-ear EEG (bipolar derivation T8-T7 with 50%% sign flip "
+        "augmentation). When 'all' is selected, model receives 8-channel spectrograms.",
     )
     preproc_group.add_argument(
         "--class-mode",

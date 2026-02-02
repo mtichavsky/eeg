@@ -90,7 +90,7 @@ def _prepare_dataset_generic(
         )
 
         # Create spectrogram dataset
-        spec_dataset = SpectrogramDataset(dataset, fs=fs, augmentation=augmentation)
+        spec_dataset = SpectrogramDataset(dataset, fs=fs, augmentation=augmentation, channel=channel)
         flat_dataset = FlattenedSpectrogramDataset(spec_dataset)
 
         # Validate shape
@@ -184,6 +184,7 @@ def prepare_cane_dataset(
             nperseg=CANEDataset.STFT_NPERSEG,
             noverlap=CANEDataset.STFT_NOVERLAP,
             augmentation=augmentation,
+            channel=channel,
         )
 
         cane_flat_dataset = FlattenedSpectrogramDataset(

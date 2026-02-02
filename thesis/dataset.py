@@ -67,16 +67,23 @@ def load_and_preprocess_edf_file(
     raw = raw.pick(list(channel_mapping.keys()))
     raw = raw.rename_channels(channel_mapping)
 
-    if channel == "all":
+    if channel == "in-ear":
+        # Bipolar derivation: T8 - T7 (right minus left, simulates in-ear EEG)
+        # Sign flip augmentation is applied later in SpectrogramDataset (per-epoch)
+        raw = raw.pick(["T7", "T8"])
+        data = raw.get_data()
+        inear_signal = data[1] - data[0]  # T8 (index 1) minus T7 (index 0)
+        data = inear_signal.reshape(1, -1)  # Shape: (1, n_samples)
+    elif channel == "all":
         # Pick channels in canonical order (excludes A2-A1 reference)
         # This ensures consistent channel ordering across datasets
         raw = raw.pick(channel_order)
+        data = raw.get_data()
     elif channel is not None:
         raw = raw.pick([channel])
+        data = raw.get_data()
     else:
         raise RuntimeError("Must specify 'channel' parameter")
-
-    data = raw.get_data()
     n_samples = data.shape[1]
     chunks_list: list[np.ndarray] = []
     for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
@@ -167,7 +174,11 @@ class MDDDataset(Dataset):
         # Handle channel selection
         self.channel = channel
         self.channel_names = (
-            MDD_CHANNEL_ORDER if channel == "all" else ([channel] if channel else [])
+            MDD_CHANNEL_ORDER
+            if channel == "all"
+            else ["in-ear"]
+            if channel == "in-ear"
+            else ([channel] if channel else [])
         )
 
         # Bind dataset-specific parameters to the preprocessing function
@@ -395,6 +406,8 @@ class CANEDataset(Dataset):
         # Set channel_names for verification
         if channel == "all":
             self.channel_names = CANE_CHANNEL_ORDER
+        elif channel == "in-ear":
+            self.channel_names = ["in-ear"]
         elif channel:
             self.channel_names = [channel]
         else:
@@ -639,7 +652,12 @@ class CANEDataset(Dataset):
         df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
 
         # Determine which channels to use
-        if channel == "all":
+        if channel == "in-ear":
+            # Bipolar derivation: process T7 and T8 individually (preserves filter integrity),
+            # then subtract. Sign flip augmentation is applied in SpectrogramDataset (per-epoch).
+            channels_to_use = ["T7", "T8"]
+            logger.info("Computing in-ear bipolar derivation (T8 - T7)")
+        elif channel == "all":
             # Use all 8 channels in canonical order
             channels_to_use = CANE_CHANNEL_ORDER
             logger.info(f"Loading all {len(channels_to_use)} channels in canonical order")
@@ -662,6 +680,12 @@ class CANEDataset(Dataset):
                 skip_artifact_removal,
             )
             processed_channels.append(processed_signal)
+
+        # For in-ear: subtract filtered channels to get bipolar derivation
+        if channel == "in-ear":
+            # processed_channels = [T7_filtered, T8_filtered]
+            inear_signal = processed_channels[1] - processed_channels[0]  # T8 - T7
+            processed_channels = [inear_signal]
 
         # Step 7: Chunk the signals at native sampling rate
         # Stack all channels together: (num_channels, n_samples)
@@ -837,7 +861,11 @@ class AX_MALIKDataset(MDDDataset):
         # Handle channel selection
         self.channel = channel
         self.channel_names = (
-            AX_MALIK_CHANNEL_ORDER if channel == "all" else ([channel] if channel else [])
+            AX_MALIK_CHANNEL_ORDER
+            if channel == "all"
+            else ["in-ear"]
+            if channel == "in-ear"
+            else ([channel] if channel else [])
         )
 
         # Bind dataset-specific parameters to the preprocessing function
@@ -948,6 +976,7 @@ class SpectrogramDataset(Dataset):
         window: str = "hamming",
         cache_size: int = 100,
         augmentation: Optional[Callable] = None,
+        channel: str = "all",
     ):
         """
         Initialize the SpectrogramDataset.
@@ -961,6 +990,8 @@ class SpectrogramDataset(Dataset):
         :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
                before spectrogram conversion. When enabled, caching is disabled to ensure
                fresh augmentations on each access.
+        :param str channel: Channel mode. When "in-ear", applies 50%% sign flip augmentation
+               per chunk to handle polarity ambiguity (always enabled regardless of augmentation).
         """
         self.dataset = dataset
         self.fs = fs
@@ -968,10 +999,11 @@ class SpectrogramDataset(Dataset):
         self.noverlap = noverlap
         self.window = window
         self.augmentation = augmentation
+        self.is_inear: bool = channel == "in-ear"
 
-        # Disable caching when augmentation is enabled - each access should return
-        # a fresh augmentation. Otherwise, use LRU cache for performance.
-        if augmentation is None:
+        # Disable caching when augmentation or in-ear sign flip is enabled - each access
+        # should return fresh randomness. Otherwise, use LRU cache for performance.
+        if augmentation is None and not self.is_inear:
             self._get_item_cached = lru_cache(maxsize=cache_size)(self._get_item)
         else:
             self._get_item_cached = self._get_item
@@ -984,6 +1016,7 @@ class SpectrogramDataset(Dataset):
         noverlap: int,
         window: str,
         augmentation: Optional[Callable] = None,
+        is_inear: bool = False,
     ) -> list[torch.Tensor]:
         """
         Convert EEG tensor to list of spectrograms using STFT.
@@ -998,6 +1031,8 @@ class SpectrogramDataset(Dataset):
         :param str window: Window function for STFT.
         :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
                before STFT conversion.
+        :param bool is_inear: If True, applies 50%% sign flip per chunk to handle in-ear
+               polarity ambiguity (independent of augmentation flag).
         :return: List of spectrogram tensors, each with shape
                  (num_channels, freq_bins, time_frames).
         :rtype: list[torch.Tensor]
@@ -1012,6 +1047,10 @@ class SpectrogramDataset(Dataset):
             channel_spectrograms = []
             for ch_idx in range(num_channels):
                 channel_data = chunk_data[ch_idx].numpy()
+
+                # Sign flip for in-ear: 50% probability per chunk, handles polarity ambiguity
+                if is_inear and np.random.random() < 0.5:
+                    channel_data = -channel_data
 
                 # Apply augmentation to raw EEG before STFT
                 if augmentation is not None:
@@ -1072,6 +1111,7 @@ class SpectrogramDataset(Dataset):
             self.noverlap,
             self.window,
             self.augmentation,
+            self.is_inear,
         )
         return spectograms, item["label"], item["subject"]
 
