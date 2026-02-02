@@ -30,10 +30,13 @@ class TestClassificationMetricsBinary:
         assert metrics["recall"] == 1.0  # sensitivity
         assert metrics["specificity"] == 1.0
         assert metrics["precision"] == 1.0
-        assert metrics["tp"] == 5
-        assert metrics["tn"] == 5
-        assert metrics["fp"] == 0
-        assert metrics["fn"] == 0
+        # Extract TP/TN/FP/FN from confusion matrix
+        cm = metrics["confusion_matrix"]
+        tn, fp, fn, tp = cm.ravel()
+        assert tp == 5
+        assert tn == 5
+        assert fp == 0
+        assert fn == 0
 
     def test_all_wrong_predictions(self):
         """0% accuracy should yield sensitivity=0.0, specificity=0.0.
@@ -52,10 +55,13 @@ class TestClassificationMetricsBinary:
         assert metrics["recall"] == 0.0
         assert metrics["specificity"] == 0.0
         assert metrics["precision"] == 0.0
-        assert metrics["tp"] == 0
-        assert metrics["tn"] == 0
-        assert metrics["fp"] == 5
-        assert metrics["fn"] == 5
+        # Extract TP/TN/FP/FN from confusion matrix
+        cm = metrics["confusion_matrix"]
+        tn, fp, fn, tp = cm.ravel()
+        assert tp == 0
+        assert tn == 0
+        assert fp == 5
+        assert fn == 5
 
     def test_partial_errors_hand_calculated(self):
         """Verify metrics match hand-calculated values from known CM.
@@ -82,10 +88,13 @@ class TestClassificationMetricsBinary:
         assert metrics["recall"] == pytest.approx(4 / 6)  # 0.6667
         assert metrics["specificity"] == pytest.approx(0.75)
         assert metrics["precision"] == pytest.approx(0.8)
-        assert metrics["tp"] == 4
-        assert metrics["tn"] == 3
-        assert metrics["fp"] == 1
-        assert metrics["fn"] == 2
+        # Extract TP/TN/FP/FN from confusion matrix
+        cm = metrics["confusion_matrix"]
+        tn, fp, fn, tp = cm.ravel()
+        assert tp == 4
+        assert tn == 3
+        assert fp == 1
+        assert fn == 2
 
     def test_high_sensitivity_low_specificity(self):
         """Catches all positives but has false positives.
@@ -109,8 +118,11 @@ class TestClassificationMetricsBinary:
         assert metrics["accuracy"] == pytest.approx(4 / 6)
         assert metrics["recall"] == 1.0  # Perfect sensitivity
         assert metrics["specificity"] == 0.5  # Low specificity
-        assert metrics["tp"] == 2
-        assert metrics["fp"] == 2
+        # Extract TP/TN/FP/FN from confusion matrix
+        cm = metrics["confusion_matrix"]
+        tn, fp, fn, tp = cm.ravel()
+        assert tp == 2
+        assert fp == 2
 
     def test_high_specificity_low_sensitivity(self):
         """Catches all negatives but misses all positives.
@@ -134,8 +146,11 @@ class TestClassificationMetricsBinary:
         assert metrics["accuracy"] == pytest.approx(4 / 6)
         assert metrics["recall"] == 0.0  # No sensitivity (misses all positives)
         assert metrics["specificity"] == 1.0  # Perfect specificity
-        assert metrics["tp"] == 0
-        assert metrics["fn"] == 2
+        # Extract TP/TN/FP/FN from confusion matrix
+        cm = metrics["confusion_matrix"]
+        tn, fp, fn, tp = cm.ravel()
+        assert tp == 0
+        assert fn == 2
 
     def test_confusion_matrix_values_match_counts(self):
         """TP, TN, FP, FN match expected counts from explicit confusion matrix."""
@@ -147,10 +162,13 @@ class TestClassificationMetricsBinary:
 
         metrics = classification_metrics(y_true, y_pred, num_classes=2)
 
-        assert metrics["tn"] == 3
-        assert metrics["fp"] == 2
-        assert metrics["fn"] == 1
-        assert metrics["tp"] == 4
+        # Extract TP/TN/FP/FN from confusion matrix
+        cm = metrics["confusion_matrix"]
+        tn, fp, fn, tp = cm.ravel()
+        assert tn == 3
+        assert fp == 2
+        assert fn == 1
+        assert tp == 4
 
         # Verify formulas use these counts correctly
         assert metrics["recall"] == pytest.approx(4 / (4 + 1))  # TP/(TP+FN)
@@ -159,81 +177,97 @@ class TestClassificationMetricsBinary:
 
 
 class TestClassificationMetricsMulticlass:
-    """Multi-class (3-class) metric calculations."""
+    """Multi-class (4-class) metric calculations.
 
-    def test_perfect_3class_predictions(self):
+    Uses the 4-class mode: normal (0), anxiety (1), depression (2), anxiety+depression (3).
+    """
+
+    def test_perfect_4class_predictions(self):
         """All classes predicted correctly gives recall=1.0 for each class."""
-        y_true = np.array([0, 0, 1, 1, 2, 2])
-        y_pred = np.array([0, 0, 1, 1, 2, 2])
+        y_true = np.array([0, 0, 1, 1, 2, 2, 3, 3])
+        y_pred = np.array([0, 0, 1, 1, 2, 2, 3, 3])
 
-        metrics = classification_metrics(y_true, y_pred, num_classes=3)
+        metrics = classification_metrics(y_true, y_pred, num_classes=4)
 
         assert metrics["accuracy"] == 1.0
         assert metrics["recall_normal"] == 1.0
-        assert metrics["recall_mdd"] == 1.0
-        assert metrics["recall_anxious"] == 1.0
+        assert metrics["recall_anxiety"] == 1.0
+        assert metrics["recall_depression"] == 1.0
+        assert metrics["recall_anxiety+depression"] == 1.0
         assert metrics["precision_normal"] == 1.0
-        assert metrics["precision_mdd"] == 1.0
-        assert metrics["precision_anxious"] == 1.0
+        assert metrics["precision_anxiety"] == 1.0
+        assert metrics["precision_depression"] == 1.0
+        assert metrics["precision_anxiety+depression"] == 1.0
 
-    def test_partial_3class_errors_hand_calculated(self):
+    def test_partial_4class_errors_hand_calculated(self):
         """Verify per-class recall with known confusion matrix.
 
-        y_true = [0, 0, 0, 1, 1, 1, 2, 2, 2]
-        y_pred = [0, 0, 1, 1, 1, 2, 2, 0, 2]
+        y_true = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+        y_pred = [0, 0, 1, 1, 1, 2, 2, 0, 2, 3, 3, 0]
 
         Confusion Matrix:
                       Predicted
-                      0   1   2
-        Actual 0  [   2   1   0 ]  -> recall_normal = 2/3
-               1  [   0   2   1 ]  -> recall_mdd = 2/3
-               2  [   1   0   2 ]  -> recall_anxious = 2/3
+                      0   1   2   3
+        Actual 0  [   2   1   0   0 ]  -> recall_normal = 2/3
+               1  [   0   2   1   0 ]  -> recall_anxiety = 2/3
+               2  [   1   0   2   0 ]  -> recall_depression = 2/3
+               3  [   1   0   0   2 ]  -> recall_anxiety+depression = 2/3
 
-        accuracy = 6/9 = 0.6667
+        accuracy = 8/12 = 0.6667
         """
-        y_true = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2])
-        y_pred = np.array([0, 0, 1, 1, 1, 2, 2, 0, 2])
+        y_true = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
+        y_pred = np.array([0, 0, 1, 1, 1, 2, 2, 0, 2, 3, 3, 0])
 
-        metrics = classification_metrics(y_true, y_pred, num_classes=3)
+        metrics = classification_metrics(y_true, y_pred, num_classes=4)
 
-        assert metrics["accuracy"] == pytest.approx(6 / 9)
+        assert metrics["accuracy"] == pytest.approx(8 / 12)
         assert metrics["recall_normal"] == pytest.approx(2 / 3)
-        assert metrics["recall_mdd"] == pytest.approx(2 / 3)
-        assert metrics["recall_anxious"] == pytest.approx(2 / 3)
+        assert metrics["recall_anxiety"] == pytest.approx(2 / 3)
+        assert metrics["recall_depression"] == pytest.approx(2 / 3)
+        assert metrics["recall_anxiety+depression"] == pytest.approx(2 / 3)
 
     def test_confusion_matrix_shape_and_values(self):
-        """Returned confusion matrix is 3x3 with correct values."""
-        y_true = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2])
-        y_pred = np.array([0, 0, 1, 1, 1, 2, 2, 0, 2])
+        """Returned confusion matrix is 4x4 with correct values."""
+        y_true = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
+        y_pred = np.array([0, 0, 1, 1, 1, 2, 2, 0, 2, 3, 3, 0])
 
-        metrics = classification_metrics(y_true, y_pred, num_classes=3)
+        metrics = classification_metrics(y_true, y_pred, num_classes=4)
 
         cm = metrics["confusion_matrix"]
-        assert cm.shape == (3, 3)
+        assert cm.shape == (4, 4)
         # Row 0 (actual=0): 2 correct, 1 predicted as class 1
         assert cm[0, 0] == 2
         assert cm[0, 1] == 1
         assert cm[0, 2] == 0
+        assert cm[0, 3] == 0
         # Row 1 (actual=1): 2 correct, 1 predicted as class 2
         assert cm[1, 0] == 0
         assert cm[1, 1] == 2
         assert cm[1, 2] == 1
+        assert cm[1, 3] == 0
         # Row 2 (actual=2): 2 correct, 1 predicted as class 0
         assert cm[2, 0] == 1
         assert cm[2, 1] == 0
         assert cm[2, 2] == 2
+        assert cm[2, 3] == 0
+        # Row 3 (actual=3): 2 correct, 1 predicted as class 0
+        assert cm[3, 0] == 1
+        assert cm[3, 1] == 0
+        assert cm[3, 2] == 0
+        assert cm[3, 3] == 2
 
     def test_one_class_never_predicted(self):
         """Handle case where one class is never predicted."""
-        y_true = np.array([0, 0, 1, 1, 2, 2])
-        y_pred = np.array([0, 0, 0, 0, 0, 0])  # All predicted as class 0
+        y_true = np.array([0, 0, 1, 1, 2, 2, 3, 3])
+        y_pred = np.array([0, 0, 0, 0, 0, 0, 0, 0])  # All predicted as class 0
 
-        metrics = classification_metrics(y_true, y_pred, num_classes=3)
+        metrics = classification_metrics(y_true, y_pred, num_classes=4)
 
-        assert metrics["accuracy"] == pytest.approx(2 / 6)
+        assert metrics["accuracy"] == pytest.approx(2 / 8)
         assert metrics["recall_normal"] == 1.0  # Both class 0 correct
-        assert metrics["recall_mdd"] == 0.0  # None of class 1 predicted
-        assert metrics["recall_anxious"] == 0.0  # None of class 2 predicted
+        assert metrics["recall_anxiety"] == 0.0  # None of class 1 predicted
+        assert metrics["recall_depression"] == 0.0  # None of class 2 predicted
+        assert metrics["recall_anxiety+depression"] == 0.0  # None of class 3 predicted
 
 
 class TestAggregateSubjectPredictions:

@@ -129,18 +129,33 @@ class TestSplitIntoFolds:
 
 
 class TestCreateBalancedFolds:
-    """Tests for create_balanced_folds function used in multi-dataset training."""
+    """Tests for create_balanced_folds function used in multi-dataset training.
+
+    The function now takes MultiDatasetSubjectList (list of lists) for each class:
+    - normal: [[mdd_normal], [cane_normal], ...]
+    - anxiety: [[cane_anxious], [ax_malik_anxious], ...]
+    - depression: [[mdd_depressed], ...]
+    - anxiety_depression: [[cane_anxdep], ...]
+
+    And returns 4 values: (normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds)
+    """
 
     def test_both_datasets_in_each_fold(self):
         """Verify each fold contains subjects from both MDD and CANE datasets."""
+        # MultiDatasetSubjectList format: list of subject lists per dataset
         mdd_normal = [("mdd", "H S1 EC"), ("mdd", "H S1 EO"), ("mdd", "H S2 EC")]
-        mdd_depressed = [("mdd", "MDD S1 EC"), ("mdd", "MDD S1 EO")]
         cane_normal = [("cane", "H S1 ec"), ("cane", "H S1 eo"), ("cane", "H S2 ec")]
-        cane_depressed = []  # CANE doesn't have MDD labeled data
+        mdd_depressed = [("mdd", "MDD S1 EC"), ("mdd", "MDD S1 EO")]
         cane_anxious = [("cane", "AX S1 ec"), ("cane", "AX S1 eo"), ("cane", "AX S2 ec")]
 
-        normal_folds, anxious_folds, mdd_folds = create_balanced_folds(
-            mdd_normal, mdd_depressed, cane_normal, cane_depressed, cane_anxious, n_folds=2
+        # Pack into MultiDatasetSubjectList format
+        normal = [mdd_normal, cane_normal]  # normal subjects from both datasets
+        anxiety = [cane_anxious]  # anxiety subjects (only CANE has these)
+        depression = [mdd_depressed]  # depression subjects (only MDD has these)
+        anxiety_depression = [[]]  # no anxiety+depression subjects in this test
+
+        normal_folds, anxiety_folds, depression_folds, anxiety_dep_folds = create_balanced_folds(
+            normal, anxiety, depression, anxiety_depression, n_folds=2
         )
 
         # Check that normal folds contain both MDD and CANE subjects
@@ -151,8 +166,8 @@ class TestCreateBalancedFolds:
             if len(fold) > 0:
                 assert "mdd" in datasets and "cane" in datasets
 
-        # Check MDD folds contain MDD subjects
-        for fold in mdd_folds:
+        # Check depression folds contain MDD subjects
+        for fold in depression_folds:
             if len(fold) > 0:
                 datasets = set(dataset for dataset, _ in fold)
                 assert "mdd" in datasets
@@ -160,38 +175,48 @@ class TestCreateBalancedFolds:
     def test_no_subject_leakage_across_class_folds(self):
         """Verify subjects don't leak between different class folds at same index."""
         mdd_normal = [("mdd", f"H S{i} EC") for i in range(1, 5)]
-        mdd_depressed = [("mdd", f"MDD S{i} EC") for i in range(1, 5)]
         cane_normal = [("cane", f"H S{i} ec") for i in range(5, 9)]
-        cane_depressed = []
+        mdd_depressed = [("mdd", f"MDD S{i} EC") for i in range(1, 5)]
         cane_anxious = [("cane", f"AX S{i} ec") for i in range(1, 5)]
 
-        normal_folds, anxious_folds, mdd_folds = create_balanced_folds(
-            mdd_normal, mdd_depressed, cane_normal, cane_depressed, cane_anxious, n_folds=2
+        # Pack into MultiDatasetSubjectList format
+        normal = [mdd_normal, cane_normal]
+        anxiety = [cane_anxious]
+        depression = [mdd_depressed]
+        anxiety_depression = [[]]
+
+        normal_folds, anxiety_folds, depression_folds, anxiety_dep_folds = create_balanced_folds(
+            normal, anxiety, depression, anxiety_depression, n_folds=2
         )
 
         # At each fold index, verify subjects don't overlap
         for i in range(2):
             normal_subjects = set(subj for _, subj in normal_folds[i])
-            mdd_subjects = set(subj for _, subj in mdd_folds[i])
-            anxious_subjects = set(subj for _, subj in anxious_folds[i])
+            depression_subjects = set(subj for _, subj in depression_folds[i])
+            anxious_subjects = set(subj for _, subj in anxiety_folds[i])
 
-            # Normal and MDD should not overlap
-            assert len(normal_subjects & mdd_subjects) == 0
+            # Normal and depression should not overlap
+            assert len(normal_subjects & depression_subjects) == 0
             # Normal and anxious should not overlap (different classes)
             assert len(normal_subjects & anxious_subjects) == 0
-            # MDD and anxious should not overlap
-            assert len(mdd_subjects & anxious_subjects) == 0
+            # Depression and anxious should not overlap
+            assert len(depression_subjects & anxious_subjects) == 0
 
     def test_stratified_distribution(self):
         """Verify each fold maintains class balance."""
         mdd_normal = [("mdd", f"H S{i} EC") for i in range(1, 11)]  # 10 normal
-        mdd_depressed = [("mdd", f"MDD S{i} EC") for i in range(1, 11)]  # 10 depressed
         cane_normal = [("cane", f"H S{i} ec") for i in range(11, 21)]  # 10 normal
-        cane_depressed = []
+        mdd_depressed = [("mdd", f"MDD S{i} EC") for i in range(1, 11)]  # 10 depressed
         cane_anxious = [("cane", f"AX S{i} ec") for i in range(1, 11)]  # 10 anxious
 
-        normal_folds, anxious_folds, mdd_folds = create_balanced_folds(
-            mdd_normal, mdd_depressed, cane_normal, cane_depressed, cane_anxious, n_folds=5
+        # Pack into MultiDatasetSubjectList format
+        normal = [mdd_normal, cane_normal]
+        anxiety = [cane_anxious]
+        depression = [mdd_depressed]
+        anxiety_depression = [[]]
+
+        normal_folds, anxiety_folds, depression_folds, anxiety_dep_folds = create_balanced_folds(
+            normal, anxiety, depression, anxiety_depression, n_folds=5
         )
 
         # Each fold should have roughly equal number of normal subjects
@@ -201,14 +226,16 @@ class TestCreateBalancedFolds:
         )
 
         # Each fold should have equal number of anxious subjects
-        anxious_sizes = [len(fold) for fold in anxious_folds]
+        anxious_sizes = [len(fold) for fold in anxiety_folds]
         assert all(size == 2 for size in anxious_sizes), (
             f"Uneven anxious distribution: {anxious_sizes}"
         )
 
-        # Each fold should have equal number of MDD subjects
-        mdd_sizes = [len(fold) for fold in mdd_folds]
-        assert all(size == 2 for size in mdd_sizes), f"Uneven MDD distribution: {mdd_sizes}"
+        # Each fold should have equal number of depression subjects
+        depression_sizes = [len(fold) for fold in depression_folds]
+        assert all(size == 2 for size in depression_sizes), (
+            f"Uneven depression distribution: {depression_sizes}"
+        )
 
 
 class TestCrossValidationIntegrity:
