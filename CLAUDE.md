@@ -403,7 +403,18 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Saves plots to `loss_curves/` directory in checkpoint folder
 - Usage: `poetry run python plot_training_curves.py <checkpoint_dir>/<log file>`
 
+## Plan Mode
+
+When executing in plan mode, save the generated plan to `docs/plans/` using the filename format:
+
+```
+docs/plans/YYYY-MM-DD-kebab-case-title.md
+```
+
+Use today's date and a short title derived from the task. Existing plans in that directory follow this convention — match their style.
+
 ## Quick Reference Files
+- `docs/plans/` - Saved plan mode outputs, dated and titled
 - `DATASET_USAGE.md` - Dataset-specific preprocessing and loading details
 - `EXPERIMENTS.md` - Log of experiment configurations and results
 - `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, SpectrogramDataset)
