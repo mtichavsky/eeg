@@ -523,9 +523,10 @@ def compute_class_weights(dataset: Dataset, num_classes: int, device: torch.devi
         _, label, _ = dataset[idx]
         class_counts[label] += 1
 
-    # Calculate weights: 1 / count, then normalize
-    weights = 1.0 / class_counts
-    weights = weights / weights.sum()
+    # Calculate weights using sklearn's balanced formula:
+    # weight[c] = total_samples / (num_classes * class_counts[c])
+    total_samples = class_counts.sum()
+    weights = total_samples / (num_classes * class_counts)
 
     return weights.to(device)
 
