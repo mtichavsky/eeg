@@ -34,11 +34,11 @@ from thesis.dataset import (
     collate_spectrograms,
 )
 from thesis.early_stopping import EarlyStopping
+from thesis.json_logging import log_metrics_json
 from thesis.metrics import (
     aggregate_subject_predictions,
     classification_metrics,
     extract_classification_metrics,
-    format_metrics_for_logging,
     write_results,
 )
 from thesis.model import MODEL_REGISTRY
@@ -303,10 +303,9 @@ def train_one_fold(
         # Train
         train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, num_classes)
 
-        metrics_str = format_metrics_for_logging(train_metrics, num_classes)
-        logger.info(
-            f"TRAIN CHUNK | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-            f"Loss: {train_metrics['loss']:.4f} | {metrics_str}"
+        log_metrics_json(
+            "train", fold + 1, epoch, num_epochs,
+            train_metrics["loss"], train_metrics, num_classes=num_classes,
         )
 
         fold_history["train_loss"].append(train_metrics["loss"])
@@ -322,39 +321,13 @@ def train_one_fold(
             subject_metrics = eval_metrics["subject"]
             condition_metrics = eval_metrics.get("condition", {})
 
-            chunk_metrics_str = format_metrics_for_logging(chunk_metrics, num_classes)
-            subject_metrics_str = format_metrics_for_logging(subject_metrics, num_classes)
-
-            logger.info(
-                f"EVAL CHUNK | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-                f"Loss: {eval_metrics['loss']:.4f} | {chunk_metrics_str}"
+            log_metrics_json(
+                "eval", fold + 1, epoch, num_epochs,
+                eval_metrics["loss"], chunk_metrics,
+                subject_metrics=subject_metrics,
+                condition_metrics=condition_metrics if condition_metrics else None,
+                num_classes=num_classes,
             )
-            if num_classes == 2 and "confusion_matrix" not in chunk_metrics:
-                # Log confusion matrix for binary classification
-                logger.info(
-                    f"  Confusion: TP={chunk_metrics['tp']}, TN={chunk_metrics['tn']}, "
-                    f"FP={chunk_metrics['fp']}, FN={chunk_metrics['fn']}"
-                )
-
-            logger.info(
-                f"EVAL SUBJECT | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-                f"Loss: {eval_metrics['loss']:.4f} | {subject_metrics_str}"
-            )
-            if num_classes == 2 and "confusion_matrix" not in subject_metrics:
-                # Log confusion matrix for binary classification
-                logger.info(
-                    f"  Confusion: TP={subject_metrics['tp']}, TN={subject_metrics['tn']}, "
-                    f"FP={subject_metrics['fp']}, FN={subject_metrics['fn']}"
-                )
-
-            # Log condition-specific metrics if available (combined EC vs EO on one line)
-            if "EC" in condition_metrics and "EO" in condition_metrics:
-                ec_acc = condition_metrics["EC"]["accuracy"]
-                eo_acc = condition_metrics["EO"]["accuracy"]
-                logger.info(
-                    f"EVAL EC vs EO | Fold {fold + 1} | Epoch {epoch:03d}/{num_epochs} | "
-                    f"EO chunk acc: {eo_acc:.4f} | EC chunk acc: {ec_acc:.4f}"
-                )
 
             fold_history["val_loss"].append(eval_metrics["loss"])
             fold_history["chunk_acc"].append(chunk_metrics["accuracy"])

@@ -9,6 +9,7 @@ Example:
     python plot_training_curves.py checkpoints_fp1_003_mdd_mqm/training.log
 """
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -35,93 +36,103 @@ class NoTrainingDataError(TrainingCurvesError):
     pass
 
 
+def _ensure_fold(data: Dict[int, Dict[str, Any]], fold_num: int) -> None:
+    """Initialise the data entry for a fold if not already present.
+
+    :param Dict[int, Dict[str, Any]] data: Parsed fold data accumulator.
+    :param int fold_num: Fold number to initialise.
+    """
+    if fold_num not in data:
+        data[fold_num] = {"train": [], "eval": [], "best_epoch": None, "best_loss": None}
+
+
+def _process_json_record(record: dict, data: Dict[int, Dict[str, Any]]) -> None:
+    """Extract train/eval data from a single JSON metrics record.
+
+    :param dict record: Parsed JSON object with at least ``phase``, ``fold``, ``epoch``, ``loss``.
+    :param Dict[int, Dict[str, Any]] data: Parsed fold data accumulator (mutated in place).
+    """
+    fold = record["fold"]
+    epoch = record["epoch"]
+    loss = record["loss"]
+    _ensure_fold(data, fold)
+
+    if record["phase"] == "train":
+        data[fold]["train"].append((epoch, loss))
+    elif record["phase"] == "eval":
+        acc = record["chunk"]["acc"]
+        data[fold]["eval"].append((epoch, loss, acc))
+
+
 def parse_log_file(log_path: Path) -> Dict[int, Dict[str, Any]]:
     """
     Parse training log file and extract loss values per fold.
+
+    Supports both JSON metrics records (new format) and legacy text lines,
+    falling back to regex when a line is not valid JSON.
 
     :param Path log_path: Path to the training log file
     :return: Dictionary mapping fold number to train/eval losses and early stopping info
     :rtype: Dict[int, Dict[str, any]]
     """
-    # Pattern for TRAIN CHUNK lines
+    # Legacy patterns (used as fallback for old log files)
     train_pattern = re.compile(r"TRAIN CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+)")
-
-    # Pattern for EVAL CHUNK lines
     eval_pattern = re.compile(
         r"EVAL CHUNK \| Fold (\d+) \| Epoch (\d+)/\d+ \| Loss: ([\d.]+) \| Acc: ([\d.]+)"
     )
-
-    # Pattern for early stopping lines
     early_stop_pattern = re.compile(
         r"Early stopping triggered.*Best score: ([\d.]+) at epoch (\d+)"
     )
 
-    # Dictionary to store data:
-    # fold_num -> {'train': [(epoch, loss)], 'eval': [(epoch, loss)],
-    #              'best_epoch': int, 'best_loss': float}
+    # fold_num -> {'train': [(epoch, loss)], 'eval': [(epoch, loss, acc)],
+    #              'best_epoch': int | None, 'best_loss': float | None}
     data: Dict[int, Dict[str, Any]] = {}
     current_fold = None
 
     with open(log_path, "r") as f:
         for line in f:
-            # Check for fold start to track current fold
+            line = line.strip()
+
+            # --- JSON record (new format) -----------------------------------------
+            if line.startswith("{"):
+                try:
+                    record = json.loads(line)
+                    _process_json_record(record, data)
+                    continue
+                except (json.JSONDecodeError, KeyError):
+                    pass  # Fall through to legacy regex
+
+            # --- Legacy text format ------------------------------------------------
+            # Track current fold for early-stopping association
             fold_start_match = re.search(r"FOLD (\d+)/\d+", line)
             if fold_start_match:
                 current_fold = int(fold_start_match.group(1))
-                if current_fold not in data:
-                    data[current_fold] = {
-                        "train": [],
-                        "eval": [],
-                        "best_epoch": None,
-                        "best_loss": None,
-                    }
+                _ensure_fold(data, current_fold)
                 continue
 
-            # Try matching TRAIN CHUNK
             train_match = train_pattern.search(line)
             if train_match:
                 fold_num = int(train_match.group(1))
-                epoch = int(train_match.group(2))
-                loss = float(train_match.group(3))
-
-                if fold_num not in data:
-                    data[fold_num] = {
-                        "train": [],
-                        "eval": [],
-                        "best_epoch": None,
-                        "best_loss": None,
-                    }
-
-                data[fold_num]["train"].append((epoch, loss))
+                _ensure_fold(data, fold_num)
+                data[fold_num]["train"].append(
+                    (int(train_match.group(2)), float(train_match.group(3)))
+                )
                 continue
 
-            # Try matching EVAL CHUNK
             eval_match = eval_pattern.search(line)
             if eval_match:
                 fold_num = int(eval_match.group(1))
-                epoch = int(eval_match.group(2))
-                loss = float(eval_match.group(3))
-                acc = float(eval_match.group(4))
-
-                if fold_num not in data:
-                    data[fold_num] = {
-                        "train": [],
-                        "eval": [],
-                        "best_epoch": None,
-                        "best_loss": None,
-                    }
-
-                data[fold_num]["eval"].append((epoch, loss, acc))
+                _ensure_fold(data, fold_num)
+                data[fold_num]["eval"].append(
+                    (int(eval_match.group(2)), float(eval_match.group(3)), float(eval_match.group(4)))
+                )
                 continue
 
-            # Try matching early stopping
             early_stop_match = early_stop_pattern.search(line)
             if early_stop_match and current_fold is not None:
                 best_epoch = int(early_stop_match.group(2))
-
                 if current_fold in data:
                     data[current_fold]["best_epoch"] = best_epoch
-                    # Find the actual eval loss at the best epoch
                     for epoch, loss, acc in data[current_fold]["eval"]:
                         if epoch == best_epoch:
                             data[current_fold]["best_loss"] = loss
