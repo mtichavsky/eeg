@@ -270,6 +270,7 @@ def train_one_fold(
     patience: int = 15,
     checkpoint_dir: Path = Path("checkpoints"),
     val_subject_dataset_map: dict[str, str] | None = None,
+    log_file: Path | None = None,
 ) -> dict:
     """
     Train model for one-fold with comprehensive logging, checkpointing, and early stopping.
@@ -288,6 +289,7 @@ def train_one_fold(
     :param Path checkpoint_dir: Directory to save checkpoints.
     :param dict[str, str] | None val_subject_dataset_map: Optional mapping from validation subject
         IDs to dataset labels for per-dataset metrics.
+    :param Path | None log_file: Path to the log file for JSON metrics output.
     :return: Dictionary with fold results.
     :rtype: dict
     """
@@ -327,6 +329,7 @@ def train_one_fold(
             train_metrics["loss"],
             train_metrics,
             num_classes=num_classes,
+            log_file=log_file,
         )
 
         fold_history["train_loss"].append(train_metrics["loss"])
@@ -354,6 +357,7 @@ def train_one_fold(
                 subject_metrics=subject_metrics,
                 condition_metrics=condition_metrics if condition_metrics else None,
                 num_classes=num_classes,
+                log_file=log_file,
             )
 
             fold_history["val_loss"].append(eval_metrics["loss"])
@@ -813,6 +817,7 @@ def train_cross_validation(
             patience=patience,
             checkpoint_dir=checkpoint_dir,
             val_subject_dataset_map=val_subject_dataset_map,
+            log_file=log_path,
         )
 
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])

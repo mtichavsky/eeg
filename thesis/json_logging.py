@@ -1,21 +1,8 @@
 """Structured JSON logging for training metrics."""
 
 import json
-import logging
 from datetime import datetime
 from pathlib import Path
-
-
-def _find_log_file() -> Path | None:
-    """Find the active file handler's log path from the root logger.
-
-    :return: Path to the log file, or None if no file handler is attached.
-    :rtype: Path | None
-    """
-    for handler in logging.getLogger().handlers:
-        if isinstance(handler, logging.FileHandler):
-            return Path(handler.baseFilename)
-    return None
 
 
 def _metrics_to_json_dict(metrics: dict, num_classes: int, include_confusion: bool = False) -> dict:
@@ -66,12 +53,13 @@ def log_metrics_json(
     subject_metrics: dict | None = None,
     condition_metrics: dict | None = None,
     num_classes: int = 2,
+    log_file: Path | None = None,
 ) -> None:
     """Log training/eval metrics as structured JSON.
 
     Prints pretty-printed JSON to the console and appends a compact single-line
-    JSON record to the active log file.  Non-metric status messages should still
-    use the standard logger.
+    JSON record to the log file (if provided).  Non-metric status messages should
+    still use the standard logger.
 
     :param str phase: ``"train"`` or ``"eval"``.
     :param int fold: 1-based fold number.
@@ -83,6 +71,7 @@ def log_metrics_json(
     :param dict | None condition_metrics: Per-condition metrics dict, e.g.
         ``{"EC": {...}, "EO": {...}}``.  Each value is a classification_metrics() dict.
     :param int num_classes: Number of classes (2 or 4).
+    :param Path | None log_file: Path to append JSON log lines to.
     """
     record: dict = {
         "t": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.")
@@ -115,7 +104,6 @@ def log_metrics_json(
     print(json.dumps(record, indent=2))
 
     # File: compact single-line JSON
-    log_file = _find_log_file()
     if log_file is not None:
         with open(log_file, "a") as f:
             f.write(json.dumps(record) + "\n")
