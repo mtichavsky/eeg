@@ -38,6 +38,7 @@ from thesis.json_logging import log_metrics_json
 from thesis.metrics import (
     aggregate_subject_predictions,
     classification_metrics,
+    compute_per_dataset_metrics,
     extract_classification_metrics,
     write_results,
 )
@@ -175,6 +176,7 @@ def eval_epoch(
     criterion: nn.Module,
     device: torch.device,
     num_classes: int = 2,
+    subject_dataset_map: dict[str, str] | None = None,
 ) -> dict[str, dict[str, float | int | np.ndarray] | float]:
     """
     Evaluate model for one epoch, computing both chunk-level and subject-level metrics.
@@ -184,6 +186,8 @@ def eval_epoch(
     :param nn.Module criterion: Loss function.
     :param torch.device device: Device to evaluate on.
     :param int num_classes: Number of classes (2 or 3).
+    :param dict[str, str] | None subject_dataset_map: Optional mapping from subject ID to dataset
+        label. When provided, per-dataset chunk accuracy is computed.
     :return: Dictionary containing chunk-level and subject-level metrics.
     :rtype: dict
     """
@@ -235,11 +239,19 @@ def eval_epoch(
                 cond_labels, cond_preds, num_classes=num_classes
             )
 
+    # Per-dataset metrics (when mapping is available)
+    per_dataset: dict[str, dict[str, float | int]] | None = None
+    if subject_dataset_map is not None:
+        per_dataset = compute_per_dataset_metrics(
+            all_preds, all_labels, all_subjects, subject_dataset_map
+        )
+
     return {
         "chunk": chunk_metrics,
         "subject": subject_metrics,
         "condition": condition_metrics,
         "loss": avg_loss,
+        "per_dataset": per_dataset,
     }
 
 
@@ -257,6 +269,7 @@ def train_one_fold(
     val_every: int = 2,
     patience: int = 15,
     checkpoint_dir: Path = Path("checkpoints"),
+    val_subject_dataset_map: dict[str, str] | None = None,
 ) -> dict:
     """
     Train model for one-fold with comprehensive logging, checkpointing, and early stopping.
@@ -273,6 +286,8 @@ def train_one_fold(
     :param int val_every: Validate every N epochs.
     :param int patience: Early stopping patience.
     :param Path checkpoint_dir: Directory to save checkpoints.
+    :param dict[str, str] | None val_subject_dataset_map: Optional mapping from validation subject
+        IDs to dataset labels for per-dataset metrics.
     :return: Dictionary with fold results.
     :rtype: dict
     """
@@ -285,6 +300,7 @@ def train_one_fold(
     best_chunk_metrics: dict[str, float] = {}
     best_subject_metrics: dict[str, float] = {}
     best_chunk_confusion_matrix: np.ndarray = np.zeros((num_classes, num_classes), dtype=int)
+    best_per_dataset_metrics: dict[str, dict[str, float | int]] | None = None
 
     fold_history = {
         "train_loss": [],
@@ -304,8 +320,13 @@ def train_one_fold(
         train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, num_classes)
 
         log_metrics_json(
-            "train", fold + 1, epoch, num_epochs,
-            train_metrics["loss"], train_metrics, num_classes=num_classes,
+            "train",
+            fold + 1,
+            epoch,
+            num_epochs,
+            train_metrics["loss"],
+            train_metrics,
+            num_classes=num_classes,
         )
 
         fold_history["train_loss"].append(train_metrics["loss"])
@@ -314,7 +335,9 @@ def train_one_fold(
 
         # Validate every val_every epochs
         if epoch % val_every == 0 or epoch == num_epochs:
-            eval_metrics = eval_epoch(model, val_loader, criterion, device, num_classes)
+            eval_metrics = eval_epoch(
+                model, val_loader, criterion, device, num_classes, val_subject_dataset_map
+            )
 
             # Extract chunk and subject metrics
             chunk_metrics = eval_metrics["chunk"]
@@ -322,8 +345,12 @@ def train_one_fold(
             condition_metrics = eval_metrics.get("condition", {})
 
             log_metrics_json(
-                "eval", fold + 1, epoch, num_epochs,
-                eval_metrics["loss"], chunk_metrics,
+                "eval",
+                fold + 1,
+                epoch,
+                num_epochs,
+                eval_metrics["loss"],
+                chunk_metrics,
                 subject_metrics=subject_metrics,
                 condition_metrics=condition_metrics if condition_metrics else None,
                 num_classes=num_classes,
@@ -343,6 +370,7 @@ def train_one_fold(
                 best_chunk_metrics = extract_classification_metrics(chunk_metrics, num_classes)
                 best_subject_metrics = extract_classification_metrics(subject_metrics, num_classes)
                 best_chunk_confusion_matrix = chunk_metrics["confusion_matrix"]
+                best_per_dataset_metrics = eval_metrics.get("per_dataset")
 
                 best_model_path = checkpoint_dir / f"fold_{fold + 1}_best.pth"
                 torch.save(
@@ -394,6 +422,7 @@ def train_one_fold(
         "chunk_metrics": best_chunk_metrics,
         "subject_metrics": best_subject_metrics,
         "chunk_confusion_matrix": best_chunk_confusion_matrix,
+        "per_dataset_metrics": best_per_dataset_metrics,
     }
 
 
@@ -581,6 +610,7 @@ def train_cross_validation(
         "fold_chunk_metrics": [],
         "fold_subject_metrics": [],
         "fold_chunk_confusion_matrices": [],
+        "fold_per_dataset_metrics": [],
     }
 
     rng = np.random.RandomState(RANDOM_SEED)
@@ -709,7 +739,7 @@ def train_cross_validation(
         logger.info(f"FOLD {fold + 1}/{n_folds}")
         logger.info(f"{'=' * 80}")
 
-        train_dataset, val_dataset = get_datasets_for_fold(
+        train_dataset, val_dataset, val_subject_dataset_map = get_datasets_for_fold(
             fold,
             normal_folds,
             anxiety_folds,
@@ -782,6 +812,7 @@ def train_cross_validation(
             val_every=val_every,
             patience=patience,
             checkpoint_dir=checkpoint_dir,
+            val_subject_dataset_map=val_subject_dataset_map,
         )
 
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
@@ -790,6 +821,8 @@ def train_cross_validation(
         cv_results["fold_chunk_metrics"].append(fold_result["chunk_metrics"])
         cv_results["fold_subject_metrics"].append(fold_result["subject_metrics"])
         cv_results["fold_chunk_confusion_matrices"].append(fold_result["chunk_confusion_matrix"])
+        if fold_result["per_dataset_metrics"] is not None:
+            cv_results["fold_per_dataset_metrics"].append(fold_result["per_dataset_metrics"])
 
     # Print final cross-validation results
     logger.info(f"{'=' * 80}")
@@ -875,7 +908,7 @@ def train(args: argparse.Namespace) -> None:
     )
 
     # Save final results to file
-    results_file = checkpoint_dir / "cv_results.txt"
+    results_file = checkpoint_dir / "results.txt"
     with open(results_file, "w") as f:
         f.write(f"{args.n_folds}-Fold Cross-Validation Results\n")
         f.write(f"{'=' * 80}\n\n")

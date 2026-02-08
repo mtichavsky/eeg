@@ -85,7 +85,8 @@ def log_metrics_json(
     :param int num_classes: Number of classes (2 or 4).
     """
     record: dict = {
-        "t": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.") + f"{datetime.now().microsecond // 1000:03d}",
+        "t": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.")
+        + f"{datetime.now().microsecond // 1000:03d}",
         "phase": phase,
         "fold": fold,
         "epoch": epoch,
