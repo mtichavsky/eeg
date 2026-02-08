@@ -90,7 +90,9 @@ def _prepare_dataset_generic(
         )
 
         # Create spectrogram dataset
-        spec_dataset = SpectrogramDataset(dataset, fs=fs, augmentation=augmentation, channel=channel)
+        spec_dataset = SpectrogramDataset(
+            dataset, fs=fs, augmentation=augmentation, channel=channel
+        )
         flat_dataset = FlattenedSpectrogramDataset(spec_dataset)
 
         # Validate shape
@@ -421,7 +423,7 @@ def get_datasets_for_fold(
     cane_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
     ax_malik_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
     flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
-) -> tuple[ConcatDataset | Subset, ConcatDataset | Subset]:
+) -> tuple[ConcatDataset | Subset, ConcatDataset | Subset, dict[str, str]]:
     """
     Get train and validation datasets for a specific fold.
 
@@ -435,8 +437,9 @@ def get_datasets_for_fold(
     :param cane_flat_dataset: CANE flattened dataset (for "all" mode).
     :param ax_malik_flat_dataset: AX_MALIK flattened dataset (for "all" mode).
     :param flat_dataset: Single dataset (for "mdd", "cane", or "ax_malik" mode).
-    :return: Tuple of (train_dataset, val_dataset).
-    :rtype: tuple
+    :return: Tuple of (train_dataset, val_dataset, val_subject_dataset_map).
+        val_subject_dataset_map maps subject IDs to their dataset label (e.g., "mdd", "cane").
+    :rtype: tuple[ConcatDataset | Subset, ConcatDataset | Subset, dict[str, str]]
     """
     # Determine train/val subjects for this fold from all classes
     val_subjects_with_dataset: SubjectList = []
@@ -455,6 +458,9 @@ def get_datasets_for_fold(
             train_subjects_with_dataset.extend(anxiety_folds[i])
             train_subjects_with_dataset.extend(depression_folds[i])
             train_subjects_with_dataset.extend(anxiety_depression_folds[i])
+
+    # Build subject→dataset mapping for validation subjects
+    val_subject_dataset_map: dict[str, str] = {subj: ds for ds, subj in val_subjects_with_dataset}
 
     # Log subject distribution
     val_subjects_clean = [f"{ds}:{subj}" for ds, subj in val_subjects_with_dataset]
@@ -476,9 +482,7 @@ def get_datasets_for_fold(
             mdd_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "mdd"]
             mdd_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "mdd"]
 
-            mdd_train_indices = get_indices_from_dataset(
-                mdd_flat_dataset, mdd_train_subjects
-            )
+            mdd_train_indices = get_indices_from_dataset(mdd_flat_dataset, mdd_train_subjects)
             mdd_val_indices = get_indices_from_dataset(mdd_flat_dataset, mdd_val_subjects)
 
             train_subsets.append(Subset(mdd_flat_dataset, mdd_train_indices))
@@ -491,9 +495,7 @@ def get_datasets_for_fold(
             cane_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "cane"]
             cane_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "cane"]
 
-            cane_train_indices = get_indices_from_dataset(
-                cane_flat_dataset, cane_train_subjects
-            )
+            cane_train_indices = get_indices_from_dataset(cane_flat_dataset, cane_train_subjects)
             cane_val_indices = get_indices_from_dataset(cane_flat_dataset, cane_val_subjects)
 
             train_subsets.append(Subset(cane_flat_dataset, cane_train_indices))
@@ -551,4 +553,4 @@ def get_datasets_for_fold(
         train_dataset = Subset(flat_dataset, train_indices)
         val_dataset = Subset(flat_dataset, val_indices)
 
-    return train_dataset, val_dataset
+    return train_dataset, val_dataset, val_subject_dataset_map

@@ -326,6 +326,90 @@ def _format_confusion_matrix(
     writer(f"Overall Accuracy: {overall_acc:.4f} ({overall_acc * 100:.2f}%)\n")
 
 
+def compute_per_dataset_metrics(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    subjects: list[str],
+    subject_dataset_map: dict[str, str],
+) -> dict[str, dict[str, float | int]]:
+    """
+    Compute chunk-level accuracy grouped by source dataset.
+
+    :param np.ndarray y_true: True labels for each chunk.
+    :param np.ndarray y_pred: Predicted labels for each chunk.
+    :param list[str] subjects: Subject ID for each chunk.
+    :param dict[str, str] subject_dataset_map: Mapping from subject ID to dataset label.
+    :return: Per-dataset metrics, e.g. {"mdd": {"accuracy": 0.85, "correct": 425, "total": 500}}.
+    :rtype: dict[str, dict[str, float | int]]
+    """
+    dataset_correct: dict[str, int] = {}
+    dataset_total: dict[str, int] = {}
+
+    for true, pred, subj in zip(y_true, y_pred, subjects):
+        ds = subject_dataset_map.get(subj, "unknown")
+        dataset_total[ds] = dataset_total.get(ds, 0) + 1
+        if true == pred:
+            dataset_correct[ds] = dataset_correct.get(ds, 0) + 1
+
+    result: dict[str, dict[str, float | int]] = {}
+    for ds in sorted(dataset_total.keys()):
+        total = dataset_total[ds]
+        correct = dataset_correct.get(ds, 0)
+        result[ds] = {
+            "accuracy": correct / total if total > 0 else 0.0,
+            "correct": correct,
+            "total": total,
+        }
+    return result
+
+
+def write_per_dataset_table(
+    writer: Callable[[str], Any],
+    fold_per_dataset_metrics: list[dict[str, dict[str, float | int]]],
+) -> None:
+    """
+    Write aggregated per-dataset chunk accuracy table across all folds.
+
+    :param Callable[[str], Any] writer: Function to write output.
+    :param list fold_per_dataset_metrics: List of per-dataset metric dicts, one per fold.
+    :return: None
+    :rtype: None
+    """
+    if not fold_per_dataset_metrics:
+        return
+
+    # Aggregate correct and total counts across folds for each dataset
+    agg_correct: dict[str, int] = {}
+    agg_total: dict[str, int] = {}
+
+    for fold_metrics in fold_per_dataset_metrics:
+        for ds, metrics in fold_metrics.items():
+            agg_correct[ds] = agg_correct.get(ds, 0) + int(metrics["correct"])
+            agg_total[ds] = agg_total.get(ds, 0) + int(metrics["total"])
+
+    datasets = sorted(agg_total.keys())
+    if not datasets:
+        return
+
+    writer("\nPer-Dataset Chunk Accuracy (aggregated across folds):\n")
+    writer(f"  {'Dataset':<12} {'Accuracy':>10}  {'Chunk Count':>12}\n")
+    writer(f"  {'─' * 12}  {'─' * 10}  {'─' * 12}\n")
+
+    grand_correct = 0
+    grand_total = 0
+    for ds in datasets:
+        total = agg_total[ds]
+        correct = agg_correct[ds]
+        acc = correct / total if total > 0 else 0.0
+        writer(f"  {ds.upper():<12} {acc * 100:>9.2f}%  {total:>12}\n")
+        grand_correct += correct
+        grand_total += total
+
+    writer(f"  {'─' * 12}  {'─' * 10}  {'─' * 12}\n")
+    grand_acc = grand_correct / grand_total if grand_total > 0 else 0.0
+    writer(f"  {'Total':<12} {grand_acc * 100:>9.2f}%  {grand_total:>12}\n")
+
+
 def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> None:
     """
     Write cross-validation results summary.
@@ -362,3 +446,8 @@ def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> 
     if chunk_cms and len(chunk_cms) > 0:
         num_classes = chunk_cms[0].shape[0]  # Infer from matrix shape
         _format_confusion_matrix(chunk_cms, num_classes, writer)
+
+    # Add per-dataset breakdown if available
+    fold_per_dataset = cv_results.get("fold_per_dataset_metrics", [])
+    if fold_per_dataset:
+        write_per_dataset_table(writer, fold_per_dataset)
