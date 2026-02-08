@@ -30,7 +30,6 @@ class TestClassificationMetricsBinary:
         assert metrics["recall"] == 1.0  # sensitivity
         assert metrics["specificity"] == 1.0
         assert metrics["precision"] == 1.0
-        # Extract TP/TN/FP/FN from confusion matrix
         cm = metrics["confusion_matrix"]
         tn, fp, fn, tp = cm.ravel()
         assert tp == 5
@@ -55,7 +54,6 @@ class TestClassificationMetricsBinary:
         assert metrics["recall"] == 0.0
         assert metrics["specificity"] == 0.0
         assert metrics["precision"] == 0.0
-        # Extract TP/TN/FP/FN from confusion matrix
         cm = metrics["confusion_matrix"]
         tn, fp, fn, tp = cm.ravel()
         assert tp == 0
@@ -88,7 +86,6 @@ class TestClassificationMetricsBinary:
         assert metrics["recall"] == pytest.approx(4 / 6)  # 0.6667
         assert metrics["specificity"] == pytest.approx(0.75)
         assert metrics["precision"] == pytest.approx(0.8)
-        # Extract TP/TN/FP/FN from confusion matrix
         cm = metrics["confusion_matrix"]
         tn, fp, fn, tp = cm.ravel()
         assert tp == 4
@@ -118,7 +115,6 @@ class TestClassificationMetricsBinary:
         assert metrics["accuracy"] == pytest.approx(4 / 6)
         assert metrics["recall"] == 1.0  # Perfect sensitivity
         assert metrics["specificity"] == 0.5  # Low specificity
-        # Extract TP/TN/FP/FN from confusion matrix
         cm = metrics["confusion_matrix"]
         tn, fp, fn, tp = cm.ravel()
         assert tp == 2
@@ -146,7 +142,6 @@ class TestClassificationMetricsBinary:
         assert metrics["accuracy"] == pytest.approx(4 / 6)
         assert metrics["recall"] == 0.0  # No sensitivity (misses all positives)
         assert metrics["specificity"] == 1.0  # Perfect specificity
-        # Extract TP/TN/FP/FN from confusion matrix
         cm = metrics["confusion_matrix"]
         tn, fp, fn, tp = cm.ravel()
         assert tp == 0
@@ -162,7 +157,6 @@ class TestClassificationMetricsBinary:
 
         metrics = classification_metrics(y_true, y_pred, num_classes=2)
 
-        # Extract TP/TN/FP/FN from confusion matrix
         cm = metrics["confusion_matrix"]
         tn, fp, fn, tp = cm.ravel()
         assert tn == 3
