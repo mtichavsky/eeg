@@ -3,12 +3,13 @@
 from typing import Any, Callable
 
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.metrics import confusion_matrix
 
 
 def classification_metrics(
     y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 2
-) -> dict[str, float | int | np.ndarray]:
+) -> dict[str, float | int | np.floating[Any] | NDArray[Any] | None]:
     """
     Compute classification metrics from true and predicted labels.
 
@@ -22,10 +23,9 @@ def classification_metrics(
     :rtype: dict
     """
     acc = np.mean(y_true == y_pred)
-    metrics = {"accuracy": acc}
+    metrics: dict[str, float | int | np.floating[Any] | NDArray[Any] | None] = {"accuracy": acc}
 
     if num_classes == 2:
-        # Binary classification: compute traditional metrics
         cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
         if cm.shape == (2, 2):
             tn, fp, fn, tp = cm.ravel()
@@ -193,11 +193,11 @@ def extract_classification_metrics(metrics: dict[str, float], num_classes: int) 
         raise ValueError(f"Unsupported num_classes: {num_classes}")
 
 
-def _format_pct(value: float) -> str:
+def _format_pct(value: float | np.floating[Any]) -> str:
     """
     Format a decimal value as percentage with 2 decimal places.
 
-    :param float value: Decimal value (e.g., 0.85).
+    :param float | np.floating value: Decimal value (e.g., 0.85).
     :return: Formatted percentage string (e.g., "85.00%").
     :rtype: str
     """
@@ -300,18 +300,21 @@ def _format_confusion_matrix(
     else:
         class_names = [f"Class {i}" for i in range(num_classes)]
 
-    writer("\nAggregated Confusion Matrix (sum across all folds):\n")
+    writer("\nAggregated Chunk Confusion Matrix (across folds; TN, FP, FN, TP):\n\n")
 
-    # Header row
-    writer(" " * 15 + "".join(f"{name:>15} " for name in class_names) + "\n")
+    # Top-left corner label + column headers
+    header = "ACTUAL ↓/PRED →".ljust(15)
+    header += "".join(f"{name:>15} " for name in class_names)
+    writer(header + "\n")
+
     # Separator
     writer("-" * (15 + 16 * num_classes) + "\n")
+
     # Data rows
     for i, row_name in enumerate(class_names):
-        row_str = f"{row_name:>15} " + "".join(
-            f"{int(aggregated_cm[i, j]):>15} " for j in range(num_classes)
-        )
-        writer(row_str + "\n")
+        row = f"{row_name:>15} "
+        row += "".join(f"{int(aggregated_cm[i, j]):>15} " for j in range(num_classes))
+        writer(row + "\n")
 
     # Additional statistics
     writer("\n")
