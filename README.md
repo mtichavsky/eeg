@@ -34,7 +34,7 @@ Expected location at `../MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {
 - **H** = Healthy control subjects
 - **MDD** = Major Depressive Disorder subjects
 - **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
-- **Channels**: 8 channels used (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) with standardized 10-20 naming
+- **Channels**: 8 channels used (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) with standardized 10-20 naming, plus synthetic in-ear option
 - **Sampling Rate**: 250 Hz (SFREQ = 1000/4)
 - **Segments**: 10-second chunks (2,500 samples each)
 
@@ -46,7 +46,7 @@ Expected location at `../CANE/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
 - **H** = Healthy control subjects
 - **AX** = Anxiety disorder subjects
 - **Conditions**: ec (eyes closed), eo (eyes open) - can train on single or combined (ec+eo)
-- **Channels**: Same 8 channels as MDD dataset with standardized naming (T3→T7, T4→T8)
+- **Channels**: Same 8 channels as MDD dataset with standardized naming (T3→T7, T4→T8), plus synthetic in-ear option
 - **Sampling Rate**: 500 Hz
 - **Preprocessing**: Optional artifact removal via `--skip-artifact-removal` flag
 
@@ -57,7 +57,7 @@ Expected location at `../AX_MALIK/`. Files follow pattern: `{ec|eo}/C{N}.edf`
 **Dataset Structure:**
 - **All subjects are anxiety class** (no healthy controls in this dataset)
 - **Conditions**: EC (eyes closed), EO (eyes open) - can train on single or combined (ec+eo)
-- **Channels**: Same 8 channels as MDD dataset (Fp1, Fp2, C3, Cz, C4, T7, T8, O2)
+- **Channels**: Same 8 channels as MDD dataset (Fp1, Fp2, C3, Cz, C4, T7, T8, O2), plus synthetic in-ear option
 - **Sampling Rate**: 256 Hz
 - **Duration**: 120 seconds per file
 - **Subjects**: 21 subjects (42 files total - one EC and one EO per subject)
@@ -107,6 +107,14 @@ poetry run python main.py train \
   --dropout 0.5 \
   --weight-decay 1e-4 \
   --val-every 1
+
+# Synthetic in-ear EEG training (bipolar derivation T8-T7)
+poetry run python main.py train \
+  --channel in-ear \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/mdd_008_inear_ec \
+  --dataset mdd \
+  --condition ec
 
 # 4-class classification with multi-channel input
 poetry run python main.py train --skip-ica \
@@ -174,6 +182,14 @@ The inference script outputs:
    - Learns spatial correlations between electrode positions
    - Automatically selected when using `--channel all`
 
+**Channel Options:**
+- **Single channel** (e.g., `--channel Fp1`): Use a specific EEG electrode
+- **Multi-channel** (`--channel all`): Use all 8 electrodes for spatial feature learning
+- **Synthetic in-ear** (`--channel in-ear`): Bipolar derivation T8 - T7 simulating IDUN-style in-ear EEG
+  - Based on research: "Estimating cognitive workload using a commercial in-ear EEG headset"
+  - Applies 50% sign flip augmentation per chunk to handle polarity ambiguity
+  - Works with all datasets (MDD, CANE, AX_MALIK, all)
+
 **Common Features:**
 - Configurable dropout (default 0.5) and L2 weight decay (default 1e-4)
 - Supports 2-class or 4-class classification modes
@@ -186,11 +202,15 @@ Each EDF file undergoes the following preprocessing (see `thesis/dataset.py`):
 1. Load EDF file
 2. Bandpass filter: 1-70 Hz (IIR)
 3. Notch filter: 50 Hz (remove power line noise)
-4. Channel selection: 8 channels (all) or single specific channel
+4. Channel selection:
+   - 8 channels (when `--channel all`)
+   - Specific single channel (e.g., `--channel Fp1`)
+   - Synthetic in-ear: Load T7 and T8, compute bipolar derivation T8 - T7 (when `--channel in-ear`)
 5. Channel name standardization: T3→T7, T4→T8 for cross-dataset compatibility
 6. Average reference
-8. Optional artifact removal for CANE: (`--skip-artifact-removal` to disable)
-9. Segmentation: 10-second chunks
+7. Optional artifact removal for CANE: (`--skip-artifact-removal` to disable)
+8. Segmentation: 10-second chunks
+9. For in-ear: Apply 50% sign flip augmentation per chunk during training
 10. STFT transformation: Convert to spectrograms
 11. Normalization: Log-magnitude spectrograms
 
