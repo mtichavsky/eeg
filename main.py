@@ -817,7 +817,6 @@ def train_cross_validation(
             patience=patience,
             checkpoint_dir=checkpoint_dir,
             val_subject_dataset_map=val_subject_dataset_map,
-            log_file=log_path,
         )
 
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
