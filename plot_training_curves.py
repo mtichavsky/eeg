@@ -124,7 +124,11 @@ def parse_log_file(log_path: Path) -> Dict[int, Dict[str, Any]]:
                 fold_num = int(eval_match.group(1))
                 _ensure_fold(data, fold_num)
                 data[fold_num]["eval"].append(
-                    (int(eval_match.group(2)), float(eval_match.group(3)), float(eval_match.group(4)))
+                    (
+                        int(eval_match.group(2)),
+                        float(eval_match.group(3)),
+                        float(eval_match.group(4)),
+                    )
                 )
                 continue
 

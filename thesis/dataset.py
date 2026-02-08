@@ -99,6 +99,7 @@ class MDDDataset(Dataset):
     """
     PyTorch Dataset for MDD EEG data.
     """
+
     # MDD channel mapping from raw EDF names to canonical names
     CHANNEL_MAPPING = {
         "EEG A2-A1": "A2-A1",
