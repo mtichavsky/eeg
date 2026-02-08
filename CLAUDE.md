@@ -22,7 +22,8 @@ Located at `/home/milan/Documents/diplomka/MDD/`. Files follow the naming patter
 - **H** = Healthy control
 - **MDD** = Major Depressive Disorder
 - **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
-- **Channels**: 8 channels available (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) - can use all or select specific channel
+- **Channels**: 8 channels available (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) - can use all, select specific channel, or use synthetic in-ear channel
+- **In-ear channel**: Bipolar derivation T8 - T7 simulating IDUN-style in-ear EEG (use `--channel in-ear`)
 - **Channel Naming**: Standardized to 10-20 system (T3→T7, T4→T8 for cross-dataset compatibility)
 - **Sampling**: 250 Hz (SFREQ = 1000/4)
 - **Segments**: 10-second chunks (2500 samples each)
@@ -33,7 +34,7 @@ Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern:
 - **H** = Healthy control
 - **AX** = Anxiety disorder
 - **Conditions**: ec (eyes closed), eo (eyes open) - lowercase, can train on single or combined (ec+eo)
-- **Channels**: Same 8 channels as MDD (standardized naming)
+- **Channels**: Same 8 channels as MDD (standardized naming), plus synthetic in-ear option
 - **Sampling**: 500 Hz
 - **Preprocessing**: Artifact removal optional via `--skip-artifact-removal` flag
 
@@ -42,7 +43,7 @@ Located at `/home/milan/Documents/diplomka/AX_MALIK/`. Files follow pattern: `{e
 
 - **All subjects are anxiety class** (no healthy controls in this dataset)
 - **Conditions**: EC (eyes closed), EO (eyes open) - can train on single or combined (ec+eo)
-- **Channels**: Same 8 channels as MDD (Fp1, Fp2, C3, Cz, C4, T7, T8, O2) - standardized 10-20 nomenclature
+- **Channels**: Same 8 channels as MDD (Fp1, Fp2, C3, Cz, C4, T7, T8, O2) - standardized 10-20 nomenclature, plus synthetic in-ear option
 - **Sampling**: 256 Hz
 - **Duration**: 120 seconds per file
 - **Subjects**: 21 subjects (42 files total - one EC and one EO per subject)
@@ -57,8 +58,6 @@ The system supports training on:
 ### Classification Modes
 - `--class-mode 2`: Binary classification (healthy vs any-pathological)
 - `--class-mode 4`: Multi-class classification (normal/anxiety/depression/comorbid) - requires `--dataset all`
-
-For detailed dataset usage, see DATASET_USAGE.md and context.md.
 
 ## Common Commands
 
@@ -104,6 +103,14 @@ poetry run python main.py train --skip-ica \
   --dropout 0.5 \
   --weight-decay 1e-4 \
   --val-every 1
+
+# Synthetic in-ear EEG training (bipolar derivation T8-T7)
+poetry run python main.py train --skip-ica \
+  --channel in-ear \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/mdd_008_inear_ec \
+  --dataset mdd \
+  --condition ec
 
 # 4-class classification (requires --dataset all)
 poetry run python main.py train --skip-ica \
@@ -162,6 +169,7 @@ All experiment directories **MUST** follow this naming pattern:
 
 **Examples:**
 - `experiments/mdd_006_fp1_ec` - MDD dataset, version 006, Fp1 channel, eyes closed
+- `experiments/mdd_008_inear_ec` - MDD dataset, version 008, synthetic in-ear EEG, eyes closed
 - `experiments/cane_006_t7_ec+eo` - CANE dataset, version 006, T7 channel, combined conditions
 - `experiments/ax_malik_001_all_ec` - AX_MALIK dataset, version 001, all 8 channels, eyes closed
 - `experiments/all_007_all_ec` - All datasets, version 007, all 8 channels, eyes closed
@@ -248,11 +256,13 @@ The `MDDDataset` supports two modes:
 
 **Raw EEG Input:**
 - Single channel: `(batch_size, 1, 2500)` - 1 channel × 2500 samples
+- In-ear channel: `(batch_size, 1, 2500)` - synthetic in-ear EEG (T8-T7 bipolar derivation)
 - Multi-channel: `(batch_size, 8, 2500)` - 8 channels × 2500 samples
 - Output from datasets as `batch['eeg']`
 
 **Spectrogram Input:**
 - Single channel (CNN_LSTM_DepCap, Smaller): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
+- In-ear channel: Same as single channel `(batch_size, 1, H, W)` with 50% sign flip augmentation per chunk
 - Multi-channel (SmallerAll): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
 - Current default: `(129, 41)` with nperseg=256, noverlap=192
 - Paper target: `(254, 342)` (may require parameter tuning)
@@ -293,11 +303,15 @@ Applied to each .edf file:
 1. Load EDF
 2. Bandpass filter 1-70 Hz (IIR)
 3. Notch filter 50 Hz (remove power line noise)
-4. Select channels (8 channels or specific channel)
+4. Select channels:
+   - 8 channels (when `--channel all`)
+   - Specific single channel (e.g., `--channel Fp1`)
+   - Synthetic in-ear: Load T7 and T8, compute bipolar derivation T8 - T7 (when `--channel in-ear`)
 5. Average reference
 6. Optional: Artifact interpolation/clipping for CANE (--skip-artifact-removal to disable)
 7. Chunk into 10-second segments
 8. Convert to PyTorch tensors
+9. For in-ear: Apply 50% sign flip augmentation per chunk during training (in `SpectrogramDataset`)
 
 **Note:** Preprocessing is now more flexible - artifact removal can be skipped for faster iteration. The model can learn to handle artifacts directly from the data.
 
@@ -360,6 +374,11 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Synthetic in-ear EEG channel** (Feb 2026): Added `--channel in-ear` option
+  - Bipolar derivation T8 - T7 simulating IDUN-style in-ear EEG
+  - 50% sign flip augmentation per chunk to handle polarity ambiguity
+  - Based on research: "Estimating cognitive workload using a commercial in-ear EEG headset"
+  - Works with all datasets (MDD, CANE, AX_MALIK, all)
 - **Multi-channel EEG support** (Jan 2026): Can use all 8 channels (`--channel all`) or single channel
   - New `SmallerAll` model with Conv3d for multi-channel spatial feature learning
   - Channel standardization: T3→T7, T4→T8 mapping for cross-dataset compatibility
@@ -415,7 +434,6 @@ Use today's date and a short title derived from the task. Existing plans in that
 
 ## Quick Reference Files
 - `docs/plans/` - Saved plan mode outputs, dated and titled
-- `DATASET_USAGE.md` - Dataset-specific preprocessing and loading details
 - `EXPERIMENTS.md` - Log of experiment configurations and results
 - `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, SpectrogramDataset)
 - `thesis/cli.py` - CLI argument parser with all training options
