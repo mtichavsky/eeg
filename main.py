@@ -637,7 +637,13 @@ def train_cross_validation(
     )
     if dataset_type == "mdd":
         flat_dataset, subject_classes = prepare_mdd_dataset(
-            conditions, channel, rng, augmentation=augmentation, test_mode=test_mode
+            conditions,
+            channel,
+            rng,
+            augmentation=augmentation,
+            test_mode=test_mode,
+            num_classes=num_classes,
+            label_mapping=label_mapping,
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -674,7 +680,13 @@ def train_cross_validation(
         if channel in ["T7", "T8"]:
             channel = {"T7": "T3", "T8": "T4"}[channel]
         mdd_flat_dataset, mdd_subject_classes = prepare_mdd_dataset(
-            conditions, channel, rng, augmentation=augmentation, test_mode=test_mode
+            conditions,
+            channel,
+            rng,
+            augmentation=augmentation,
+            test_mode=test_mode,
+            num_classes=num_classes,
+            label_mapping=label_mapping,
         )
         mdd_normal, mdd_anxiety, mdd_depression, mdd_anxiety_depression = (
             mdd_subject_classes.normal,
@@ -705,7 +717,13 @@ def train_cross_validation(
 
         # Load AX_MALIK dataset
         ax_malik_flat_dataset, ax_malik_subject_classes = prepare_ax_malik_dataset(
-            conditions, channel, rng, augmentation=augmentation, test_mode=test_mode
+            conditions,
+            channel,
+            rng,
+            augmentation=augmentation,
+            test_mode=test_mode,
+            num_classes=num_classes,
+            label_mapping=label_mapping,
         )
         ax_malik_normal, ax_malik_anxiety, ax_malik_depression, ax_malik_anxiety_depression = (
             ax_malik_subject_classes.normal,
