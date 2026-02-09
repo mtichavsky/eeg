@@ -1,0 +1,1673 @@
+[2026-02-08 15:32:09,367 INFO main.setup_logging] Logging to console and file: experiments/both-014b-all-binary-smallerall_krh/training_ec+eo_all_20260208_153209.log
+[2026-02-08 15:32:09,368 INFO main.train] Starting EEG Classification Training
+[2026-02-08 15:32:09,368 INFO main.train] Hyperparameters:
+[2026-02-08 15:32:09,368 INFO main.train]   Dataset: all
+[2026-02-08 15:32:09,368 INFO main.train]   Condition: ec+eo
+[2026-02-08 15:32:09,368 INFO main.train]   Channel: all
+[2026-02-08 15:32:09,368 INFO main.train]   N-Fold CV: 6
+[2026-02-08 15:32:09,368 INFO main.train]   Batch Size: 64
+[2026-02-08 15:32:09,368 INFO main.train]   Learning Rate: 0.0001
+[2026-02-08 15:32:09,368 INFO main.train]   Dropout: 0.1
+[2026-02-08 15:32:09,368 INFO main.train]   Weight decay (L2 penalty): 0.0001
+[2026-02-08 15:32:09,368 INFO main.train]   Max Epochs: 100
+[2026-02-08 15:32:09,368 INFO main.train]   Validation Every: 1 epochs
+[2026-02-08 15:32:09,368 INFO main.train]   Save Checkpoint Every: 100 epochs
+[2026-02-08 15:32:09,368 INFO main.train]   Early Stopping Patience: 20 epochs
+[2026-02-08 15:32:09,369 INFO main.train]   Skip Artifact Removal: False
+[2026-02-08 15:32:09,369 INFO main.train]   Data Augmentation: disabled
+[2026-02-08 15:32:09,369 INFO main.train]   Pretrained Checkpoint: None
+[2026-02-08 15:32:09,369 INFO main.train]   Freeze CNN: False
+[2026-02-08 15:32:09,369 INFO main.train]   Freeze LSTM: False
+[2026-02-08 15:32:09,369 INFO main.train]   Class mode: 2
+[2026-02-08 15:32:09,369 INFO main.train]   Test mode: False
+[2026-02-08 15:32:09,369 INFO main.train]   Device: cpu
+[2026-02-08 15:32:09,369 INFO main.train]   Checkpoint Directory: experiments/both-014b-all-binary-smallerall_krh
+[2026-02-08 15:32:09,369 INFO main.train]   Log File: experiments/both-014b-all-binary-smallerall_krh/training_ec+eo_all_20260208_153209.log
+[2026-02-08 15:32:09,369 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 15:32:09,369 INFO main.train_cross_validation] Starting 6-Fold Cross-Validation Training
+[2026-02-08 15:32:09,370 INFO main.train_cross_validation] Dataset: all, Condition(s): ['EC', 'EO']
+[2026-02-08 15:32:09,370 INFO main.train_cross_validation] Batch Size: 64, LR: 0.0001
+[2026-02-08 15:32:09,370 INFO main.train_cross_validation] Device: cpu
+[2026-02-08 15:32:09,370 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 15:32:09,370 INFO main.train_cross_validation] Classification mode: 2-class
+[2026-02-08 15:32:09,370 INFO main.train_cross_validation] Label mapping: {0: 0, 1: 1, 2: 1, 3: 1} (collapsing to binary)
+[2026-02-08 15:32:09,374 INFO dataset._log_file_discovery] Discovered 58 MDD files: {'H': 28, 'MDD': 30} labels, {'EC': 58} conditions
+[2026-02-08 15:32:09,374 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:32:33,366 INFO dataset.__init__] Built index with 1741 total chunks
+[2026-02-08 15:32:33,370 INFO dataset._log_file_discovery] Discovered 60 MDD files: {'H': 28, 'MDD': 32} labels, {'EO': 60} conditions
+[2026-02-08 15:32:33,370 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:33:01,759 INFO dataset.__init__] Built index with 1794 total chunks
+[2026-02-08 15:33:01,764 INFO dataset._log_file_discovery] Discovered 64 CANE files: {'normal': 19, 'anxiety': 18, 'depression': 1, 'anxiety-depression': 26} labels, {'ec': 64} conditions
+[2026-02-08 15:33:01,764 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:33:02,539 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.97 Hz
+[2026-02-08 15:33:02,694 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:02,695 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:02,720 INFO dataset._process_single_channel] Channel Fp1: Found 3 artifacts (0.00%)
+[2026-02-08 15:33:02,765 INFO dataset._process_single_channel] Channel Fp2: Found 20 artifacts (0.01%)
+[2026-02-08 15:33:02,827 INFO dataset._process_single_channel] Channel C3: Found 139 artifacts (0.09%)
+[2026-02-08 15:33:03,011 INFO dataset._process_single_channel] Channel Cz: Found 77 artifacts (0.05%)
+[2026-02-08 15:33:03,111 INFO dataset._process_single_channel] Channel C4: Found 51 artifacts (0.03%)
+[2026-02-08 15:33:03,198 INFO dataset._process_single_channel] Channel T7: Found 9 artifacts (0.01%)
+[2026-02-08 15:33:03,264 INFO dataset._process_single_channel] Channel Oz: Found 543 artifacts (0.34%)
+[2026-02-08 15:33:03,640 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:03,640 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:04,186 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 8, 5000])
+[2026-02-08 15:33:04,828 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.07 Hz
+[2026-02-08 15:33:04,881 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:04,881 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:04,893 INFO dataset._process_single_channel] Channel Fp1: Found 4 artifacts (0.00%)
+[2026-02-08 15:33:04,912 INFO dataset._process_single_channel] Channel Fp2: Found 12 artifacts (0.01%)
+[2026-02-08 15:33:04,935 INFO dataset._process_single_channel] Channel C3: Found 139 artifacts (0.09%)
+[2026-02-08 15:33:05,010 INFO dataset._process_single_channel] Channel Cz: Found 42 artifacts (0.03%)
+[2026-02-08 15:33:05,076 INFO dataset._process_single_channel] Channel T8: Found 8 artifacts (0.01%)
+[2026-02-08 15:33:05,096 INFO dataset._process_single_channel] Channel Oz: Found 8 artifacts (0.01%)
+[2026-02-08 15:33:05,109 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:05,109 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:05,572 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:33:06,289 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.67 Hz
+[2026-02-08 15:33:06,333 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:06,334 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:06,346 INFO dataset._process_single_channel] Channel Fp1: Found 634 artifacts (0.41%)
+[2026-02-08 15:33:06,563 INFO dataset._process_single_channel] Channel Fp2: Found 583 artifacts (0.37%)
+[2026-02-08 15:33:06,766 INFO dataset._process_single_channel] Channel C3: Found 375 artifacts (0.24%)
+[2026-02-08 15:33:06,901 INFO dataset._process_single_channel] Channel Cz: Found 406 artifacts (0.26%)
+[2026-02-08 15:33:07,064 INFO dataset._process_single_channel] Channel C4: Found 875 artifacts (0.56%)
+[2026-02-08 15:33:07,407 INFO dataset._process_single_channel] Channel T7: Found 469 artifacts (0.30%)
+[2026-02-08 15:33:07,596 INFO dataset._process_single_channel] Channel T8: Found 21 artifacts (0.01%)
+[2026-02-08 15:33:07,619 INFO dataset._process_single_channel] Channel Oz: Found 402 artifacts (0.26%)
+[2026-02-08 15:33:07,777 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:07,777 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:08,161 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:33:08,913 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.65 Hz
+[2026-02-08 15:33:08,949 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:08,950 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:08,958 INFO dataset._process_single_channel] Channel Fp1: Found 188 artifacts (0.12%)
+[2026-02-08 15:33:09,024 INFO dataset._process_single_channel] Channel Fp2: Found 133 artifacts (0.09%)
+[2026-02-08 15:33:09,074 INFO dataset._process_single_channel] Channel C3: Found 15 artifacts (0.01%)
+[2026-02-08 15:33:09,124 INFO dataset._process_single_channel] Channel T8: Found 2136 artifacts (1.39%)
+[2026-02-08 15:33:09,774 INFO dataset._process_single_channel] Channel Oz: Found 2591 artifacts (1.69%)
+[2026-02-08 15:33:10,569 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:10,569 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:10,886 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:11,415 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.17 Hz
+[2026-02-08 15:33:11,468 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:11,469 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:11,476 INFO dataset._process_single_channel] Channel Fp1: Found 2808 artifacts (2.19%)
+[2026-02-08 15:33:12,570 INFO dataset._process_single_channel] Channel Fp2: Found 2408 artifacts (1.88%)
+[2026-02-08 15:33:13,330 INFO dataset._process_single_channel] Channel C3: Found 3075 artifacts (2.40%)
+[2026-02-08 15:33:14,263 INFO dataset._process_single_channel] Channel Cz: Found 2863 artifacts (2.23%)
+[2026-02-08 15:33:15,170 INFO dataset._process_single_channel] Channel C4: Found 2809 artifacts (2.19%)
+[2026-02-08 15:33:16,070 INFO dataset._process_single_channel] Channel T7: Found 3402 artifacts (2.65%)
+[2026-02-08 15:33:17,655 INFO dataset._process_single_channel] Channel T8: Found 1273 artifacts (0.99%)
+[2026-02-08 15:33:18,124 INFO dataset._process_single_channel] Channel Oz: Found 3255 artifacts (2.54%)
+[2026-02-08 15:33:19,136 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:19,136 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:19,376 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:33:19,974 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.41 Hz
+[2026-02-08 15:33:20,006 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:20,006 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:20,011 INFO dataset._process_single_channel] Channel Fp1: Found 8 artifacts (0.01%)
+[2026-02-08 15:33:20,026 INFO dataset._process_single_channel] Channel Fp2: Found 8 artifacts (0.01%)
+[2026-02-08 15:33:20,038 INFO dataset._process_single_channel] Channel C3: Found 8 artifacts (0.01%)
+[2026-02-08 15:33:20,057 INFO dataset._process_single_channel] Channel Cz: Found 7 artifacts (0.01%)
+[2026-02-08 15:33:20,076 INFO dataset._process_single_channel] Channel C4: Found 8 artifacts (0.01%)
+[2026-02-08 15:33:20,096 INFO dataset._process_single_channel] Channel T7: Found 6 artifacts (0.00%)
+[2026-02-08 15:33:20,110 INFO dataset._process_single_channel] Channel T8: Found 6 artifacts (0.00%)
+[2026-02-08 15:33:20,124 INFO dataset._process_single_channel] Channel Oz: Found 8 artifacts (0.01%)
+[2026-02-08 15:33:20,134 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:20,134 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:20,459 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:33:21,136 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.44 Hz
+[2026-02-08 15:33:21,169 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:21,169 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:21,176 INFO dataset._process_single_channel] Channel Fp1: Found 382 artifacts (0.28%)
+[2026-02-08 15:33:21,272 INFO dataset._process_single_channel] Channel Fp2: Found 373 artifacts (0.27%)
+[2026-02-08 15:33:21,368 INFO dataset._process_single_channel] Channel C3: Found 2133 artifacts (1.54%)
+[2026-02-08 15:33:21,932 INFO dataset._process_single_channel] Channel Cz: Found 597 artifacts (0.43%)
+[2026-02-08 15:33:22,113 INFO dataset._process_single_channel] Channel C4: Found 57 artifacts (0.04%)
+[2026-02-08 15:33:22,141 INFO dataset._process_single_channel] Channel T7: Found 345 artifacts (0.25%)
+[2026-02-08 15:33:22,265 INFO dataset._process_single_channel] Channel T8: Found 406 artifacts (0.29%)
+[2026-02-08 15:33:22,429 INFO dataset._process_single_channel] Channel Oz: Found 480 artifacts (0.35%)
+[2026-02-08 15:33:22,612 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:22,612 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:22,966 INFO dataset.load_and_preprocess_cane_raw_file] Created 27 chunks of shape torch.Size([27, 8, 5000])
+[2026-02-08 15:33:23,468 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.12 Hz
+[2026-02-08 15:33:23,514 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:23,514 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:23,551 INFO dataset._process_single_channel] Channel C3: Found 1 artifacts (0.00%)
+[2026-02-08 15:33:23,567 INFO dataset._process_single_channel] Channel Cz: Found 3 artifacts (0.00%)
+[2026-02-08 15:33:23,624 INFO dataset._process_single_channel] Channel Oz: Found 2 artifacts (0.00%)
+[2026-02-08 15:33:23,635 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:23,635 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:23,959 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:33:24,441 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.10 Hz
+[2026-02-08 15:33:24,486 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:24,487 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:24,496 INFO dataset._process_single_channel] Channel Fp1: Found 128 artifacts (0.10%)
+[2026-02-08 15:33:24,563 INFO dataset._process_single_channel] Channel Fp2: Found 116 artifacts (0.09%)
+[2026-02-08 15:33:24,627 INFO dataset._process_single_channel] Channel C3: Found 12 artifacts (0.01%)
+[2026-02-08 15:33:24,646 INFO dataset._process_single_channel] Channel Cz: Found 10 artifacts (0.01%)
+[2026-02-08 15:33:24,666 INFO dataset._process_single_channel] Channel C4: Found 197 artifacts (0.15%)
+[2026-02-08 15:33:24,764 INFO dataset._process_single_channel] Channel T7: Found 59 artifacts (0.05%)
+[2026-02-08 15:33:24,804 INFO dataset._process_single_channel] Channel T8: Found 21 artifacts (0.02%)
+[2026-02-08 15:33:24,828 INFO dataset._process_single_channel] Channel Oz: Found 114 artifacts (0.09%)
+[2026-02-08 15:33:24,886 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:24,886 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:25,197 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:33:25,824 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.21 Hz
+[2026-02-08 15:33:25,882 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:25,882 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:25,895 INFO dataset._process_single_channel] Channel Fp1: Found 106 artifacts (0.07%)
+[2026-02-08 15:33:25,969 INFO dataset._process_single_channel] Channel Fp2: Found 15 artifacts (0.01%)
+[2026-02-08 15:33:25,996 INFO dataset._process_single_channel] Channel C3: Found 2428 artifacts (1.58%)
+[2026-02-08 15:33:27,471 INFO dataset._process_single_channel] Channel Cz: Found 2 artifacts (0.00%)
+[2026-02-08 15:33:27,496 INFO dataset._process_single_channel] Channel C4: Found 55 artifacts (0.04%)
+[2026-02-08 15:33:27,550 INFO dataset._process_single_channel] Channel T7: Found 1609 artifacts (1.05%)
+[2026-02-08 15:33:28,381 INFO dataset._process_single_channel] Channel T8: Found 2770 artifacts (1.81%)
+[2026-02-08 15:33:29,545 INFO dataset._process_single_channel] Channel Oz: Found 2 artifacts (0.00%)
+[2026-02-08 15:33:29,560 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:29,560 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:29,901 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:30,463 INFO dataset.verify_sampling_rate] Detected sampling rate: 495.81 Hz
+[2026-02-08 15:33:30,518 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:30,518 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:30,601 INFO dataset._process_single_channel] Channel C4: Found 2081 artifacts (1.37%)
+[2026-02-08 15:33:31,580 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:31,580 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:31,983 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:32,656 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.50 Hz
+[2026-02-08 15:33:32,803 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:32,803 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:32,820 INFO dataset._process_single_channel] Channel Fp1: Found 151 artifacts (0.08%)
+[2026-02-08 15:33:32,907 INFO dataset._process_single_channel] Channel Fp2: Found 204 artifacts (0.11%)
+[2026-02-08 15:33:33,017 INFO dataset._process_single_channel] Channel C3: Found 335 artifacts (0.18%)
+[2026-02-08 15:33:33,180 INFO dataset._process_single_channel] Channel Cz: Found 391 artifacts (0.21%)
+[2026-02-08 15:33:33,365 INFO dataset._process_single_channel] Channel C4: Found 58 artifacts (0.03%)
+[2026-02-08 15:33:33,409 INFO dataset._process_single_channel] Channel T7: Found 2156 artifacts (1.15%)
+[2026-02-08 15:33:34,322 INFO dataset._process_single_channel] Channel T8: Found 1139 artifacts (0.61%)
+[2026-02-08 15:33:34,793 INFO dataset._process_single_channel] Channel Oz: Found 1168 artifacts (0.62%)
+[2026-02-08 15:33:35,277 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:35,277 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:35,863 INFO dataset.load_and_preprocess_cane_raw_file] Created 37 chunks of shape torch.Size([37, 8, 5000])
+[2026-02-08 15:33:36,690 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.26 Hz
+[2026-02-08 15:33:36,725 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:36,726 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:36,734 INFO dataset._process_single_channel] Channel Fp1: Found 33 artifacts (0.02%)
+[2026-02-08 15:33:36,756 INFO dataset._process_single_channel] Channel Fp2: Found 1002 artifacts (0.65%)
+[2026-02-08 15:33:37,019 INFO dataset._process_single_channel] Channel C3: Found 870 artifacts (0.57%)
+[2026-02-08 15:33:37,288 INFO dataset._process_single_channel] Channel T7: Found 915 artifacts (0.60%)
+[2026-02-08 15:33:37,558 INFO dataset._process_single_channel] Channel T8: Found 299 artifacts (0.20%)
+[2026-02-08 15:33:37,657 INFO dataset._process_single_channel] Channel Oz: Found 841 artifacts (0.55%)
+[2026-02-08 15:33:37,907 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:37,907 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:38,273 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:39,031 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.51 Hz
+[2026-02-08 15:33:39,079 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:39,080 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:39,194 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:39,194 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:39,586 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:40,394 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.61 Hz
+[2026-02-08 15:33:40,434 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:40,434 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:40,444 INFO dataset._process_single_channel] Channel Fp1: Found 399 artifacts (0.25%)
+[2026-02-08 15:33:40,553 INFO dataset._process_single_channel] Channel Fp2: Found 5 artifacts (0.00%)
+[2026-02-08 15:33:40,567 INFO dataset._process_single_channel] Channel C3: Found 1016 artifacts (0.65%)
+[2026-02-08 15:33:40,840 INFO dataset._process_single_channel] Channel Cz: Found 1161 artifacts (0.74%)
+[2026-02-08 15:33:41,189 INFO dataset._process_single_channel] Channel C4: Found 2418 artifacts (1.54%)
+[2026-02-08 15:33:42,554 INFO dataset._process_single_channel] Channel T7: Found 2323 artifacts (1.48%)
+[2026-02-08 15:33:43,550 INFO dataset._process_single_channel] Channel T8: Found 446 artifacts (0.28%)
+[2026-02-08 15:33:43,718 INFO dataset._process_single_channel] Channel Oz: Found 1193 artifacts (0.76%)
+[2026-02-08 15:33:44,121 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:44,121 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:44,500 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:33:45,303 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.42 Hz
+[2026-02-08 15:33:45,345 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:45,345 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:45,456 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:45,456 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:45,796 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:46,689 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.74 Hz
+[2026-02-08 15:33:46,727 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:46,727 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:46,733 INFO dataset._process_single_channel] Channel Fp1: Found 168 artifacts (0.11%)
+[2026-02-08 15:33:46,782 INFO dataset._process_single_channel] Channel Fp2: Found 2 artifacts (0.00%)
+[2026-02-08 15:33:46,793 INFO dataset._process_single_channel] Channel C3: Found 77 artifacts (0.05%)
+[2026-02-08 15:33:46,821 INFO dataset._process_single_channel] Channel Cz: Found 103 artifacts (0.07%)
+[2026-02-08 15:33:46,854 INFO dataset._process_single_channel] Channel C4: Found 88 artifacts (0.06%)
+[2026-02-08 15:33:46,883 INFO dataset._process_single_channel] Channel T7: Found 103 artifacts (0.07%)
+[2026-02-08 15:33:46,918 INFO dataset._process_single_channel] Channel T8: Found 104 artifacts (0.07%)
+[2026-02-08 15:33:46,953 INFO dataset._process_single_channel] Channel Oz: Found 110 artifacts (0.07%)
+[2026-02-08 15:33:46,985 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:46,986 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:47,260 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:48,065 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.45 Hz
+[2026-02-08 15:33:48,102 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:48,102 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:48,155 INFO dataset._process_single_channel] Channel C4: Found 56 artifacts (0.04%)
+[2026-02-08 15:33:48,197 INFO dataset._process_single_channel] Channel Oz: Found 257 artifacts (0.17%)
+[2026-02-08 15:33:48,272 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:48,272 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:48,488 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:49,029 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.60 Hz
+[2026-02-08 15:33:49,078 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:49,078 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:49,207 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:49,208 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:49,501 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:50,247 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.28 Hz
+[2026-02-08 15:33:50,285 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:50,286 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:50,296 INFO dataset._process_single_channel] Channel Fp1: Found 9 artifacts (0.01%)
+[2026-02-08 15:33:50,314 INFO dataset._process_single_channel] Channel Fp2: Found 339 artifacts (0.22%)
+[2026-02-08 15:33:50,427 INFO dataset._process_single_channel] Channel C3: Found 59 artifacts (0.04%)
+[2026-02-08 15:33:50,457 INFO dataset._process_single_channel] Channel Cz: Found 991 artifacts (0.65%)
+[2026-02-08 15:33:50,774 INFO dataset._process_single_channel] Channel C4: Found 55 artifacts (0.04%)
+[2026-02-08 15:33:50,804 INFO dataset._process_single_channel] Channel T7: Found 531 artifacts (0.35%)
+[2026-02-08 15:33:50,981 INFO dataset._process_single_channel] Channel T8: Found 1091 artifacts (0.71%)
+[2026-02-08 15:33:51,323 INFO dataset._process_single_channel] Channel Oz: Found 241 artifacts (0.16%)
+[2026-02-08 15:33:51,402 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:51,402 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:51,784 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:52,713 INFO dataset.verify_sampling_rate] Detected sampling rate: 497.83 Hz
+[2026-02-08 15:33:52,757 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:52,757 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:52,781 INFO dataset._process_single_channel] Channel Fp2: Found 12 artifacts (0.01%)
+[2026-02-08 15:33:52,800 INFO dataset._process_single_channel] Channel C3: Found 515 artifacts (0.33%)
+[2026-02-08 15:33:52,944 INFO dataset._process_single_channel] Channel Cz: Found 808 artifacts (0.51%)
+[2026-02-08 15:33:53,185 INFO dataset._process_single_channel] Channel C4: Found 621 artifacts (0.39%)
+[2026-02-08 15:33:53,468 INFO dataset._process_single_channel] Channel T7: Found 11 artifacts (0.01%)
+[2026-02-08 15:33:53,499 INFO dataset._process_single_channel] Channel T8: Found 10 artifacts (0.01%)
+[2026-02-08 15:33:53,524 INFO dataset._process_single_channel] Channel Oz: Found 66 artifacts (0.04%)
+[2026-02-08 15:33:53,566 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:53,566 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:54,109 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:33:54,867 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.53 Hz
+[2026-02-08 15:33:54,924 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:54,925 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:54,939 INFO dataset._process_single_channel] Channel Fp1: Found 76 artifacts (0.05%)
+[2026-02-08 15:33:55,008 INFO dataset._process_single_channel] Channel C3: Found 41 artifacts (0.03%)
+[2026-02-08 15:33:55,045 INFO dataset._process_single_channel] Channel Cz: Found 24 artifacts (0.02%)
+[2026-02-08 15:33:55,072 INFO dataset._process_single_channel] Channel C4: Found 133 artifacts (0.09%)
+[2026-02-08 15:33:55,147 INFO dataset._process_single_channel] Channel T7: Found 195 artifacts (0.13%)
+[2026-02-08 15:33:55,262 INFO dataset._process_single_channel] Channel Oz: Found 40 artifacts (0.03%)
+[2026-02-08 15:33:55,288 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:55,288 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:33:55,769 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:33:56,415 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:33:56,485 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:33:56,485 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:33:56,506 INFO dataset._process_single_channel] Channel Fp1: Found 1231 artifacts (0.79%)
+[2026-02-08 15:33:57,216 INFO dataset._process_single_channel] Channel Fp2: Found 1378 artifacts (0.89%)
+[2026-02-08 15:33:57,992 INFO dataset._process_single_channel] Channel C3: Found 351 artifacts (0.23%)
+[2026-02-08 15:33:58,239 INFO dataset._process_single_channel] Channel Cz: Found 803 artifacts (0.52%)
+[2026-02-08 15:33:58,834 INFO dataset._process_single_channel] Channel C4: Found 325 artifacts (0.21%)
+[2026-02-08 15:33:59,102 INFO dataset._process_single_channel] Channel T7: Found 666 artifacts (0.43%)
+[2026-02-08 15:33:59,568 INFO dataset._process_single_channel] Channel T8: Found 366 artifacts (0.24%)
+[2026-02-08 15:33:59,797 INFO dataset._process_single_channel] Channel Oz: Found 276 artifacts (0.18%)
+[2026-02-08 15:33:59,959 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:33:59,960 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:00,474 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:34:01,167 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.58 Hz
+[2026-02-08 15:34:01,212 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:01,212 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:01,230 INFO dataset._process_single_channel] Channel Fp1: Found 44 artifacts (0.03%)
+[2026-02-08 15:34:01,272 INFO dataset._process_single_channel] Channel Fp2: Found 58 artifacts (0.03%)
+[2026-02-08 15:34:01,324 INFO dataset._process_single_channel] Channel C3: Found 41 artifacts (0.02%)
+[2026-02-08 15:34:01,357 INFO dataset._process_single_channel] Channel Cz: Found 27 artifacts (0.02%)
+[2026-02-08 15:34:01,385 INFO dataset._process_single_channel] Channel C4: Found 53 artifacts (0.03%)
+[2026-02-08 15:34:01,422 INFO dataset._process_single_channel] Channel T7: Found 53 artifacts (0.03%)
+[2026-02-08 15:34:01,477 INFO dataset._process_single_channel] Channel Oz: Found 16 artifacts (0.01%)
+[2026-02-08 15:34:01,499 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:01,499 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:01,986 INFO dataset.load_and_preprocess_cane_raw_file] Created 33 chunks of shape torch.Size([33, 8, 5000])
+[2026-02-08 15:34:02,816 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.56 Hz
+[2026-02-08 15:34:02,883 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:02,883 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:02,962 INFO dataset._process_single_channel] Channel Cz: Found 240 artifacts (0.16%)
+[2026-02-08 15:34:03,108 INFO dataset._process_single_channel] Channel C4: Found 215 artifacts (0.14%)
+[2026-02-08 15:34:03,211 INFO dataset._process_single_channel] Channel T7: Found 768 artifacts (0.50%)
+[2026-02-08 15:34:03,562 INFO dataset._process_single_channel] Channel T8: Found 1979 artifacts (1.29%)
+[2026-02-08 15:34:04,356 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:04,356 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:04,792 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:34:05,477 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.57 Hz
+[2026-02-08 15:34:05,516 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:05,517 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:05,526 INFO dataset._process_single_channel] Channel Fp1: Found 337 artifacts (0.26%)
+[2026-02-08 15:34:05,667 INFO dataset._process_single_channel] Channel C3: Found 181 artifacts (0.14%)
+[2026-02-08 15:34:05,741 INFO dataset._process_single_channel] Channel Cz: Found 2 artifacts (0.00%)
+[2026-02-08 15:34:05,755 INFO dataset._process_single_channel] Channel C4: Found 84 artifacts (0.06%)
+[2026-02-08 15:34:05,817 INFO dataset._process_single_channel] Channel Oz: Found 2 artifacts (0.00%)
+[2026-02-08 15:34:05,826 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:05,826 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:06,087 INFO dataset.load_and_preprocess_cane_raw_file] Created 26 chunks of shape torch.Size([26, 8, 5000])
+[2026-02-08 15:34:06,661 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.57 Hz
+[2026-02-08 15:34:06,718 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:06,719 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:06,735 INFO dataset._process_single_channel] Channel Fp1: Found 251 artifacts (0.16%)
+[2026-02-08 15:34:06,882 INFO dataset._process_single_channel] Channel Fp2: Found 191 artifacts (0.12%)
+[2026-02-08 15:34:06,977 INFO dataset._process_single_channel] Channel C3: Found 310 artifacts (0.20%)
+[2026-02-08 15:34:07,115 INFO dataset._process_single_channel] Channel Cz: Found 227 artifacts (0.14%)
+[2026-02-08 15:34:07,217 INFO dataset._process_single_channel] Channel C4: Found 541 artifacts (0.34%)
+[2026-02-08 15:34:07,438 INFO dataset._process_single_channel] Channel T8: Found 1 artifacts (0.00%)
+[2026-02-08 15:34:07,461 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:07,461 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:07,886 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:34:08,681 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.57 Hz
+[2026-02-08 15:34:08,717 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:08,718 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:08,761 INFO dataset._process_single_channel] Channel Cz: Found 2166 artifacts (1.41%)
+[2026-02-08 15:34:09,556 INFO dataset._process_single_channel] Channel C4: Found 2131 artifacts (1.38%)
+[2026-02-08 15:34:10,282 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:10,282 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:10,701 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:34:11,169 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.36 Hz
+[2026-02-08 15:34:11,211 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:11,212 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:11,222 INFO dataset._process_single_channel] Channel Fp1: Found 216 artifacts (0.17%)
+[2026-02-08 15:34:11,328 INFO dataset._process_single_channel] Channel Fp2: Found 1206 artifacts (0.94%)
+[2026-02-08 15:34:11,863 INFO dataset._process_single_channel] Channel C3: Found 793 artifacts (0.62%)
+[2026-02-08 15:34:12,269 INFO dataset._process_single_channel] Channel Cz: Found 39 artifacts (0.03%)
+[2026-02-08 15:34:12,301 INFO dataset._process_single_channel] Channel C4: Found 194 artifacts (0.15%)
+[2026-02-08 15:34:12,404 INFO dataset._process_single_channel] Channel T7: Found 512 artifacts (0.40%)
+[2026-02-08 15:34:12,655 INFO dataset._process_single_channel] Channel T8: Found 763 artifacts (0.59%)
+[2026-02-08 15:34:13,003 INFO dataset._process_single_channel] Channel Oz: Found 59 artifacts (0.05%)
+[2026-02-08 15:34:13,038 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:13,038 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:13,390 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:34:14,083 INFO dataset.verify_sampling_rate] Detected sampling rate: 496.97 Hz
+[2026-02-08 15:34:14,153 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:14,154 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:14,170 INFO dataset._process_single_channel] Channel Fp1: Found 5935 artifacts (3.13%)
+[2026-02-08 15:34:16,783 INFO dataset._process_single_channel] Channel Fp2: Found 5481 artifacts (2.89%)
+[2026-02-08 15:34:19,657 INFO dataset._process_single_channel] Channel C3: Found 5383 artifacts (2.84%)
+[2026-02-08 15:34:22,958 INFO dataset._process_single_channel] Channel Cz: Found 857 artifacts (0.45%)
+[2026-02-08 15:34:23,522 INFO dataset._process_single_channel] Channel C4: Found 5451 artifacts (2.88%)
+[2026-02-08 15:34:26,420 INFO dataset._process_single_channel] Channel T7: Found 757 artifacts (0.40%)
+[2026-02-08 15:34:26,791 INFO dataset._process_single_channel] Channel T8: Found 1400 artifacts (0.74%)
+[2026-02-08 15:34:27,573 INFO dataset._process_single_channel] Channel Oz: Found 5571 artifacts (2.94%)
+[2026-02-08 15:34:31,537 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:31,538 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:32,306 INFO dataset.load_and_preprocess_cane_raw_file] Created 37 chunks of shape torch.Size([37, 8, 5000])
+[2026-02-08 15:34:33,504 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.05 Hz
+[2026-02-08 15:34:33,644 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:33,645 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:33,664 INFO dataset._process_single_channel] Channel Fp1: Found 338 artifacts (0.15%)
+[2026-02-08 15:34:33,856 INFO dataset._process_single_channel] Channel Fp2: Found 7918 artifacts (3.49%)
+[2026-02-08 15:34:37,840 INFO dataset._process_single_channel] Channel C3: Found 538 artifacts (0.24%)
+[2026-02-08 15:34:38,118 INFO dataset._process_single_channel] Channel Cz: Found 394 artifacts (0.17%)
+[2026-02-08 15:34:38,318 INFO dataset._process_single_channel] Channel C4: Found 475 artifacts (0.21%)
+[2026-02-08 15:34:38,568 INFO dataset._process_single_channel] Channel T7: Found 426 artifacts (0.19%)
+[2026-02-08 15:34:38,795 INFO dataset._process_single_channel] Channel T8: Found 200 artifacts (0.09%)
+[2026-02-08 15:34:38,915 INFO dataset._process_single_channel] Channel Oz: Found 3271 artifacts (1.44%)
+[2026-02-08 15:34:40,361 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:40,361 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:40,985 INFO dataset.load_and_preprocess_cane_raw_file] Created 45 chunks of shape torch.Size([45, 8, 5000])
+[2026-02-08 15:34:42,391 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.08 Hz
+[2026-02-08 15:34:42,500 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:42,501 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:42,527 INFO dataset._process_single_channel] Channel Fp1: Found 183 artifacts (0.09%)
+[2026-02-08 15:34:42,681 INFO dataset._process_single_channel] Channel Fp2: Found 829 artifacts (0.40%)
+[2026-02-08 15:34:43,125 INFO dataset._process_single_channel] Channel C3: Found 395 artifacts (0.19%)
+[2026-02-08 15:34:43,324 INFO dataset._process_single_channel] Channel Cz: Found 1215 artifacts (0.58%)
+[2026-02-08 15:34:43,915 INFO dataset._process_single_channel] Channel T8: Found 54 artifacts (0.03%)
+[2026-02-08 15:34:43,963 INFO dataset._process_single_channel] Channel Oz: Found 489 artifacts (0.24%)
+[2026-02-08 15:34:44,176 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:44,177 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:44,690 INFO dataset.load_and_preprocess_cane_raw_file] Created 41 chunks of shape torch.Size([41, 8, 5000])
+[2026-02-08 15:34:45,369 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.56 Hz
+[2026-02-08 15:34:45,432 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:45,433 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:45,448 INFO dataset._process_single_channel] Channel Fp1: Found 284 artifacts (0.18%)
+[2026-02-08 15:34:45,597 INFO dataset._process_single_channel] Channel Fp2: Found 738 artifacts (0.46%)
+[2026-02-08 15:34:45,940 INFO dataset._process_single_channel] Channel Cz: Found 15 artifacts (0.01%)
+[2026-02-08 15:34:45,963 INFO dataset._process_single_channel] Channel C4: Found 6 artifacts (0.00%)
+[2026-02-08 15:34:45,982 INFO dataset._process_single_channel] Channel T7: Found 941 artifacts (0.59%)
+[2026-02-08 15:34:46,410 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:46,410 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:46,776 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:34:47,327 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.16 Hz
+[2026-02-08 15:34:47,384 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:47,385 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:47,397 INFO dataset._process_single_channel] Channel Fp1: Found 84 artifacts (0.05%)
+[2026-02-08 15:34:47,457 INFO dataset._process_single_channel] Channel Fp2: Found 1482 artifacts (0.97%)
+[2026-02-08 15:34:48,155 INFO dataset._process_single_channel] Channel C4: Found 15 artifacts (0.01%)
+[2026-02-08 15:34:48,228 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:48,228 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:48,580 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:34:49,126 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.21 Hz
+[2026-02-08 15:34:49,181 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:49,182 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:49,233 INFO dataset._process_single_channel] Channel C3: Found 1598 artifacts (1.04%)
+[2026-02-08 15:34:49,952 INFO dataset._process_single_channel] Channel C4: Found 111 artifacts (0.07%)
+[2026-02-08 15:34:50,053 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:50,053 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:50,490 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:34:51,123 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.62 Hz
+[2026-02-08 15:34:51,176 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:51,176 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:51,187 INFO dataset._process_single_channel] Channel Fp1: Found 341 artifacts (0.22%)
+[2026-02-08 15:34:51,374 INFO dataset._process_single_channel] Channel Fp2: Found 13 artifacts (0.01%)
+[2026-02-08 15:34:51,399 INFO dataset._process_single_channel] Channel C3: Found 2333 artifacts (1.51%)
+[2026-02-08 15:34:52,575 INFO dataset._process_single_channel] Channel Cz: Found 39 artifacts (0.03%)
+[2026-02-08 15:34:52,610 INFO dataset._process_single_channel] Channel C4: Found 15 artifacts (0.01%)
+[2026-02-08 15:34:52,635 INFO dataset._process_single_channel] Channel T7: Found 8 artifacts (0.01%)
+[2026-02-08 15:34:52,682 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:52,682 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:53,068 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:34:53,621 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.62 Hz
+[2026-02-08 15:34:53,680 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:53,681 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:53,729 INFO dataset._process_single_channel] Channel C3: Found 540 artifacts (0.35%)
+[2026-02-08 15:34:53,998 INFO dataset._process_single_channel] Channel Cz: Found 2826 artifacts (1.82%)
+[2026-02-08 15:34:55,209 INFO dataset._process_single_channel] Channel C4: Found 65 artifacts (0.04%)
+[2026-02-08 15:34:55,258 INFO dataset._process_single_channel] Channel T7: Found 1442 artifacts (0.93%)
+[2026-02-08 15:34:55,873 INFO dataset._process_single_channel] Channel T8: Found 1576 artifacts (1.01%)
+[2026-02-08 15:34:56,538 INFO dataset._process_single_channel] Channel Oz: Found 1465 artifacts (0.94%)
+[2026-02-08 15:34:57,220 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:57,220 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:57,762 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:34:58,559 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.49 Hz
+[2026-02-08 15:34:58,649 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:34:58,650 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:34:58,669 INFO dataset._process_single_channel] Channel Fp1: Found 11 artifacts (0.01%)
+[2026-02-08 15:34:58,706 INFO dataset._process_single_channel] Channel Fp2: Found 11 artifacts (0.01%)
+[2026-02-08 15:34:58,736 INFO dataset._process_single_channel] Channel C3: Found 11 artifacts (0.01%)
+[2026-02-08 15:34:58,767 INFO dataset._process_single_channel] Channel Cz: Found 11 artifacts (0.01%)
+[2026-02-08 15:34:58,798 INFO dataset._process_single_channel] Channel C4: Found 10 artifacts (0.01%)
+[2026-02-08 15:34:58,830 INFO dataset._process_single_channel] Channel T7: Found 11 artifacts (0.01%)
+[2026-02-08 15:34:58,862 INFO dataset._process_single_channel] Channel T8: Found 11 artifacts (0.01%)
+[2026-02-08 15:34:58,894 INFO dataset._process_single_channel] Channel Oz: Found 11 artifacts (0.01%)
+[2026-02-08 15:34:58,913 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:34:58,913 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:34:59,380 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:00,014 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.44 Hz
+[2026-02-08 15:35:00,073 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:00,073 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:00,085 INFO dataset._process_single_channel] Channel Fp1: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:00,104 INFO dataset._process_single_channel] Channel Fp2: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:00,129 INFO dataset._process_single_channel] Channel C3: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:00,151 INFO dataset._process_single_channel] Channel Cz: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:00,173 INFO dataset._process_single_channel] Channel C4: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:00,195 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:00,222 INFO dataset._process_single_channel] Channel T8: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:00,245 INFO dataset._process_single_channel] Channel Oz: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:00,261 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:00,262 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:00,796 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:01,586 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.38 Hz
+[2026-02-08 15:35:01,646 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:01,647 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:01,657 INFO dataset._process_single_channel] Channel Fp1: Found 32 artifacts (0.02%)
+[2026-02-08 15:35:01,692 INFO dataset._process_single_channel] Channel Fp2: Found 69 artifacts (0.04%)
+[2026-02-08 15:35:01,740 INFO dataset._process_single_channel] Channel C3: Found 18 artifacts (0.01%)
+[2026-02-08 15:35:01,770 INFO dataset._process_single_channel] Channel Cz: Found 22 artifacts (0.01%)
+[2026-02-08 15:35:01,801 INFO dataset._process_single_channel] Channel C4: Found 19 artifacts (0.01%)
+[2026-02-08 15:35:01,832 INFO dataset._process_single_channel] Channel T7: Found 194 artifacts (0.12%)
+[2026-02-08 15:35:01,941 INFO dataset._process_single_channel] Channel T8: Found 176 artifacts (0.11%)
+[2026-02-08 15:35:02,037 INFO dataset._process_single_channel] Channel Oz: Found 12 artifacts (0.01%)
+[2026-02-08 15:35:02,054 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:02,054 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:02,472 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:35:03,123 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.21 Hz
+[2026-02-08 15:35:03,180 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:03,180 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:03,198 INFO dataset._process_single_channel] Channel Fp1: Found 361 artifacts (0.24%)
+[2026-02-08 15:35:03,431 INFO dataset._process_single_channel] Channel Fp2: Found 357 artifacts (0.23%)
+[2026-02-08 15:35:03,667 INFO dataset._process_single_channel] Channel C3: Found 363 artifacts (0.24%)
+[2026-02-08 15:35:03,863 INFO dataset._process_single_channel] Channel Cz: Found 54 artifacts (0.04%)
+[2026-02-08 15:35:03,909 INFO dataset._process_single_channel] Channel C4: Found 336 artifacts (0.22%)
+[2026-02-08 15:35:04,090 INFO dataset._process_single_channel] Channel T7: Found 701 artifacts (0.46%)
+[2026-02-08 15:35:04,494 INFO dataset._process_single_channel] Channel T8: Found 347 artifacts (0.23%)
+[2026-02-08 15:35:04,738 INFO dataset._process_single_channel] Channel Oz: Found 317 artifacts (0.21%)
+[2026-02-08 15:35:04,965 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:04,965 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:05,580 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:06,359 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.31 Hz
+[2026-02-08 15:35:06,426 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:06,427 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:06,442 INFO dataset._process_single_channel] Channel Fp1: Found 653 artifacts (0.41%)
+[2026-02-08 15:35:06,840 INFO dataset._process_single_channel] Channel C3: Found 340 artifacts (0.21%)
+[2026-02-08 15:35:07,027 INFO dataset._process_single_channel] Channel Cz: Found 319 artifacts (0.20%)
+[2026-02-08 15:35:07,203 INFO dataset._process_single_channel] Channel C4: Found 302 artifacts (0.19%)
+[2026-02-08 15:35:07,366 INFO dataset._process_single_channel] Channel T7: Found 143 artifacts (0.09%)
+[2026-02-08 15:35:07,459 INFO dataset._process_single_channel] Channel T8: Found 279 artifacts (0.18%)
+[2026-02-08 15:35:07,601 INFO dataset._process_single_channel] Channel Oz: Found 614 artifacts (0.39%)
+[2026-02-08 15:35:07,873 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:07,873 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:08,384 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:35:09,127 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.65 Hz
+[2026-02-08 15:35:09,203 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:09,204 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:09,224 INFO dataset._process_single_channel] Channel Fp1: Found 433 artifacts (0.28%)
+[2026-02-08 15:35:09,519 INFO dataset._process_single_channel] Channel Fp2: Found 28 artifacts (0.02%)
+[2026-02-08 15:35:09,588 INFO dataset._process_single_channel] Channel Cz: Found 162 artifacts (0.10%)
+[2026-02-08 15:35:09,716 INFO dataset._process_single_channel] Channel C4: Found 147 artifacts (0.10%)
+[2026-02-08 15:35:09,829 INFO dataset._process_single_channel] Channel T7: Found 69 artifacts (0.04%)
+[2026-02-08 15:35:09,897 INFO dataset._process_single_channel] Channel T8: Found 1054 artifacts (0.68%)
+[2026-02-08 15:35:10,571 INFO dataset._process_single_channel] Channel Oz: Found 1034 artifacts (0.67%)
+[2026-02-08 15:35:11,137 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:11,137 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:11,677 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:12,426 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.33 Hz
+[2026-02-08 15:35:12,490 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:12,491 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:12,549 INFO dataset._process_single_channel] Channel C3: Found 2 artifacts (0.00%)
+[2026-02-08 15:35:12,577 INFO dataset._process_single_channel] Channel Cz: Found 47 artifacts (0.03%)
+[2026-02-08 15:35:12,695 INFO dataset._process_single_channel] Channel T8: Found 6 artifacts (0.00%)
+[2026-02-08 15:35:12,738 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:12,738 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:13,286 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:35:14,223 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.44 Hz
+[2026-02-08 15:35:14,309 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:14,310 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:14,366 INFO dataset._process_single_channel] Channel Fp2: Found 2 artifacts (0.00%)
+[2026-02-08 15:35:14,404 INFO dataset._process_single_channel] Channel C3: Found 2 artifacts (0.00%)
+[2026-02-08 15:35:14,447 INFO dataset._process_single_channel] Channel Cz: Found 2 artifacts (0.00%)
+[2026-02-08 15:35:14,526 INFO dataset._process_single_channel] Channel T7: Found 2 artifacts (0.00%)
+[2026-02-08 15:35:14,567 INFO dataset._process_single_channel] Channel T8: Found 2 artifacts (0.00%)
+[2026-02-08 15:35:14,607 INFO dataset._process_single_channel] Channel Oz: Found 1 artifacts (0.00%)
+[2026-02-08 15:35:14,630 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:14,630 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:15,590 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:16,686 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.49 Hz
+[2026-02-08 15:35:16,777 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:16,778 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:16,790 INFO dataset._process_single_channel] Channel Fp1: Found 221 artifacts (0.14%)
+[2026-02-08 15:35:16,945 INFO dataset._process_single_channel] Channel Fp2: Found 65 artifacts (0.04%)
+[2026-02-08 15:35:17,002 INFO dataset._process_single_channel] Channel C3: Found 47 artifacts (0.03%)
+[2026-02-08 15:35:17,052 INFO dataset._process_single_channel] Channel Cz: Found 15 artifacts (0.01%)
+[2026-02-08 15:35:17,079 INFO dataset._process_single_channel] Channel C4: Found 427 artifacts (0.27%)
+[2026-02-08 15:35:17,318 INFO dataset._process_single_channel] Channel T7: Found 11 artifacts (0.01%)
+[2026-02-08 15:35:17,345 INFO dataset._process_single_channel] Channel T8: Found 40 artifacts (0.03%)
+[2026-02-08 15:35:17,393 INFO dataset._process_single_channel] Channel Oz: Found 503 artifacts (0.32%)
+[2026-02-08 15:35:17,651 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:17,651 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:18,163 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:35:18,799 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.26 Hz
+[2026-02-08 15:35:18,871 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:18,872 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:18,911 INFO dataset._process_single_channel] Channel Fp2: Found 31 artifacts (0.02%)
+[2026-02-08 15:35:19,070 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:19,071 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:19,676 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:20,660 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.40 Hz
+[2026-02-08 15:35:20,741 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:20,742 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:20,758 INFO dataset._process_single_channel] Channel Fp1: Found 47 artifacts (0.03%)
+[2026-02-08 15:35:20,821 INFO dataset._process_single_channel] Channel Fp2: Found 43 artifacts (0.03%)
+[2026-02-08 15:35:20,873 INFO dataset._process_single_channel] Channel C3: Found 290 artifacts (0.19%)
+[2026-02-08 15:35:21,110 INFO dataset._process_single_channel] Channel T7: Found 23 artifacts (0.02%)
+[2026-02-08 15:35:21,150 INFO dataset._process_single_channel] Channel T8: Found 47 artifacts (0.03%)
+[2026-02-08 15:35:21,198 INFO dataset._process_single_channel] Channel Oz: Found 60 artifacts (0.04%)
+[2026-02-08 15:35:21,248 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:21,248 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:21,959 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:23,061 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.70 Hz
+[2026-02-08 15:35:23,138 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:23,139 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:23,153 INFO dataset._process_single_channel] Channel Fp1: Found 23 artifacts (0.01%)
+[2026-02-08 15:35:23,192 INFO dataset._process_single_channel] Channel Fp2: Found 65 artifacts (0.04%)
+[2026-02-08 15:35:23,253 INFO dataset._process_single_channel] Channel C3: Found 955 artifacts (0.61%)
+[2026-02-08 15:35:23,802 INFO dataset._process_single_channel] Channel Cz: Found 928 artifacts (0.59%)
+[2026-02-08 15:35:24,280 INFO dataset._process_single_channel] Channel C4: Found 377 artifacts (0.24%)
+[2026-02-08 15:35:24,479 INFO dataset._process_single_channel] Channel T7: Found 252 artifacts (0.16%)
+[2026-02-08 15:35:24,660 INFO dataset._process_single_channel] Channel T8: Found 484 artifacts (0.31%)
+[2026-02-08 15:35:24,943 INFO dataset._process_single_channel] Channel Oz: Found 1119 artifacts (0.72%)
+[2026-02-08 15:35:25,492 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:25,492 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:25,980 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:35:26,889 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.48 Hz
+[2026-02-08 15:35:26,986 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:26,987 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:27,006 INFO dataset._process_single_channel] Channel Fp1: Found 32 artifacts (0.02%)
+[2026-02-08 15:35:27,273 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:27,274 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:27,887 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:28,813 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.55 Hz
+[2026-02-08 15:35:28,898 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:28,898 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:28,999 INFO dataset._process_single_channel] Channel Cz: Found 34 artifacts (0.02%)
+[2026-02-08 15:35:29,146 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:29,146 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:29,792 INFO dataset.load_and_preprocess_cane_raw_file] Created 43 chunks of shape torch.Size([43, 8, 5000])
+[2026-02-08 15:35:30,538 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.80 Hz
+[2026-02-08 15:35:30,590 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:30,590 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:30,714 INFO dataset._process_single_channel] Channel Oz: Found 612 artifacts (0.40%)
+[2026-02-08 15:35:30,988 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:30,988 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:31,471 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:32,356 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.29 Hz
+[2026-02-08 15:35:32,434 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:32,435 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:32,455 INFO dataset._process_single_channel] Channel Fp1: Found 92 artifacts (0.04%)
+[2026-02-08 15:35:32,525 INFO dataset._process_single_channel] Channel Fp2: Found 104 artifacts (0.05%)
+[2026-02-08 15:35:32,601 INFO dataset._process_single_channel] Channel C3: Found 28 artifacts (0.01%)
+[2026-02-08 15:35:32,640 INFO dataset._process_single_channel] Channel Cz: Found 1099 artifacts (0.52%)
+[2026-02-08 15:35:33,176 INFO dataset._process_single_channel] Channel C4: Found 840 artifacts (0.40%)
+[2026-02-08 15:35:33,569 INFO dataset._process_single_channel] Channel T7: Found 66 artifacts (0.03%)
+[2026-02-08 15:35:33,626 INFO dataset._process_single_channel] Channel T8: Found 502 artifacts (0.24%)
+[2026-02-08 15:35:33,879 INFO dataset._process_single_channel] Channel Oz: Found 81 artifacts (0.04%)
+[2026-02-08 15:35:33,932 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:33,932 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:34,504 INFO dataset.load_and_preprocess_cane_raw_file] Created 42 chunks of shape torch.Size([42, 8, 5000])
+[2026-02-08 15:35:35,294 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.49 Hz
+[2026-02-08 15:35:35,390 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:35,390 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:35,409 INFO dataset._process_single_channel] Channel Fp1: Found 50 artifacts (0.03%)
+[2026-02-08 15:35:35,483 INFO dataset._process_single_channel] Channel Fp2: Found 314 artifacts (0.20%)
+[2026-02-08 15:35:35,795 INFO dataset._process_single_channel] Channel C3: Found 91 artifacts (0.06%)
+[2026-02-08 15:35:35,932 INFO dataset._process_single_channel] Channel Cz: Found 2 artifacts (0.00%)
+[2026-02-08 15:35:35,968 INFO dataset._process_single_channel] Channel C4: Found 453 artifacts (0.29%)
+[2026-02-08 15:35:36,359 INFO dataset._process_single_channel] Channel T7: Found 43 artifacts (0.03%)
+[2026-02-08 15:35:36,403 INFO dataset._process_single_channel] Channel T8: Found 28 artifacts (0.02%)
+[2026-02-08 15:35:36,440 INFO dataset._process_single_channel] Channel Oz: Found 44 artifacts (0.03%)
+[2026-02-08 15:35:36,477 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:36,477 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:36,971 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:37,543 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.25 Hz
+[2026-02-08 15:35:37,595 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:37,596 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:37,688 INFO dataset._process_single_channel] Channel T7: Found 9 artifacts (0.01%)
+[2026-02-08 15:35:37,735 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:37,735 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:38,168 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:38,705 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.21 Hz
+[2026-02-08 15:35:38,757 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:38,757 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:38,887 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:38,887 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:39,259 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:39,754 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:35:39,807 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:39,808 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:39,819 INFO dataset._process_single_channel] Channel Fp1: Found 38 artifacts (0.02%)
+[2026-02-08 15:35:39,856 INFO dataset._process_single_channel] Channel Fp2: Found 96 artifacts (0.06%)
+[2026-02-08 15:35:39,913 INFO dataset._process_single_channel] Channel C3: Found 47 artifacts (0.03%)
+[2026-02-08 15:35:39,965 INFO dataset._process_single_channel] Channel C4: Found 1073 artifacts (0.68%)
+[2026-02-08 15:35:40,413 INFO dataset._process_single_channel] Channel T7: Found 5 artifacts (0.00%)
+[2026-02-08 15:35:40,432 INFO dataset._process_single_channel] Channel T8: Found 1 artifacts (0.00%)
+[2026-02-08 15:35:40,450 INFO dataset._process_single_channel] Channel Oz: Found 62 artifacts (0.04%)
+[2026-02-08 15:35:40,486 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:40,486 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:40,900 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:35:41,510 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.22 Hz
+[2026-02-08 15:35:41,561 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:41,562 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:41,572 INFO dataset._process_single_channel] Channel Fp1: Found 1025 artifacts (0.67%)
+[2026-02-08 15:35:42,003 INFO dataset._process_single_channel] Channel Fp2: Found 1192 artifacts (0.78%)
+[2026-02-08 15:35:42,489 INFO dataset._process_single_channel] Channel C3: Found 882 artifacts (0.58%)
+[2026-02-08 15:35:42,894 INFO dataset._process_single_channel] Channel T8: Found 423 artifacts (0.28%)
+[2026-02-08 15:35:43,126 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:43,126 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:43,595 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:44,301 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.59 Hz
+[2026-02-08 15:35:44,368 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:44,368 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:44,541 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:44,541 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:45,069 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:45,794 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.40 Hz
+[2026-02-08 15:35:45,867 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:45,867 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:45,880 INFO dataset._process_single_channel] Channel Fp1: Found 277 artifacts (0.18%)
+[2026-02-08 15:35:46,052 INFO dataset._process_single_channel] Channel Fp2: Found 15 artifacts (0.01%)
+[2026-02-08 15:35:46,086 INFO dataset._process_single_channel] Channel C3: Found 56 artifacts (0.04%)
+[2026-02-08 15:35:46,140 INFO dataset._process_single_channel] Channel Cz: Found 5 artifacts (0.00%)
+[2026-02-08 15:35:46,169 INFO dataset._process_single_channel] Channel C4: Found 475 artifacts (0.31%)
+[2026-02-08 15:35:46,476 INFO dataset._process_single_channel] Channel T7: Found 813 artifacts (0.53%)
+[2026-02-08 15:35:47,039 INFO dataset._process_single_channel] Channel T8: Found 10 artifacts (0.01%)
+[2026-02-08 15:35:47,067 INFO dataset._process_single_channel] Channel Oz: Found 13 artifacts (0.01%)
+[2026-02-08 15:35:47,087 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:47,087 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:47,668 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:48,473 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.65 Hz
+[2026-02-08 15:35:48,548 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:48,549 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:48,565 INFO dataset._process_single_channel] Channel Fp1: Found 223 artifacts (0.15%)
+[2026-02-08 15:35:48,715 INFO dataset._process_single_channel] Channel Fp2: Found 115 artifacts (0.07%)
+[2026-02-08 15:35:48,798 INFO dataset._process_single_channel] Channel C3: Found 551 artifacts (0.36%)
+[2026-02-08 15:35:49,114 INFO dataset._process_single_channel] Channel Cz: Found 114 artifacts (0.07%)
+[2026-02-08 15:35:49,200 INFO dataset._process_single_channel] Channel C4: Found 77 artifacts (0.05%)
+[2026-02-08 15:35:49,265 INFO dataset._process_single_channel] Channel T7: Found 423 artifacts (0.28%)
+[2026-02-08 15:35:49,516 INFO dataset._process_single_channel] Channel T8: Found 971 artifacts (0.63%)
+[2026-02-08 15:35:50,085 INFO dataset._process_single_channel] Channel Oz: Found 74 artifacts (0.05%)
+[2026-02-08 15:35:50,144 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:50,144 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:50,781 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:51,861 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.73 Hz
+[2026-02-08 15:35:51,935 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:51,936 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:51,974 INFO dataset._process_single_channel] Channel Fp2: Found 42 artifacts (0.03%)
+[2026-02-08 15:35:52,162 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:52,162 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:52,709 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:53,518 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.65 Hz
+[2026-02-08 15:35:53,588 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:53,589 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:53,607 INFO dataset._process_single_channel] Channel Fp1: Found 304 artifacts (0.19%)
+[2026-02-08 15:35:53,814 INFO dataset._process_single_channel] Channel Fp2: Found 324 artifacts (0.20%)
+[2026-02-08 15:35:54,026 INFO dataset._process_single_channel] Channel C3: Found 145 artifacts (0.09%)
+[2026-02-08 15:35:54,133 INFO dataset._process_single_channel] Channel Cz: Found 304 artifacts (0.19%)
+[2026-02-08 15:35:54,365 INFO dataset._process_single_channel] Channel T7: Found 131 artifacts (0.08%)
+[2026-02-08 15:35:54,470 INFO dataset._process_single_channel] Channel T8: Found 304 artifacts (0.19%)
+[2026-02-08 15:35:54,671 INFO dataset._process_single_channel] Channel Oz: Found 307 artifacts (0.19%)
+[2026-02-08 15:35:54,855 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:54,856 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:55,389 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:35:56,225 INFO dataset.verify_sampling_rate] Detected sampling rate: 497.71 Hz
+[2026-02-08 15:35:56,290 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:56,291 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:56,456 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:56,457 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:56,900 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:57,195 INFO dataset.__init__] Built index with 1972 total chunks
+[2026-02-08 15:35:57,197 INFO dataset._log_file_discovery] Discovered 62 CANE files: {'normal': 18, 'anxiety': 18, 'depression': 1, 'anxiety-depression': 25} labels, {'eo': 62} conditions
+[2026-02-08 15:35:57,197 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:35:57,614 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.15 Hz
+[2026-02-08 15:35:57,683 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:57,683 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:57,699 INFO dataset._process_single_channel] Channel Fp1: Found 11 artifacts (0.01%)
+[2026-02-08 15:35:57,731 INFO dataset._process_single_channel] Channel Fp2: Found 11 artifacts (0.01%)
+[2026-02-08 15:35:57,762 INFO dataset._process_single_channel] Channel C3: Found 36 artifacts (0.02%)
+[2026-02-08 15:35:57,806 INFO dataset._process_single_channel] Channel Cz: Found 15 artifacts (0.01%)
+[2026-02-08 15:35:57,837 INFO dataset._process_single_channel] Channel C4: Found 115 artifacts (0.08%)
+[2026-02-08 15:35:57,922 INFO dataset._process_single_channel] Channel T7: Found 36 artifacts (0.02%)
+[2026-02-08 15:35:57,969 INFO dataset._process_single_channel] Channel T8: Found 16 artifacts (0.01%)
+[2026-02-08 15:35:58,001 INFO dataset._process_single_channel] Channel Oz: Found 227 artifacts (0.15%)
+[2026-02-08 15:35:58,134 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:58,134 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:35:58,577 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:35:59,308 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.06 Hz
+[2026-02-08 15:35:59,389 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:35:59,390 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:35:59,404 INFO dataset._process_single_channel] Channel Fp1: Found 2 artifacts (0.00%)
+[2026-02-08 15:35:59,435 INFO dataset._process_single_channel] Channel Fp2: Found 4 artifacts (0.00%)
+[2026-02-08 15:35:59,467 INFO dataset._process_single_channel] Channel C3: Found 62 artifacts (0.04%)
+[2026-02-08 15:35:59,538 INFO dataset._process_single_channel] Channel Cz: Found 17 artifacts (0.01%)
+[2026-02-08 15:35:59,575 INFO dataset._process_single_channel] Channel C4: Found 10 artifacts (0.01%)
+[2026-02-08 15:35:59,633 INFO dataset._process_single_channel] Channel T8: Found 67 artifacts (0.04%)
+[2026-02-08 15:35:59,693 INFO dataset._process_single_channel] Channel Oz: Found 5 artifacts (0.00%)
+[2026-02-08 15:35:59,713 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:35:59,713 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:00,199 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:01,429 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.81 Hz
+[2026-02-08 15:36:01,542 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:01,542 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:01,560 INFO dataset._process_single_channel] Channel Fp1: Found 53 artifacts (0.03%)
+[2026-02-08 15:36:01,630 INFO dataset._process_single_channel] Channel Fp2: Found 3 artifacts (0.00%)
+[2026-02-08 15:36:01,711 INFO dataset._process_single_channel] Channel Cz: Found 33 artifacts (0.02%)
+[2026-02-08 15:36:01,797 INFO dataset._process_single_channel] Channel C4: Found 191 artifacts (0.12%)
+[2026-02-08 15:36:02,152 INFO dataset._process_single_channel] Channel T7: Found 546 artifacts (0.34%)
+[2026-02-08 15:36:02,930 INFO dataset._process_single_channel] Channel T8: Found 9 artifacts (0.01%)
+[2026-02-08 15:36:02,986 INFO dataset._process_single_channel] Channel Oz: Found 34 artifacts (0.02%)
+[2026-02-08 15:36:03,080 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:03,083 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:04,411 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 8, 5000])
+[2026-02-08 15:36:06,026 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.86 Hz
+[2026-02-08 15:36:06,156 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:06,156 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:06,217 INFO dataset._process_single_channel] Channel Fp2: Found 121 artifacts (0.08%)
+[2026-02-08 15:36:06,351 INFO dataset._process_single_channel] Channel C3: Found 189 artifacts (0.12%)
+[2026-02-08 15:36:06,550 INFO dataset._process_single_channel] Channel Cz: Found 1419 artifacts (0.92%)
+[2026-02-08 15:36:07,905 INFO dataset._process_single_channel] Channel C4: Found 1280 artifacts (0.83%)
+[2026-02-08 15:36:08,885 INFO dataset._process_single_channel] Channel T7: Found 603 artifacts (0.39%)
+[2026-02-08 15:36:09,297 INFO dataset._process_single_channel] Channel T8: Found 1430 artifacts (0.93%)
+[2026-02-08 15:36:10,157 INFO dataset._process_single_channel] Channel Oz: Found 1039 artifacts (0.68%)
+[2026-02-08 15:36:10,826 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:10,826 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:11,485 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:12,422 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.24 Hz
+[2026-02-08 15:36:12,497 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:12,498 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:12,512 INFO dataset._process_single_channel] Channel Fp1: Found 9 artifacts (0.01%)
+[2026-02-08 15:36:12,550 INFO dataset._process_single_channel] Channel Fp2: Found 7 artifacts (0.01%)
+[2026-02-08 15:36:12,578 INFO dataset._process_single_channel] Channel C3: Found 56 artifacts (0.04%)
+[2026-02-08 15:36:12,650 INFO dataset._process_single_channel] Channel Cz: Found 8 artifacts (0.01%)
+[2026-02-08 15:36:12,700 INFO dataset._process_single_channel] Channel T7: Found 161 artifacts (0.13%)
+[2026-02-08 15:36:12,851 INFO dataset._process_single_channel] Channel T8: Found 29 artifacts (0.02%)
+[2026-02-08 15:36:12,899 INFO dataset._process_single_channel] Channel Oz: Found 16 artifacts (0.01%)
+[2026-02-08 15:36:12,925 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:12,925 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:13,571 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:36:14,381 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.51 Hz
+[2026-02-08 15:36:14,456 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:14,457 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:14,469 INFO dataset._process_single_channel] Channel Fp1: Found 5 artifacts (0.00%)
+[2026-02-08 15:36:14,505 INFO dataset._process_single_channel] Channel Fp2: Found 5 artifacts (0.00%)
+[2026-02-08 15:36:14,538 INFO dataset._process_single_channel] Channel C3: Found 4 artifacts (0.00%)
+[2026-02-08 15:36:14,569 INFO dataset._process_single_channel] Channel Cz: Found 4 artifacts (0.00%)
+[2026-02-08 15:36:14,602 INFO dataset._process_single_channel] Channel C4: Found 5 artifacts (0.00%)
+[2026-02-08 15:36:14,633 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:36:14,663 INFO dataset._process_single_channel] Channel T8: Found 5 artifacts (0.00%)
+[2026-02-08 15:36:14,695 INFO dataset._process_single_channel] Channel Oz: Found 5 artifacts (0.00%)
+[2026-02-08 15:36:14,715 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:14,715 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:15,362 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:36:16,097 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.47 Hz
+[2026-02-08 15:36:16,166 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:16,167 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:16,203 INFO dataset._process_single_channel] Channel Fp2: Found 7 artifacts (0.01%)
+[2026-02-08 15:36:16,296 INFO dataset._process_single_channel] Channel T7: Found 737 artifacts (0.57%)
+[2026-02-08 15:36:16,851 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:16,851 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:17,717 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:36:18,569 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.23 Hz
+[2026-02-08 15:36:18,655 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:18,655 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:18,669 INFO dataset._process_single_channel] Channel Fp1: Found 15 artifacts (0.01%)
+[2026-02-08 15:36:18,706 INFO dataset._process_single_channel] Channel Fp2: Found 20 artifacts (0.02%)
+[2026-02-08 15:36:18,762 INFO dataset._process_single_channel] Channel Cz: Found 1 artifacts (0.00%)
+[2026-02-08 15:36:18,786 INFO dataset._process_single_channel] Channel C4: Found 3 artifacts (0.00%)
+[2026-02-08 15:36:18,814 INFO dataset._process_single_channel] Channel T7: Found 31 artifacts (0.02%)
+[2026-02-08 15:36:18,861 INFO dataset._process_single_channel] Channel T8: Found 177 artifacts (0.14%)
+[2026-02-08 15:36:19,031 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:19,031 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:19,606 INFO dataset.load_and_preprocess_cane_raw_file] Created 26 chunks of shape torch.Size([26, 8, 5000])
+[2026-02-08 15:36:20,378 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.20 Hz
+[2026-02-08 15:36:20,455 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:20,456 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:20,467 INFO dataset._process_single_channel] Channel Fp1: Found 97 artifacts (0.08%)
+[2026-02-08 15:36:20,560 INFO dataset._process_single_channel] Channel Fp2: Found 95 artifacts (0.07%)
+[2026-02-08 15:36:20,678 INFO dataset._process_single_channel] Channel C3: Found 27 artifacts (0.02%)
+[2026-02-08 15:36:20,737 INFO dataset._process_single_channel] Channel C4: Found 218 artifacts (0.17%)
+[2026-02-08 15:36:20,916 INFO dataset._process_single_channel] Channel T7: Found 3 artifacts (0.00%)
+[2026-02-08 15:36:20,948 INFO dataset._process_single_channel] Channel T8: Found 322 artifacts (0.25%)
+[2026-02-08 15:36:21,206 INFO dataset._process_single_channel] Channel Oz: Found 42 artifacts (0.03%)
+[2026-02-08 15:36:21,248 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:21,249 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:21,797 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:36:22,626 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.28 Hz
+[2026-02-08 15:36:22,709 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:22,710 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:22,724 INFO dataset._process_single_channel] Channel Fp1: Found 98 artifacts (0.06%)
+[2026-02-08 15:36:22,830 INFO dataset._process_single_channel] Channel Fp2: Found 5 artifacts (0.00%)
+[2026-02-08 15:36:22,862 INFO dataset._process_single_channel] Channel C3: Found 105 artifacts (0.07%)
+[2026-02-08 15:36:22,952 INFO dataset._process_single_channel] Channel Cz: Found 6 artifacts (0.00%)
+[2026-02-08 15:36:22,983 INFO dataset._process_single_channel] Channel C4: Found 1 artifacts (0.00%)
+[2026-02-08 15:36:23,011 INFO dataset._process_single_channel] Channel T7: Found 14 artifacts (0.01%)
+[2026-02-08 15:36:23,048 INFO dataset._process_single_channel] Channel T8: Found 4 artifacts (0.00%)
+[2026-02-08 15:36:23,080 INFO dataset._process_single_channel] Channel Oz: Found 5 artifacts (0.00%)
+[2026-02-08 15:36:23,102 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:23,102 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:23,669 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:24,578 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.55 Hz
+[2026-02-08 15:36:24,678 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:24,679 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:24,701 INFO dataset._process_single_channel] Channel Fp1: Found 104 artifacts (0.05%)
+[2026-02-08 15:36:24,793 INFO dataset._process_single_channel] Channel Fp2: Found 207 artifacts (0.10%)
+[2026-02-08 15:36:24,940 INFO dataset._process_single_channel] Channel C3: Found 999 artifacts (0.47%)
+[2026-02-08 15:36:25,522 INFO dataset._process_single_channel] Channel Cz: Found 17 artifacts (0.01%)
+[2026-02-08 15:36:25,599 INFO dataset._process_single_channel] Channel T7: Found 2366 artifacts (1.10%)
+[2026-02-08 15:36:27,097 INFO dataset._process_single_channel] Channel T8: Found 1493 artifacts (0.70%)
+[2026-02-08 15:36:28,111 INFO dataset._process_single_channel] Channel Oz: Found 407 artifacts (0.19%)
+[2026-02-08 15:36:28,450 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:28,450 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:29,360 INFO dataset.load_and_preprocess_cane_raw_file] Created 42 chunks of shape torch.Size([42, 8, 5000])
+[2026-02-08 15:36:30,350 INFO dataset.verify_sampling_rate] Detected sampling rate: 491.57 Hz
+[2026-02-08 15:36:30,429 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:30,429 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:30,445 INFO dataset._process_single_channel] Channel Fp1: Found 1172 artifacts (0.78%)
+[2026-02-08 15:36:31,262 INFO dataset._process_single_channel] Channel Fp2: Found 1216 artifacts (0.81%)
+[2026-02-08 15:36:32,141 INFO dataset._process_single_channel] Channel C3: Found 1045 artifacts (0.69%)
+[2026-02-08 15:36:32,925 INFO dataset._process_single_channel] Channel Cz: Found 690 artifacts (0.46%)
+[2026-02-08 15:36:33,421 INFO dataset._process_single_channel] Channel C4: Found 991 artifacts (0.66%)
+[2026-02-08 15:36:34,052 INFO dataset._process_single_channel] Channel T7: Found 964 artifacts (0.64%)
+[2026-02-08 15:36:34,750 INFO dataset._process_single_channel] Channel T8: Found 995 artifacts (0.66%)
+[2026-02-08 15:36:35,382 INFO dataset._process_single_channel] Channel Oz: Found 656 artifacts (0.43%)
+[2026-02-08 15:36:35,859 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:35,860 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:36,586 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:37,404 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.57 Hz
+[2026-02-08 15:36:37,481 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:37,482 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:37,494 INFO dataset._process_single_channel] Channel Fp1: Found 26 artifacts (0.02%)
+[2026-02-08 15:36:37,580 INFO dataset._process_single_channel] Channel Cz: Found 109 artifacts (0.07%)
+[2026-02-08 15:36:37,773 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:37,773 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:38,398 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:39,266 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.69 Hz
+[2026-02-08 15:36:39,355 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:39,355 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:39,371 INFO dataset._process_single_channel] Channel Fp1: Found 271 artifacts (0.16%)
+[2026-02-08 15:36:39,559 INFO dataset._process_single_channel] Channel Fp2: Found 156 artifacts (0.09%)
+[2026-02-08 15:36:39,710 INFO dataset._process_single_channel] Channel Cz: Found 4 artifacts (0.00%)
+[2026-02-08 15:36:39,761 INFO dataset._process_single_channel] Channel T7: Found 6 artifacts (0.00%)
+[2026-02-08 15:36:39,790 INFO dataset._process_single_channel] Channel T8: Found 5 artifacts (0.00%)
+[2026-02-08 15:36:39,822 INFO dataset._process_single_channel] Channel Oz: Found 263 artifacts (0.15%)
+[2026-02-08 15:36:40,024 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:40,025 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:40,782 INFO dataset.load_and_preprocess_cane_raw_file] Created 34 chunks of shape torch.Size([34, 8, 5000])
+[2026-02-08 15:36:41,811 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:36:41,894 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:41,895 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:42,045 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:36:42,108 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:42,108 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:42,679 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:43,543 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.94 Hz
+[2026-02-08 15:36:43,622 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:43,623 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:43,637 INFO dataset._process_single_channel] Channel Fp1: Found 214 artifacts (0.14%)
+[2026-02-08 15:36:43,801 INFO dataset._process_single_channel] Channel Fp2: Found 1 artifacts (0.00%)
+[2026-02-08 15:36:43,828 INFO dataset._process_single_channel] Channel C3: Found 252 artifacts (0.16%)
+[2026-02-08 15:36:44,022 INFO dataset._process_single_channel] Channel Cz: Found 17 artifacts (0.01%)
+[2026-02-08 15:36:44,063 INFO dataset._process_single_channel] Channel C4: Found 209 artifacts (0.13%)
+[2026-02-08 15:36:44,247 INFO dataset._process_single_channel] Channel T7: Found 22 artifacts (0.01%)
+[2026-02-08 15:36:44,279 INFO dataset._process_single_channel] Channel T8: Found 20 artifacts (0.01%)
+[2026-02-08 15:36:44,321 INFO dataset._process_single_channel] Channel Oz: Found 20 artifacts (0.01%)
+[2026-02-08 15:36:44,352 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:44,352 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:44,888 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:36:45,765 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:36:45,849 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:45,850 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:45,914 INFO dataset._process_single_channel] Channel C3: Found 2 artifacts (0.00%)
+[2026-02-08 15:36:46,031 INFO dataset._process_single_channel] Channel Oz: Found 156 artifacts (0.10%)
+[2026-02-08 15:36:46,137 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:46,137 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:46,758 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:47,542 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.71 Hz
+[2026-02-08 15:36:47,615 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:47,616 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:47,792 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:47,792 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:48,387 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:49,177 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.29 Hz
+[2026-02-08 15:36:49,258 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:49,259 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:49,275 INFO dataset._process_single_channel] Channel Fp1: Found 218 artifacts (0.14%)
+[2026-02-08 15:36:49,442 INFO dataset._process_single_channel] Channel Fp2: Found 273 artifacts (0.18%)
+[2026-02-08 15:36:49,663 INFO dataset._process_single_channel] Channel C3: Found 112 artifacts (0.07%)
+[2026-02-08 15:36:49,764 INFO dataset._process_single_channel] Channel Cz: Found 663 artifacts (0.43%)
+[2026-02-08 15:36:50,184 INFO dataset._process_single_channel] Channel T7: Found 122 artifacts (0.08%)
+[2026-02-08 15:36:50,275 INFO dataset._process_single_channel] Channel T8: Found 237 artifacts (0.15%)
+[2026-02-08 15:36:50,507 INFO dataset._process_single_channel] Channel Oz: Found 105 artifacts (0.07%)
+[2026-02-08 15:36:50,602 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:50,602 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:51,409 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:36:52,442 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.93 Hz
+[2026-02-08 15:36:52,553 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:52,554 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:36:52,573 INFO dataset._process_single_channel] Channel Fp1: Found 925 artifacts (0.57%)
+[2026-02-08 15:36:53,391 INFO dataset._process_single_channel] Channel Fp2: Found 937 artifacts (0.58%)
+[2026-02-08 15:36:54,125 INFO dataset._process_single_channel] Channel C3: Found 2780 artifacts (1.71%)
+[2026-02-08 15:36:56,025 INFO dataset._process_single_channel] Channel C4: Found 1164 artifacts (0.72%)
+[2026-02-08 15:36:56,901 INFO dataset._process_single_channel] Channel T7: Found 3333 artifacts (2.05%)
+[2026-02-08 15:36:59,045 INFO dataset._process_single_channel] Channel T8: Found 1994 artifacts (1.23%)
+[2026-02-08 15:37:00,504 INFO dataset._process_single_channel] Channel Oz: Found 6 artifacts (0.00%)
+[2026-02-08 15:37:00,559 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:00,559 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:01,260 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 8, 5000])
+[2026-02-08 15:37:02,151 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.64 Hz
+[2026-02-08 15:37:02,273 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:02,274 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:02,296 INFO dataset._process_single_channel] Channel Fp1: Found 7 artifacts (0.00%)
+[2026-02-08 15:37:02,342 INFO dataset._process_single_channel] Channel Fp2: Found 114 artifacts (0.07%)
+[2026-02-08 15:37:02,509 INFO dataset._process_single_channel] Channel C3: Found 102 artifacts (0.07%)
+[2026-02-08 15:37:02,612 INFO dataset._process_single_channel] Channel Cz: Found 17 artifacts (0.01%)
+[2026-02-08 15:37:02,671 INFO dataset._process_single_channel] Channel T7: Found 1 artifacts (0.00%)
+[2026-02-08 15:37:02,700 INFO dataset._process_single_channel] Channel T8: Found 34 artifacts (0.02%)
+[2026-02-08 15:37:02,752 INFO dataset._process_single_channel] Channel Oz: Found 27 artifacts (0.02%)
+[2026-02-08 15:37:02,785 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:02,785 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:03,361 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:37:04,142 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.64 Hz
+[2026-02-08 15:37:04,212 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:04,213 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:04,226 INFO dataset._process_single_channel] Channel Fp1: Found 255 artifacts (0.16%)
+[2026-02-08 15:37:04,388 INFO dataset._process_single_channel] Channel Fp2: Found 67 artifacts (0.04%)
+[2026-02-08 15:37:04,485 INFO dataset._process_single_channel] Channel Cz: Found 188 artifacts (0.12%)
+[2026-02-08 15:37:04,643 INFO dataset._process_single_channel] Channel T7: Found 11 artifacts (0.01%)
+[2026-02-08 15:37:04,674 INFO dataset._process_single_channel] Channel T8: Found 1632 artifacts (1.01%)
+[2026-02-08 15:37:05,667 INFO dataset._process_single_channel] Channel Oz: Found 1592 artifacts (0.99%)
+[2026-02-08 15:37:06,746 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:06,746 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:07,362 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 8, 5000])
+[2026-02-08 15:37:08,088 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.79 Hz
+[2026-02-08 15:37:08,184 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:08,185 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:08,198 INFO dataset._process_single_channel] Channel Fp1: Found 19 artifacts (0.01%)
+[2026-02-08 15:37:08,236 INFO dataset._process_single_channel] Channel Fp2: Found 2 artifacts (0.00%)
+[2026-02-08 15:37:08,441 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:08,442 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:09,383 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:37:10,304 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.56 Hz
+[2026-02-08 15:37:10,379 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:10,380 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:10,398 INFO dataset._process_single_channel] Channel Fp1: Found 1 artifacts (0.00%)
+[2026-02-08 15:37:10,428 INFO dataset._process_single_channel] Channel Fp2: Found 2 artifacts (0.00%)
+[2026-02-08 15:37:10,454 INFO dataset._process_single_channel] Channel C3: Found 81 artifacts (0.05%)
+[2026-02-08 15:37:10,527 INFO dataset._process_single_channel] Channel Cz: Found 325 artifacts (0.21%)
+[2026-02-08 15:37:10,753 INFO dataset._process_single_channel] Channel C4: Found 117 artifacts (0.08%)
+[2026-02-08 15:37:10,867 INFO dataset._process_single_channel] Channel T7: Found 233 artifacts (0.15%)
+[2026-02-08 15:37:11,042 INFO dataset._process_single_channel] Channel T8: Found 2165 artifacts (1.41%)
+[2026-02-08 15:37:12,538 INFO dataset._process_single_channel] Channel Oz: Found 5 artifacts (0.00%)
+[2026-02-08 15:37:12,556 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:12,556 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:13,474 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:37:14,517 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.69 Hz
+[2026-02-08 15:37:14,637 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:14,641 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:14,720 INFO dataset._process_single_channel] Channel Fp2: Found 13 artifacts (0.01%)
+[2026-02-08 15:37:14,777 INFO dataset._process_single_channel] Channel C3: Found 3 artifacts (0.00%)
+[2026-02-08 15:37:14,855 INFO dataset._process_single_channel] Channel Cz: Found 52 artifacts (0.04%)
+[2026-02-08 15:37:15,039 INFO dataset._process_single_channel] Channel C4: Found 4 artifacts (0.00%)
+[2026-02-08 15:37:15,257 INFO dataset._process_single_channel] Channel Oz: Found 3 artifacts (0.00%)
+[2026-02-08 15:37:15,286 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:15,286 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:17,223 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:37:19,118 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.32 Hz
+[2026-02-08 15:37:19,256 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:19,257 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:19,278 INFO dataset._process_single_channel] Channel Fp1: Found 29 artifacts (0.02%)
+[2026-02-08 15:37:19,360 INFO dataset._process_single_channel] Channel Fp2: Found 30 artifacts (0.02%)
+[2026-02-08 15:37:19,451 INFO dataset._process_single_channel] Channel C3: Found 17 artifacts (0.01%)
+[2026-02-08 15:37:19,515 INFO dataset._process_single_channel] Channel Cz: Found 32 artifacts (0.02%)
+[2026-02-08 15:37:19,768 INFO dataset._process_single_channel] Channel C4: Found 12 artifacts (0.01%)
+[2026-02-08 15:37:19,872 INFO dataset._process_single_channel] Channel T8: Found 108 artifacts (0.08%)
+[2026-02-08 15:37:20,049 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:20,049 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:21,427 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 8, 5000])
+[2026-02-08 15:37:22,853 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.57 Hz
+[2026-02-08 15:37:23,007 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:23,010 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:23,087 INFO dataset._process_single_channel] Channel Fp2: Found 53 artifacts (0.03%)
+[2026-02-08 15:37:23,269 INFO dataset._process_single_channel] Channel Cz: Found 4 artifacts (0.00%)
+[2026-02-08 15:37:23,505 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:23,505 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:24,607 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:37:25,919 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.50 Hz
+[2026-02-08 15:37:26,039 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:26,040 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:26,063 INFO dataset._process_single_channel] Channel Fp1: Found 3 artifacts (0.00%)
+[2026-02-08 15:37:26,115 INFO dataset._process_single_channel] Channel Fp2: Found 103 artifacts (0.06%)
+[2026-02-08 15:37:26,269 INFO dataset._process_single_channel] Channel C3: Found 18 artifacts (0.01%)
+[2026-02-08 15:37:26,317 INFO dataset._process_single_channel] Channel Cz: Found 1 artifacts (0.00%)
+[2026-02-08 15:37:26,354 INFO dataset._process_single_channel] Channel C4: Found 19 artifacts (0.01%)
+[2026-02-08 15:37:26,468 INFO dataset._process_single_channel] Channel Oz: Found 111 artifacts (0.07%)
+[2026-02-08 15:37:26,612 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:26,612 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:27,584 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 8, 5000])
+[2026-02-08 15:37:28,666 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.62 Hz
+[2026-02-08 15:37:28,764 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:28,765 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:28,785 INFO dataset._process_single_channel] Channel Fp1: Found 603 artifacts (0.32%)
+[2026-02-08 15:37:29,195 INFO dataset._process_single_channel] Channel Fp2: Found 574 artifacts (0.31%)
+[2026-02-08 15:37:29,602 INFO dataset._process_single_channel] Channel C3: Found 389 artifacts (0.21%)
+[2026-02-08 15:37:29,905 INFO dataset._process_single_channel] Channel Cz: Found 359 artifacts (0.19%)
+[2026-02-08 15:37:30,143 INFO dataset._process_single_channel] Channel C4: Found 84 artifacts (0.04%)
+[2026-02-08 15:37:30,229 INFO dataset._process_single_channel] Channel T7: Found 537 artifacts (0.29%)
+[2026-02-08 15:37:30,576 INFO dataset._process_single_channel] Channel T8: Found 663 artifacts (0.36%)
+[2026-02-08 15:37:31,015 INFO dataset._process_single_channel] Channel Oz: Found 2357 artifacts (1.26%)
+[2026-02-08 15:37:32,813 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:32,813 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:33,679 INFO dataset.load_and_preprocess_cane_raw_file] Created 37 chunks of shape torch.Size([37, 8, 5000])
+[2026-02-08 15:37:34,947 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.70 Hz
+[2026-02-08 15:37:35,062 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:35,063 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:35,081 INFO dataset._process_single_channel] Channel Fp1: Found 1482 artifacts (0.68%)
+[2026-02-08 15:37:36,128 INFO dataset._process_single_channel] Channel Fp2: Found 172 artifacts (0.08%)
+[2026-02-08 15:37:36,362 INFO dataset._process_single_channel] Channel C3: Found 3865 artifacts (1.77%)
+[2026-02-08 15:37:39,296 INFO dataset._process_single_channel] Channel Cz: Found 181 artifacts (0.08%)
+[2026-02-08 15:37:39,447 INFO dataset._process_single_channel] Channel C4: Found 129 artifacts (0.06%)
+[2026-02-08 15:37:39,566 INFO dataset._process_single_channel] Channel T7: Found 1385 artifacts (0.63%)
+[2026-02-08 15:37:40,541 INFO dataset._process_single_channel] Channel T8: Found 186 artifacts (0.09%)
+[2026-02-08 15:37:40,701 INFO dataset._process_single_channel] Channel Oz: Found 2885 artifacts (1.32%)
+[2026-02-08 15:37:42,733 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:42,733 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:43,660 INFO dataset.load_and_preprocess_cane_raw_file] Created 43 chunks of shape torch.Size([43, 8, 5000])
+[2026-02-08 15:37:44,725 INFO dataset.verify_sampling_rate] Detected sampling rate: 497.74 Hz
+[2026-02-08 15:37:44,811 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:44,812 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:44,869 INFO dataset._process_single_channel] Channel Fp2: Found 868 artifacts (0.45%)
+[2026-02-08 15:37:45,514 INFO dataset._process_single_channel] Channel C3: Found 41 artifacts (0.02%)
+[2026-02-08 15:37:45,573 INFO dataset._process_single_channel] Channel Cz: Found 60 artifacts (0.03%)
+[2026-02-08 15:37:45,743 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:45,743 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:46,565 INFO dataset.load_and_preprocess_cane_raw_file] Created 38 chunks of shape torch.Size([38, 8, 5000])
+[2026-02-08 15:37:47,611 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.84 Hz
+[2026-02-08 15:37:47,697 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:47,698 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:47,748 INFO dataset._process_single_channel] Channel Fp2: Found 289 artifacts (0.17%)
+[2026-02-08 15:37:48,030 INFO dataset._process_single_channel] Channel C4: Found 1043 artifacts (0.63%)
+[2026-02-08 15:37:48,779 INFO dataset._process_single_channel] Channel T7: Found 1209 artifacts (0.73%)
+[2026-02-08 15:37:49,653 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:49,653 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:50,390 INFO dataset.load_and_preprocess_cane_raw_file] Created 33 chunks of shape torch.Size([33, 8, 5000])
+[2026-02-08 15:37:51,768 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.26 Hz
+[2026-02-08 15:37:51,872 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:51,873 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:51,915 INFO dataset._process_single_channel] Channel Fp2: Found 3139 artifacts (2.05%)
+[2026-02-08 15:37:54,424 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:54,425 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:55,375 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:37:56,588 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.30 Hz
+[2026-02-08 15:37:56,671 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:56,671 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:56,819 INFO dataset._process_single_channel] Channel C4: Found 151 artifacts (0.10%)
+[2026-02-08 15:37:57,063 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:57,063 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:57,790 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:37:59,160 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.70 Hz
+[2026-02-08 15:37:59,240 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:59,241 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:37:59,282 INFO dataset._process_single_channel] Channel Fp2: Found 11 artifacts (0.01%)
+[2026-02-08 15:37:59,315 INFO dataset._process_single_channel] Channel C3: Found 759 artifacts (0.48%)
+[2026-02-08 15:37:59,923 INFO dataset._process_single_channel] Channel Cz: Found 48 artifacts (0.03%)
+[2026-02-08 15:37:59,980 INFO dataset._process_single_channel] Channel C4: Found 43 artifacts (0.03%)
+[2026-02-08 15:38:00,042 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:00,074 INFO dataset._process_single_channel] Channel T8: Found 7 artifacts (0.00%)
+[2026-02-08 15:38:00,118 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:00,118 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:00,788 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:38:01,553 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.82 Hz
+[2026-02-08 15:38:01,621 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:01,621 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:01,790 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:01,790 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:02,271 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:38:03,027 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.52 Hz
+[2026-02-08 15:38:03,096 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:03,097 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:03,114 INFO dataset._process_single_channel] Channel Fp1: Found 4556 artifacts (2.97%)
+[2026-02-08 15:38:06,345 INFO dataset._process_single_channel] Channel Fp2: Found 2597 artifacts (1.69%)
+[2026-02-08 15:38:07,958 INFO dataset._process_single_channel] Channel C3: Found 3529 artifacts (2.30%)
+[2026-02-08 15:38:10,043 INFO dataset._process_single_channel] Channel Cz: Found 59 artifacts (0.04%)
+[2026-02-08 15:38:10,100 INFO dataset._process_single_channel] Channel C4: Found 4463 artifacts (2.91%)
+[2026-02-08 15:38:12,420 INFO dataset._process_single_channel] Channel T7: Found 7 artifacts (0.00%)
+[2026-02-08 15:38:12,447 INFO dataset._process_single_channel] Channel T8: Found 3058 artifacts (2.00%)
+[2026-02-08 15:38:14,287 INFO dataset._process_single_channel] Channel Oz: Found 3514 artifacts (2.29%)
+[2026-02-08 15:38:16,477 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:16,477 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:17,082 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:38:17,895 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.49 Hz
+[2026-02-08 15:38:17,980 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:17,981 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:17,997 INFO dataset._process_single_channel] Channel Fp1: Found 3 artifacts (0.00%)
+[2026-02-08 15:38:18,029 INFO dataset._process_single_channel] Channel Fp2: Found 3 artifacts (0.00%)
+[2026-02-08 15:38:18,059 INFO dataset._process_single_channel] Channel C3: Found 3 artifacts (0.00%)
+[2026-02-08 15:38:18,089 INFO dataset._process_single_channel] Channel Cz: Found 3 artifacts (0.00%)
+[2026-02-08 15:38:18,118 INFO dataset._process_single_channel] Channel C4: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:18,150 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:18,178 INFO dataset._process_single_channel] Channel T8: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:18,208 INFO dataset._process_single_channel] Channel Oz: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:18,229 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:18,229 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:18,786 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:38:19,744 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.36 Hz
+[2026-02-08 15:38:19,828 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:19,828 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:19,843 INFO dataset._process_single_channel] Channel Fp1: Found 208 artifacts (0.12%)
+[2026-02-08 15:38:19,998 INFO dataset._process_single_channel] Channel Fp2: Found 540 artifacts (0.31%)
+[2026-02-08 15:38:20,361 INFO dataset._process_single_channel] Channel C3: Found 4128 artifacts (2.38%)
+[2026-02-08 15:38:22,637 INFO dataset._process_single_channel] Channel Cz: Found 1863 artifacts (1.07%)
+[2026-02-08 15:38:23,664 INFO dataset._process_single_channel] Channel C4: Found 4506 artifacts (2.59%)
+[2026-02-08 15:38:27,204 INFO dataset._process_single_channel] Channel T7: Found 505 artifacts (0.29%)
+[2026-02-08 15:38:27,597 INFO dataset._process_single_channel] Channel T8: Found 4115 artifacts (2.37%)
+[2026-02-08 15:38:29,936 INFO dataset._process_single_channel] Channel Oz: Found 866 artifacts (0.50%)
+[2026-02-08 15:38:30,411 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:30,412 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:30,975 INFO dataset.load_and_preprocess_cane_raw_file] Created 34 chunks of shape torch.Size([34, 8, 5000])
+[2026-02-08 15:38:31,774 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.29 Hz
+[2026-02-08 15:38:31,844 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:31,845 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:31,863 INFO dataset._process_single_channel] Channel Fp1: Found 36 artifacts (0.02%)
+[2026-02-08 15:38:31,953 INFO dataset._process_single_channel] Channel Cz: Found 3 artifacts (0.00%)
+[2026-02-08 15:38:32,058 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:32,058 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:32,565 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:38:33,239 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.44 Hz
+[2026-02-08 15:38:33,310 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:33,311 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:33,325 INFO dataset._process_single_channel] Channel Fp1: Found 3653 artifacts (2.11%)
+[2026-02-08 15:38:35,249 INFO dataset._process_single_channel] Channel Fp2: Found 2214 artifacts (1.28%)
+[2026-02-08 15:38:36,683 INFO dataset._process_single_channel] Channel C3: Found 182 artifacts (0.10%)
+[2026-02-08 15:38:36,927 INFO dataset._process_single_channel] Channel T7: Found 2170 artifacts (1.25%)
+[2026-02-08 15:38:38,409 INFO dataset._process_single_channel] Channel T8: Found 2457 artifacts (1.42%)
+[2026-02-08 15:38:39,999 INFO dataset._process_single_channel] Channel Oz: Found 1165 artifacts (0.67%)
+[2026-02-08 15:38:40,744 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:40,744 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:41,303 INFO dataset.load_and_preprocess_cane_raw_file] Created 34 chunks of shape torch.Size([34, 8, 5000])
+[2026-02-08 15:38:42,184 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.75 Hz
+[2026-02-08 15:38:42,253 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:42,254 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:42,270 INFO dataset._process_single_channel] Channel Fp1: Found 432 artifacts (0.27%)
+[2026-02-08 15:38:42,539 INFO dataset._process_single_channel] Channel Fp2: Found 175 artifacts (0.11%)
+[2026-02-08 15:38:42,657 INFO dataset._process_single_channel] Channel C3: Found 192 artifacts (0.12%)
+[2026-02-08 15:38:42,798 INFO dataset._process_single_channel] Channel Cz: Found 513 artifacts (0.32%)
+[2026-02-08 15:38:43,180 INFO dataset._process_single_channel] Channel C4: Found 171 artifacts (0.11%)
+[2026-02-08 15:38:43,318 INFO dataset._process_single_channel] Channel T7: Found 424 artifacts (0.26%)
+[2026-02-08 15:38:43,630 INFO dataset._process_single_channel] Channel T8: Found 558 artifacts (0.35%)
+[2026-02-08 15:38:44,011 INFO dataset._process_single_channel] Channel Oz: Found 1400 artifacts (0.87%)
+[2026-02-08 15:38:44,987 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:44,988 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:45,626 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 8, 5000])
+[2026-02-08 15:38:46,415 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.42 Hz
+[2026-02-08 15:38:46,489 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:46,489 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:46,507 INFO dataset._process_single_channel] Channel Fp1: Found 255 artifacts (0.17%)
+[2026-02-08 15:38:46,663 INFO dataset._process_single_channel] Channel Fp2: Found 259 artifacts (0.17%)
+[2026-02-08 15:38:46,820 INFO dataset._process_single_channel] Channel C3: Found 231 artifacts (0.15%)
+[2026-02-08 15:38:46,958 INFO dataset._process_single_channel] Channel Cz: Found 273 artifacts (0.18%)
+[2026-02-08 15:38:47,117 INFO dataset._process_single_channel] Channel C4: Found 263 artifacts (0.17%)
+[2026-02-08 15:38:47,277 INFO dataset._process_single_channel] Channel T7: Found 263 artifacts (0.17%)
+[2026-02-08 15:38:47,479 INFO dataset._process_single_channel] Channel T8: Found 246 artifacts (0.16%)
+[2026-02-08 15:38:47,678 INFO dataset._process_single_channel] Channel Oz: Found 254 artifacts (0.17%)
+[2026-02-08 15:38:47,930 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:47,930 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:48,700 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:38:49,559 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.65 Hz
+[2026-02-08 15:38:49,623 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:49,623 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:49,649 INFO dataset._process_single_channel] Channel Fp1: Found 150 artifacts (0.10%)
+[2026-02-08 15:38:49,758 INFO dataset._process_single_channel] Channel Fp2: Found 8 artifacts (0.01%)
+[2026-02-08 15:38:49,789 INFO dataset._process_single_channel] Channel C3: Found 32 artifacts (0.02%)
+[2026-02-08 15:38:49,830 INFO dataset._process_single_channel] Channel Cz: Found 11 artifacts (0.01%)
+[2026-02-08 15:38:49,855 INFO dataset._process_single_channel] Channel C4: Found 448 artifacts (0.29%)
+[2026-02-08 15:38:50,162 INFO dataset._process_single_channel] Channel T7: Found 8 artifacts (0.01%)
+[2026-02-08 15:38:50,189 INFO dataset._process_single_channel] Channel T8: Found 35 artifacts (0.02%)
+[2026-02-08 15:38:50,238 INFO dataset._process_single_channel] Channel Oz: Found 507 artifacts (0.32%)
+[2026-02-08 15:38:50,543 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:50,543 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:51,180 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:38:52,068 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.34 Hz
+[2026-02-08 15:38:52,146 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:52,147 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:52,188 INFO dataset._process_single_channel] Channel Fp2: Found 125 artifacts (0.08%)
+[2026-02-08 15:38:52,324 INFO dataset._process_single_channel] Channel Cz: Found 152 artifacts (0.10%)
+[2026-02-08 15:38:52,571 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:52,571 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:53,398 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:38:54,246 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.43 Hz
+[2026-02-08 15:38:54,332 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:54,333 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:38:54,347 INFO dataset._process_single_channel] Channel Fp1: Found 940 artifacts (0.61%)
+[2026-02-08 15:38:54,954 INFO dataset._process_single_channel] Channel Fp2: Found 960 artifacts (0.63%)
+[2026-02-08 15:38:55,504 INFO dataset._process_single_channel] Channel C3: Found 1544 artifacts (1.01%)
+[2026-02-08 15:38:56,325 INFO dataset._process_single_channel] Channel Cz: Found 2270 artifacts (1.48%)
+[2026-02-08 15:38:57,771 INFO dataset._process_single_channel] Channel C4: Found 1973 artifacts (1.29%)
+[2026-02-08 15:38:59,429 INFO dataset._process_single_channel] Channel T7: Found 1477 artifacts (0.96%)
+[2026-02-08 15:39:00,435 INFO dataset._process_single_channel] Channel T8: Found 1489 artifacts (0.97%)
+[2026-02-08 15:39:01,341 INFO dataset._process_single_channel] Channel Oz: Found 2600 artifacts (1.70%)
+[2026-02-08 15:39:02,662 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:02,662 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:03,096 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:03,838 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.89 Hz
+[2026-02-08 15:39:03,901 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:03,902 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:03,915 INFO dataset._process_single_channel] Channel Fp1: Found 12 artifacts (0.01%)
+[2026-02-08 15:39:03,965 INFO dataset._process_single_channel] Channel C3: Found 277 artifacts (0.18%)
+[2026-02-08 15:39:04,120 INFO dataset._process_single_channel] Channel Cz: Found 1 artifacts (0.00%)
+[2026-02-08 15:39:04,203 INFO dataset._process_single_channel] Channel Oz: Found 16 artifacts (0.01%)
+[2026-02-08 15:39:04,226 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:04,226 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:04,776 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:39:05,527 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.71 Hz
+[2026-02-08 15:39:05,585 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:05,586 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:05,761 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:05,761 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:06,183 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:07,157 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.61 Hz
+[2026-02-08 15:39:07,267 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:07,267 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:07,297 INFO dataset._process_single_channel] Channel Fp1: Found 367 artifacts (0.15%)
+[2026-02-08 15:39:07,635 INFO dataset._process_single_channel] Channel Fp2: Found 362 artifacts (0.14%)
+[2026-02-08 15:39:07,932 INFO dataset._process_single_channel] Channel C3: Found 32 artifacts (0.01%)
+[2026-02-08 15:39:08,481 INFO dataset._process_single_channel] Channel T7: Found 1081 artifacts (0.43%)
+[2026-02-08 15:39:09,195 INFO dataset._process_single_channel] Channel T8: Found 422 artifacts (0.17%)
+[2026-02-08 15:39:09,554 INFO dataset._process_single_channel] Channel Oz: Found 3377 artifacts (1.35%)
+[2026-02-08 15:39:11,256 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:11,256 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:12,191 INFO dataset.load_and_preprocess_cane_raw_file] Created 50 chunks of shape torch.Size([50, 8, 5000])
+[2026-02-08 15:39:13,195 INFO dataset.verify_sampling_rate] Detected sampling rate: 494.10 Hz
+[2026-02-08 15:39:13,261 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:13,261 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:13,273 INFO dataset._process_single_channel] Channel Fp1: Found 29 artifacts (0.02%)
+[2026-02-08 15:39:13,331 INFO dataset._process_single_channel] Channel C3: Found 83 artifacts (0.05%)
+[2026-02-08 15:39:13,436 INFO dataset._process_single_channel] Channel T7: Found 454 artifacts (0.30%)
+[2026-02-08 15:39:13,688 INFO dataset._process_single_channel] Channel T8: Found 154 artifacts (0.10%)
+[2026-02-08 15:39:13,781 INFO dataset._process_single_channel] Channel Oz: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:13,795 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:13,795 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:14,198 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:14,938 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.55 Hz
+[2026-02-08 15:39:15,010 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:15,010 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:15,025 INFO dataset._process_single_channel] Channel Fp1: Found 100 artifacts (0.06%)
+[2026-02-08 15:39:15,097 INFO dataset._process_single_channel] Channel Fp2: Found 164 artifacts (0.09%)
+[2026-02-08 15:39:15,201 INFO dataset._process_single_channel] Channel C3: Found 113 artifacts (0.06%)
+[2026-02-08 15:39:15,279 INFO dataset._process_single_channel] Channel Cz: Found 142 artifacts (0.08%)
+[2026-02-08 15:39:15,374 INFO dataset._process_single_channel] Channel C4: Found 119 artifacts (0.07%)
+[2026-02-08 15:39:15,455 INFO dataset._process_single_channel] Channel T7: Found 56 artifacts (0.03%)
+[2026-02-08 15:39:15,506 INFO dataset._process_single_channel] Channel T8: Found 61 artifacts (0.03%)
+[2026-02-08 15:39:15,557 INFO dataset._process_single_channel] Channel Oz: Found 204 artifacts (0.11%)
+[2026-02-08 15:39:15,664 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:15,665 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:16,183 INFO dataset.load_and_preprocess_cane_raw_file] Created 35 chunks of shape torch.Size([35, 8, 5000])
+[2026-02-08 15:39:16,866 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:39:16,942 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:16,943 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:16,961 INFO dataset._process_single_channel] Channel Fp1: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:16,987 INFO dataset._process_single_channel] Channel Fp2: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:17,016 INFO dataset._process_single_channel] Channel C3: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:17,049 INFO dataset._process_single_channel] Channel Cz: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:17,077 INFO dataset._process_single_channel] Channel C4: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:17,103 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:17,139 INFO dataset._process_single_channel] Channel T8: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:17,167 INFO dataset._process_single_channel] Channel Oz: Found 4 artifacts (0.00%)
+[2026-02-08 15:39:17,182 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:17,182 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:17,697 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:18,398 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.33 Hz
+[2026-02-08 15:39:18,465 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:18,465 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:18,480 INFO dataset._process_single_channel] Channel Fp1: Found 45 artifacts (0.03%)
+[2026-02-08 15:39:18,528 INFO dataset._process_single_channel] Channel Fp2: Found 1748 artifacts (1.14%)
+[2026-02-08 15:39:19,402 INFO dataset._process_single_channel] Channel Cz: Found 16 artifacts (0.01%)
+[2026-02-08 15:39:19,438 INFO dataset._process_single_channel] Channel C4: Found 1521 artifacts (0.99%)
+[2026-02-08 15:39:20,217 INFO dataset._process_single_channel] Channel T7: Found 1518 artifacts (0.99%)
+[2026-02-08 15:39:21,043 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:21,043 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:21,402 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:21,987 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.25 Hz
+[2026-02-08 15:39:22,053 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:22,054 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:22,208 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:22,208 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:22,785 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:23,617 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.74 Hz
+[2026-02-08 15:39:23,694 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:23,694 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:23,709 INFO dataset._process_single_channel] Channel Fp1: Found 8 artifacts (0.00%)
+[2026-02-08 15:39:23,783 INFO dataset._process_single_channel] Channel Cz: Found 10 artifacts (0.01%)
+[2026-02-08 15:39:23,818 INFO dataset._process_single_channel] Channel C4: Found 1152 artifacts (0.66%)
+[2026-02-08 15:39:24,426 INFO dataset._process_single_channel] Channel T7: Found 6 artifacts (0.00%)
+[2026-02-08 15:39:24,474 INFO dataset._process_single_channel] Channel Oz: Found 70 artifacts (0.04%)
+[2026-02-08 15:39:24,520 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:24,521 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:25,085 INFO dataset.load_and_preprocess_cane_raw_file] Created 35 chunks of shape torch.Size([35, 8, 5000])
+[2026-02-08 15:39:25,810 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.29 Hz
+[2026-02-08 15:39:25,872 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:25,872 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:25,904 INFO dataset._process_single_channel] Channel Fp2: Found 6 artifacts (0.00%)
+[2026-02-08 15:39:26,039 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:26,039 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:26,559 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:27,239 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.68 Hz
+[2026-02-08 15:39:27,306 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:27,306 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:27,343 INFO dataset._process_single_channel] Channel Fp2: Found 3 artifacts (0.00%)
+[2026-02-08 15:39:27,387 INFO dataset._process_single_channel] Channel Cz: Found 116 artifacts (0.08%)
+[2026-02-08 15:39:27,494 INFO dataset._process_single_channel] Channel T7: Found 158 artifacts (0.10%)
+[2026-02-08 15:39:27,642 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:27,642 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:28,172 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:28,841 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.50 Hz
+[2026-02-08 15:39:28,901 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:28,902 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:28,917 INFO dataset._process_single_channel] Channel Fp1: Found 568 artifacts (0.37%)
+[2026-02-08 15:39:29,214 INFO dataset._process_single_channel] Channel Fp2: Found 479 artifacts (0.31%)
+[2026-02-08 15:39:29,491 INFO dataset._process_single_channel] Channel C3: Found 672 artifacts (0.44%)
+[2026-02-08 15:39:29,859 INFO dataset._process_single_channel] Channel Cz: Found 1023 artifacts (0.67%)
+[2026-02-08 15:39:30,383 INFO dataset._process_single_channel] Channel C4: Found 22 artifacts (0.01%)
+[2026-02-08 15:39:30,440 INFO dataset._process_single_channel] Channel T8: Found 911 artifacts (0.59%)
+[2026-02-08 15:39:30,934 INFO dataset._process_single_channel] Channel Oz: Found 419 artifacts (0.27%)
+[2026-02-08 15:39:31,137 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:31,137 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:31,570 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:32,350 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.78 Hz
+[2026-02-08 15:39:32,441 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:32,442 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:32,466 INFO dataset._process_single_channel] Channel Fp1: Found 1 artifacts (0.00%)
+[2026-02-08 15:39:32,499 INFO dataset._process_single_channel] Channel Fp2: Found 3 artifacts (0.00%)
+[2026-02-08 15:39:32,526 INFO dataset._process_single_channel] Channel C3: Found 9 artifacts (0.01%)
+[2026-02-08 15:39:32,559 INFO dataset._process_single_channel] Channel Cz: Found 2 artifacts (0.00%)
+[2026-02-08 15:39:32,591 INFO dataset._process_single_channel] Channel C4: Found 526 artifacts (0.33%)
+[2026-02-08 15:39:32,916 INFO dataset._process_single_channel] Channel T7: Found 3 artifacts (0.00%)
+[2026-02-08 15:39:32,943 INFO dataset._process_single_channel] Channel T8: Found 163 artifacts (0.10%)
+[2026-02-08 15:39:33,070 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:33,070 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:33,577 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:39:34,218 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.89 Hz
+[2026-02-08 15:39:34,282 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:34,283 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:34,446 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:34,447 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:34,882 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:35,486 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.86 Hz
+[2026-02-08 15:39:35,554 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:35,555 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:35,569 INFO dataset._process_single_channel] Channel Fp1: Found 596 artifacts (0.37%)
+[2026-02-08 15:39:35,901 INFO dataset._process_single_channel] Channel C3: Found 3 artifacts (0.00%)
+[2026-02-08 15:39:35,926 INFO dataset._process_single_channel] Channel Cz: Found 27 artifacts (0.02%)
+[2026-02-08 15:39:35,991 INFO dataset._process_single_channel] Channel T8: Found 24 artifacts (0.02%)
+[2026-02-08 15:39:36,043 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:36,043 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:36,504 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 8, 5000])
+[2026-02-08 15:39:37,213 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.88 Hz
+[2026-02-08 15:39:37,278 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:39:37,279 INFO dataset.load_and_preprocess_cane_raw_file] Loading all 8 channels in canonical order
+[2026-02-08 15:39:37,294 INFO dataset._process_single_channel] Channel Fp1: Found 7 artifacts (0.00%)
+[2026-02-08 15:39:37,317 INFO dataset._process_single_channel] Channel Fp2: Found 5 artifacts (0.00%)
+[2026-02-08 15:39:37,357 INFO dataset._process_single_channel] Channel Cz: Found 196 artifacts (0.13%)
+[2026-02-08 15:39:37,484 INFO dataset._process_single_channel] Channel T7: Found 359 artifacts (0.23%)
+[2026-02-08 15:39:37,688 INFO dataset._process_single_channel] Channel T8: Found 6 artifacts (0.00%)
+[2026-02-08 15:39:37,726 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:39:37,726 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:39:38,166 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 8, 5000])
+[2026-02-08 15:39:38,460 INFO dataset.__init__] Built index with 1929 total chunks
+[2026-02-08 15:39:38,465 INFO dataset._log_file_discovery] Discovered 21 AX_MALIK files: {'AX': 21} labels, {'EC': 21} conditions
+[2026-02-08 15:39:38,466 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:39:45,266 INFO dataset.__init__] Built index with 252 total chunks
+[2026-02-08 15:39:45,267 INFO dataset._log_file_discovery] Discovered 21 AX_MALIK files: {'AX': 21} labels, {'EO': 21} conditions
+[2026-02-08 15:39:45,267 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:39:52,004 INFO dataset.__init__] Built index with 252 total chunks
+[2026-02-08 15:39:52,006 INFO data_preparation.create_balanced_folds] Created 6 balanced folds:
+[2026-02-08 15:39:52,007 INFO data_preparation.create_balanced_folds]   Normal subjects per fold: ~15.5
+[2026-02-08 15:39:52,007 INFO data_preparation.create_balanced_folds]   Anxiety subjects per fold: ~13.0
+[2026-02-08 15:39:52,007 INFO data_preparation.create_balanced_folds]   Depression subjects per fold: ~10.7
+[2026-02-08 15:39:52,007 INFO data_preparation.create_balanced_folds]   Anxiety+Depression subjects per fold: ~8.5
+[2026-02-08 15:39:52,007 INFO main.train_cross_validation] Created 6 balanced folds with subjects from MDD, CANE, and AX_MALIK datasets
+[2026-02-08 15:39:52,007 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 15:39:52,008 INFO main.train_cross_validation] FOLD 1/6
+[2026-02-08 15:39:52,008 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 15:39:52,008 INFO data_preparation.get_datasets_for_fold] Train subjects (231): ['mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO', 'cane:AXDEP S1100 EO', 'cane:AXDEP S1100 EC', 'cane:AXDEP S1052 EC', 'cane:AXDEP S1052 EO', 'cane:AXDEP S1038 EC', 'cane:AXDEP S1038 EO', 'mdd:H S13 EC', 'mdd:H S13 EO', 'mdd:H S16 EO', 'mdd:H S16 EC', 'mdd:H S11 EO', 'mdd:H S11 EC', 'mdd:H S19 EC', 'mdd:H S19 EO', 'mdd:H S27 EC', 'mdd:H S27 EO', 'cane:H S1008 EO', 'cane:H S1008 EC', 'cane:H S1028 EC', 'cane:H S1096 EO', 'cane:H S1096 EC', 'cane:AX S1087 EC', 'cane:AX S1087 EO', 'cane:AX S1027 EO', 'cane:AX S1027 EC', 'cane:AX S1007 EC', 'cane:AX S1007 EO', 'ax_malik:AX S13 EC', 'ax_malik:AX S13 EO', 'ax_malik:AX S10 EC', 'ax_malik:AX S10 EO', 'ax_malik:AX S2 EC', 'ax_malik:AX S2 EO', 'ax_malik:AX S12 EC', 'ax_malik:AX S12 EO', 'mdd:MDD S15 EO', 'mdd:MDD S15 EC', 'mdd:MDD S21 EC', 'mdd:MDD S21 EO', 'mdd:MDD S4 EO', 'mdd:MDD S6 EC', 'mdd:MDD S6 EO', 'mdd:MDD S9 EO', 'mdd:MDD S9 EC', 'mdd:MDD S1 EC', 'mdd:MDD S1 EO', 'cane:AXDEP S1094 EC', 'cane:AXDEP S1094 EO', 'cane:AXDEP S1034 EC', 'cane:AXDEP S1034 EO', 'cane:AXDEP S1019 EO', 'cane:AXDEP S1019 EC', 'cane:AXDEP S0042 EO', 'cane:AXDEP S0042 EC', 'mdd:H S9 EC']...
+[2026-02-08 15:39:52,008 INFO data_preparation.get_datasets_for_fold] Val subjects (55): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO']
+[2026-02-08 15:39:52,062 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2916, CANE=3080, AX_MALIK=408, Total=6404
+[2026-02-08 15:39:52,063 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=619, CANE=821, AX_MALIK=96, Total=1536
+[2026-02-08 15:39:52,322 INFO main.train_cross_validation] Fold 1 | Class weights | tensor([1.4112, 0.7744])
+[2026-02-08 15:39:52,564 INFO model.__init__] Initialized LSTM with input_size=880, hidden_size=64, batch_first=True
+[2026-02-08 15:39:56,411 INFO main.train_one_fold] Starting training for fold 1
+[2026-02-08 15:41:37,385 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_1_best.pth (chunk=0.7643, subject=0.7636, combined=0.5837)
+[2026-02-08 15:41:37,386 INFO early_stopping.__call__] Early stopping initialized: best score 0.7643 at epoch 1
+[2026-02-08 15:43:19,283 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_1_best.pth (chunk=0.7884, subject=0.8000, combined=0.6307)
+[2026-02-08 15:43:19,283 INFO early_stopping.__call__] Validation improved from 0.7643 to 0.7884 (+0.0241) at epoch 2
+[2026-02-08 15:45:04,723 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_1_best.pth (chunk=0.8001, subject=0.8364, combined=0.6692)
+[2026-02-08 15:45:04,726 INFO early_stopping.__call__] Validation improved from 0.7884 to 0.8001 (+0.0117) at epoch 3
+[2026-02-08 15:50:02,603 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_1_best.pth (chunk=0.8021, subject=0.8364, combined=0.6708)
+[2026-02-08 15:50:02,653 INFO early_stopping.__call__] Validation improved from 0.8001 to 0.8021 (+0.0020) at epoch 5
+[2026-02-08 15:53:32,263 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_1_best.pth (chunk=0.8066, subject=0.8545, combined=0.6893)
+[2026-02-08 15:53:32,272 INFO early_stopping.__call__] Validation improved from 0.8021 to 0.8066 (+0.0046) at epoch 7
+[2026-02-08 16:22:36,593 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8066 at epoch 7
+[2026-02-08 16:22:36,603 INFO main.train_one_fold] Early stopping triggered at epoch 27
+[2026-02-08 16:22:36,604 INFO main.train_one_fold] 
+Fold 1 training completed. Best Chunk Val Acc: 0.8066 at epoch 7
+[2026-02-08 16:22:36,604 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 16:22:36,604 INFO main.train_cross_validation] FOLD 2/6
+[2026-02-08 16:22:36,604 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 16:22:36,605 INFO data_preparation.get_datasets_for_fold] Train subjects (235): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S13 EC', 'mdd:H S13 EO', 'mdd:H S16 EO', 'mdd:H S16 EC', 'mdd:H S11 EO', 'mdd:H S11 EC', 'mdd:H S19 EC', 'mdd:H S19 EO', 'mdd:H S27 EC', 'mdd:H S27 EO', 'cane:H S1008 EO', 'cane:H S1008 EC', 'cane:H S1028 EC', 'cane:H S1096 EO', 'cane:H S1096 EC', 'cane:AX S1087 EC', 'cane:AX S1087 EO', 'cane:AX S1027 EO', 'cane:AX S1027 EC', 'cane:AX S1007 EC', 'cane:AX S1007 EO', 'ax_malik:AX S13 EC', 'ax_malik:AX S13 EO', 'ax_malik:AX S10 EC', 'ax_malik:AX S10 EO', 'ax_malik:AX S2 EC', 'ax_malik:AX S2 EO', 'ax_malik:AX S12 EC', 'ax_malik:AX S12 EO', 'mdd:MDD S15 EO', 'mdd:MDD S15 EC', 'mdd:MDD S21 EC', 'mdd:MDD S21 EO', 'mdd:MDD S4 EO', 'mdd:MDD S6 EC', 'mdd:MDD S6 EO', 'mdd:MDD S9 EO', 'mdd:MDD S9 EC', 'mdd:MDD S1 EC', 'mdd:MDD S1 EO', 'cane:AXDEP S1094 EC', 'cane:AXDEP S1094 EO', 'cane:AXDEP S1034 EC', 'cane:AXDEP S1034 EO', 'cane:AXDEP S1019 EO']...
+[2026-02-08 16:22:36,605 INFO data_preparation.get_datasets_for_fold] Val subjects (51): ['mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO', 'cane:AXDEP S1100 EO', 'cane:AXDEP S1100 EC', 'cane:AXDEP S1052 EC', 'cane:AXDEP S1052 EO', 'cane:AXDEP S1038 EC', 'cane:AXDEP S1038 EO']
+[2026-02-08 16:22:36,659 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2904, CANE=3255, AX_MALIK=408, Total=6567
+[2026-02-08 16:22:36,659 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=631, CANE=646, AX_MALIK=96, Total=1373
+[2026-02-08 16:22:36,838 INFO main.train_cross_validation] Fold 2 | Class weights | tensor([1.3955, 0.7792])
+[2026-02-08 16:22:36,854 INFO model.__init__] Initialized LSTM with input_size=880, hidden_size=64, batch_first=True
+[2026-02-08 16:22:36,857 INFO main.train_one_fold] Starting training for fold 2
+[2026-02-08 16:24:02,941 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_2_best.pth (chunk=0.8048, subject=0.7843, combined=0.6312)
+[2026-02-08 16:24:02,941 INFO early_stopping.__call__] Early stopping initialized: best score 0.8048 at epoch 1
+[2026-02-08 16:25:22,477 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_2_best.pth (chunk=0.8434, subject=0.8235, combined=0.6946)
+[2026-02-08 16:25:22,477 INFO early_stopping.__call__] Validation improved from 0.8048 to 0.8434 (+0.0386) at epoch 2
+[2026-02-08 16:26:50,888 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_2_best.pth (chunk=0.8492, subject=0.8627, combined=0.7327)
+[2026-02-08 16:26:50,888 INFO early_stopping.__call__] Validation improved from 0.8434 to 0.8492 (+0.0058) at epoch 3
+[2026-02-08 16:54:47,900 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8492 at epoch 3
+[2026-02-08 16:54:47,900 INFO main.train_one_fold] Early stopping triggered at epoch 23
+[2026-02-08 16:54:47,900 INFO main.train_one_fold] 
+Fold 2 training completed. Best Chunk Val Acc: 0.8492 at epoch 3
+[2026-02-08 16:54:47,900 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 16:54:47,900 INFO main.train_cross_validation] FOLD 3/6
+[2026-02-08 16:54:47,901 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 16:54:47,901 INFO data_preparation.get_datasets_for_fold] Train subjects (238): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO']...
+[2026-02-08 16:54:47,901 INFO data_preparation.get_datasets_for_fold] Val subjects (48): ['mdd:H S13 EC', 'mdd:H S13 EO', 'mdd:H S16 EO', 'mdd:H S16 EC', 'mdd:H S11 EO', 'mdd:H S11 EC', 'mdd:H S19 EC', 'mdd:H S19 EO', 'mdd:H S27 EC', 'mdd:H S27 EO', 'cane:H S1008 EO', 'cane:H S1008 EC', 'cane:H S1028 EC', 'cane:H S1096 EO', 'cane:H S1096 EC', 'cane:AX S1087 EC', 'cane:AX S1087 EO', 'cane:AX S1027 EO', 'cane:AX S1027 EC', 'cane:AX S1007 EC', 'cane:AX S1007 EO', 'ax_malik:AX S13 EC', 'ax_malik:AX S13 EO', 'ax_malik:AX S10 EC', 'ax_malik:AX S10 EO', 'ax_malik:AX S2 EC', 'ax_malik:AX S2 EO', 'ax_malik:AX S12 EC', 'ax_malik:AX S12 EO', 'mdd:MDD S15 EO', 'mdd:MDD S15 EC', 'mdd:MDD S21 EC', 'mdd:MDD S21 EO', 'mdd:MDD S4 EO', 'mdd:MDD S6 EC', 'mdd:MDD S6 EO', 'mdd:MDD S9 EO', 'mdd:MDD S9 EC', 'mdd:MDD S1 EC', 'mdd:MDD S1 EO', 'cane:AXDEP S1094 EC', 'cane:AXDEP S1094 EO', 'cane:AXDEP S1034 EC', 'cane:AXDEP S1034 EO', 'cane:AXDEP S1019 EO', 'cane:AXDEP S1019 EC', 'cane:AXDEP S0042 EO', 'cane:AXDEP S0042 EC']
+[2026-02-08 16:54:47,907 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2904, CANE=3282, AX_MALIK=408, Total=6594
+[2026-02-08 16:54:47,907 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=631, CANE=619, AX_MALIK=96, Total=1346
+[2026-02-08 16:54:48,127 INFO main.train_cross_validation] Fold 3 | Class weights | tensor([1.4012, 0.7774])
+[2026-02-08 16:54:48,133 INFO model.__init__] Initialized LSTM with input_size=880, hidden_size=64, batch_first=True
+[2026-02-08 16:54:48,134 INFO main.train_one_fold] Starting training for fold 3
+[2026-02-08 16:56:14,598 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_3_best.pth (chunk=0.7355, subject=0.6458, combined=0.4750)
+[2026-02-08 16:56:14,599 INFO early_stopping.__call__] Early stopping initialized: best score 0.7355 at epoch 1
+[2026-02-08 16:57:32,079 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_3_best.pth (chunk=0.7949, subject=0.7708, combined=0.6128)
+[2026-02-08 16:57:32,080 INFO early_stopping.__call__] Validation improved from 0.7355 to 0.7949 (+0.0594) at epoch 2
+[2026-02-08 17:18:16,467 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_3_best.pth (chunk=0.7979, subject=0.7917, combined=0.6317)
+[2026-02-08 17:18:16,468 INFO early_stopping.__call__] Validation improved from 0.7949 to 0.7979 (+0.0030) at epoch 17
+[2026-02-08 17:29:22,458 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_3_best.pth (chunk=0.8001, subject=0.8333, combined=0.6668)
+[2026-02-08 17:29:22,458 INFO early_stopping.__call__] Validation improved from 0.7979 to 0.8001 (+0.0022) at epoch 25
+[2026-02-08 17:36:25,904 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_3_best.pth (chunk=0.8053, subject=0.8542, combined=0.6879)
+[2026-02-08 17:36:25,904 INFO early_stopping.__call__] Validation improved from 0.8001 to 0.8053 (+0.0052) at epoch 30
+[2026-02-08 17:42:02,368 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_3_best.pth (chunk=0.8143, subject=0.8333, combined=0.6786)
+[2026-02-08 17:42:02,368 INFO early_stopping.__call__] Validation improved from 0.8053 to 0.8143 (+0.0089) at epoch 34
+[2026-02-08 17:44:48,876 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_3_best.pth (chunk=0.8217, subject=0.8958, combined=0.7361)
+[2026-02-08 17:44:48,876 INFO early_stopping.__call__] Validation improved from 0.8143 to 0.8217 (+0.0074) at epoch 36
+[2026-02-08 17:54:30,285 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_3_best.pth (chunk=0.8269, subject=0.8542, combined=0.7063)
+[2026-02-08 17:54:30,294 INFO early_stopping.__call__] Validation improved from 0.8217 to 0.8269 (+0.0052) at epoch 43
+[2026-02-08 18:23:45,477 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8269 at epoch 43
+[2026-02-08 18:23:45,486 INFO main.train_one_fold] Early stopping triggered at epoch 63
+[2026-02-08 18:23:45,486 INFO main.train_one_fold] 
+Fold 3 training completed. Best Chunk Val Acc: 0.8269 at epoch 43
+[2026-02-08 18:23:45,486 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 18:23:45,486 INFO main.train_cross_validation] FOLD 4/6
+[2026-02-08 18:23:45,486 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 18:23:45,486 INFO data_preparation.get_datasets_for_fold] Train subjects (242): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO']...
+[2026-02-08 18:23:45,486 INFO data_preparation.get_datasets_for_fold] Val subjects (44): ['mdd:H S9 EC', 'mdd:H S9 EO', 'mdd:H S28 EO', 'mdd:H S28 EC', 'mdd:H S6 EO', 'mdd:H S6 EC', 'mdd:H S25 EC', 'mdd:H S2 EC', 'mdd:H S2 EO', 'cane:H S1022 EC', 'cane:H S1022 EO', 'cane:H S0012 EO', 'cane:H S0012 EC', 'cane:H S1085 EC', 'cane:H S1085 EO', 'cane:AX S0074 EO', 'cane:AX S0074 EC', 'cane:AX S0056 EO', 'cane:AX S0056 EC', 'cane:AX S1050 EC', 'cane:AX S1050 EO', 'ax_malik:AX S8 EO', 'ax_malik:AX S8 EC', 'ax_malik:AX S17 EO', 'ax_malik:AX S17 EC', 'ax_malik:AX S18 EC', 'ax_malik:AX S18 EO', 'mdd:MDD S5 EC', 'mdd:MDD S5 EO', 'mdd:MDD S10 EO', 'mdd:MDD S10 EC', 'mdd:MDD S33 EC', 'mdd:MDD S33 EO', 'mdd:MDD S22 EO', 'mdd:MDD S22 EC', 'mdd:MDD S16 EO', 'cane:AXDEP S0076 EC', 'cane:AXDEP S0076 EO', 'cane:AXDEP S0039 EC', 'cane:AXDEP S0039 EO', 'cane:AXDEP S1089 EO', 'cane:AXDEP S1089 EC', 'cane:AXDEP S0026 EO', 'cane:AXDEP S0026 EC']
+[2026-02-08 18:23:45,489 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2994, CANE=3280, AX_MALIK=432, Total=6706
+[2026-02-08 18:23:45,489 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=541, CANE=621, AX_MALIK=72, Total=1234
+[2026-02-08 18:23:45,604 INFO main.train_cross_validation] Fold 4 | Class weights | tensor([1.4354, 0.7673])
+[2026-02-08 18:23:45,621 INFO model.__init__] Initialized LSTM with input_size=880, hidden_size=64, batch_first=True
+[2026-02-08 18:23:45,622 INFO main.train_one_fold] Starting training for fold 4
+[2026-02-08 18:25:08,779 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_4_best.pth (chunk=0.6807, subject=0.6591, combined=0.4487)
+[2026-02-08 18:25:08,779 INFO early_stopping.__call__] Early stopping initialized: best score 0.6807 at epoch 1
+[2026-02-08 18:26:33,767 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_4_best.pth (chunk=0.7423, subject=0.7500, combined=0.5567)
+[2026-02-08 18:26:33,767 INFO early_stopping.__call__] Validation improved from 0.6807 to 0.7423 (+0.0616) at epoch 2
+[2026-02-08 18:54:10,569 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.7423 at epoch 2
+[2026-02-08 18:54:10,569 INFO main.train_one_fold] Early stopping triggered at epoch 22
+[2026-02-08 18:54:10,569 INFO main.train_one_fold] 
+Fold 4 training completed. Best Chunk Val Acc: 0.7423 at epoch 2
+[2026-02-08 18:54:10,570 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 18:54:10,570 INFO main.train_cross_validation] FOLD 5/6
+[2026-02-08 18:54:10,570 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 18:54:10,570 INFO data_preparation.get_datasets_for_fold] Train subjects (241): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO']...
+[2026-02-08 18:54:10,570 INFO data_preparation.get_datasets_for_fold] Val subjects (45): ['mdd:H S12 EO', 'mdd:H S7 EO', 'mdd:H S7 EC', 'mdd:H S3 EO', 'mdd:H S3 EC', 'mdd:H S21 EC', 'mdd:H S21 EO', 'mdd:H S30 EO', 'mdd:H S30 EC', 'cane:H S1003 EO', 'cane:H S1003 EC', 'cane:H S0015 EO', 'cane:H S0015 EC', 'cane:H S0078 EO', 'cane:H S0078 EC', 'cane:AX S1024 EC', 'cane:AX S1024 EO', 'cane:AX S1005 EO', 'cane:AX S1005 EC', 'cane:AX S0072 EO', 'cane:AX S0072 EC', 'ax_malik:AX S19 EC', 'ax_malik:AX S19 EO', 'ax_malik:AX S15 EO', 'ax_malik:AX S15 EC', 'ax_malik:AX S6 EC', 'ax_malik:AX S6 EO', 'mdd:MDD S23 EO', 'mdd:MDD S23 EC', 'mdd:MDD S3 EC', 'mdd:MDD S3 EO', 'mdd:MDD S31 EC', 'mdd:MDD S31 EO', 'mdd:MDD S24 EC', 'mdd:MDD S24 EO', 'mdd:MDD S2 EC', 'mdd:MDD S2 EO', 'cane:AXDEP S0013 EC', 'cane:AXDEP S0013 EO', 'cane:AXDEP S1092 EC', 'cane:AXDEP S1092 EO', 'cane:AXDEP S0018 EO', 'cane:AXDEP S0018 EC', 'cane:AXDEP S1035 EO', 'cane:AXDEP S1035 EC']
+[2026-02-08 18:54:10,574 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2966, CANE=3278, AX_MALIK=432, Total=6676
+[2026-02-08 18:54:10,574 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=569, CANE=623, AX_MALIK=72, Total=1264
+[2026-02-08 18:54:10,733 INFO main.train_cross_validation] Fold 5 | Class weights | tensor([1.4271, 0.7697])
+[2026-02-08 18:54:10,739 INFO model.__init__] Initialized LSTM with input_size=880, hidden_size=64, batch_first=True
+[2026-02-08 18:54:10,740 INFO main.train_one_fold] Starting training for fold 5
+[2026-02-08 18:55:27,962 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_5_best.pth (chunk=0.6883, subject=0.7111, combined=0.4895)
+[2026-02-08 18:55:27,962 INFO early_stopping.__call__] Early stopping initialized: best score 0.6883 at epoch 1
+[2026-02-08 18:56:56,288 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_5_best.pth (chunk=0.7500, subject=0.7333, combined=0.5500)
+[2026-02-08 18:56:56,288 INFO early_stopping.__call__] Validation improved from 0.6883 to 0.7500 (+0.0617) at epoch 2
+[2026-02-08 18:58:12,287 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_5_best.pth (chunk=0.7737, subject=0.8000, combined=0.6190)
+[2026-02-08 18:58:12,287 INFO early_stopping.__call__] Validation improved from 0.7500 to 0.7737 (+0.0237) at epoch 3
+[2026-02-08 19:26:07,772 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.7737 at epoch 3
+[2026-02-08 19:26:07,772 INFO main.train_one_fold] Early stopping triggered at epoch 23
+[2026-02-08 19:26:07,772 INFO main.train_one_fold] 
+Fold 5 training completed. Best Chunk Val Acc: 0.7737 at epoch 3
+[2026-02-08 19:26:07,773 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 19:26:07,773 INFO main.train_cross_validation] FOLD 6/6
+[2026-02-08 19:26:07,773 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 19:26:07,773 INFO data_preparation.get_datasets_for_fold] Train subjects (243): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO']...
+[2026-02-08 19:26:07,773 INFO data_preparation.get_datasets_for_fold] Val subjects (43): ['mdd:H S10 EO', 'mdd:H S10 EC', 'mdd:H S24 EO', 'mdd:H S24 EC', 'mdd:H S20 EO', 'mdd:H S20 EC', 'mdd:H S17 EO', 'mdd:H S17 EC', 'mdd:H S5 EC', 'mdd:H S5 EO', 'cane:H S1091 EO', 'cane:H S1091 EC', 'cane:H S1001 EC', 'cane:H S1001 EO', 'cane:H S1010 EC', 'cane:H S1010 EO', 'cane:AX S1051 EO', 'cane:AX S1051 EC', 'cane:AX S1023 EO', 'cane:AX S1023 EC', 'cane:AX S0073 EO', 'cane:AX S0073 EC', 'ax_malik:AX S16 EC', 'ax_malik:AX S16 EO', 'ax_malik:AX S4 EO', 'ax_malik:AX S4 EC', 'ax_malik:AX S7 EO', 'ax_malik:AX S7 EC', 'mdd:MDD S12 EO', 'mdd:MDD S27 EC', 'mdd:MDD S27 EO', 'mdd:MDD S7 EC', 'mdd:MDD S13 EC', 'mdd:MDD S13 EO', 'mdd:MDD S18 EO', 'mdd:MDD S18 EC', 'cane:AXDEP S1093 EO', 'cane:AXDEP S1093 EC', 'cane:AXDEP S0099 EC', 'cane:AXDEP S0099 EO', 'cane:AXDEP S0068 EO', 'cane:AXDEP S0068 EC', 'cane:AXDEP S0043 EC']
+[2026-02-08 19:26:07,778 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2991, CANE=3330, AX_MALIK=432, Total=6753
+[2026-02-08 19:26:07,778 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=544, CANE=571, AX_MALIK=72, Total=1187
+[2026-02-08 19:26:07,981 INFO main.train_cross_validation] Fold 6 | Class weights | tensor([1.4554, 0.7617])
+[2026-02-08 19:26:07,987 INFO model.__init__] Initialized LSTM with input_size=880, hidden_size=64, batch_first=True
+[2026-02-08 19:26:07,989 INFO main.train_one_fold] Starting training for fold 6
+[2026-02-08 19:27:16,863 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_6_best.pth (chunk=0.7818, subject=0.7209, combined=0.5636)
+[2026-02-08 19:27:16,863 INFO early_stopping.__call__] Early stopping initialized: best score 0.7818 at epoch 1
+[2026-02-08 19:29:28,202 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-all-binary-smallerall_krh/fold_6_best.pth (chunk=0.7843, subject=0.8140, combined=0.6384)
+[2026-02-08 19:29:28,202 INFO early_stopping.__call__] Validation improved from 0.7818 to 0.7843 (+0.0025) at epoch 3
+[2026-02-08 19:51:57,571 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.7843 at epoch 3
+[2026-02-08 19:51:57,572 INFO main.train_one_fold] Early stopping triggered at epoch 23
+[2026-02-08 19:51:57,572 INFO main.train_one_fold] 
+Fold 6 training completed. Best Chunk Val Acc: 0.7843 at epoch 3
+[2026-02-08 19:51:57,572 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 19:51:57,572 INFO main.train_cross_validation] 6-FOLD CROSS-VALIDATION RESULTS
+[2026-02-08 19:51:57,572 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 19:51:57,572 INFO main.train_cross_validation] 
+Per-fold best validation accuracy (chunk):
+[2026-02-08 19:51:57,572 INFO main.train_cross_validation]   Fold 1: 0.8066 (epoch 7)
+[2026-02-08 19:51:57,572 INFO main.train_cross_validation]   Fold 2: 0.8492 (epoch 3)
+[2026-02-08 19:51:57,572 INFO main.train_cross_validation]   Fold 3: 0.8269 (epoch 43)
+[2026-02-08 19:51:57,573 INFO main.train_cross_validation]   Fold 4: 0.7423 (epoch 2)
+[2026-02-08 19:51:57,573 INFO main.train_cross_validation]   Fold 5: 0.7737 (epoch 3)
+[2026-02-08 19:51:57,573 INFO main.train_cross_validation]   Fold 6: 0.7843 (epoch 3)
+[2026-02-08 19:51:57,628 INFO metrics._write_metrics_block] CHUNK Accuracy Mean: 79.72% ± 3.51%, Min: 74.23%, Max: 84.92%
+
+[2026-02-08 19:51:57,628 INFO metrics._write_metrics_block] CHUNK Sensitivity Mean: 93.56% ± 5.03%, Min: 86.63%, Max: 99.25%
+
+[2026-02-08 19:51:57,628 INFO metrics._write_metrics_block] CHUNK Specificity Mean: 54.75% ± 10.13%, Min: 40.22%, Max: 74.60%
+
+[2026-02-08 19:51:57,629 INFO metrics._write_metrics_block] SUBJECT Accuracy Mean: 82.26% ± 3.98%, Min: 75.00%, Max: 86.27%
+
+[2026-02-08 19:51:57,629 INFO metrics._write_metrics_block] SUBJECT Sensitivity Mean: 95.75% ± 5.34%, Min: 86.21%, Max: 100.00%
+
+[2026-02-08 19:51:57,629 INFO metrics._write_metrics_block] SUBJECT Specificity Mean: 54.80% ± 10.05%, Min: 40.00%, Max: 73.33%
+
+[2026-02-08 19:51:57,629 INFO metrics.write_results] COMBINED Accuracy Mean (chunk×subject): 65.71% ± 5.92%, Min: 55.67%, Max: 73.27%
+
+[2026-02-08 19:51:57,629 INFO metrics._format_confusion_matrix] 
+Aggregated Chunk Confusion Matrix (across folds; TN, FP, FN, TP):
+
+
+[2026-02-08 19:51:57,630 INFO metrics._format_confusion_matrix] ACTUAL ↓/PRED →        Healthy    Pathological 
+
+[2026-02-08 19:51:57,630 INFO metrics._format_confusion_matrix] -----------------------------------------------
+
+[2026-02-08 19:51:57,630 INFO metrics._format_confusion_matrix]         Healthy            1526            1268 
+
+[2026-02-08 19:51:57,630 INFO metrics._format_confusion_matrix]    Pathological             329            4817 
+
+[2026-02-08 19:51:57,630 INFO metrics._format_confusion_matrix] 
+
+[2026-02-08 19:51:57,630 INFO metrics._format_confusion_matrix] Total Predictions: 7940
+
+[2026-02-08 19:51:57,630 INFO metrics._format_confusion_matrix] Correct Predictions: 6343
+
+[2026-02-08 19:51:57,630 INFO metrics._format_confusion_matrix] Overall Accuracy: 0.7989 (79.89%)
+
+[2026-02-08 19:51:57,631 INFO metrics.write_per_dataset_table] 
+Per-Dataset Chunk Accuracy (aggregated across folds):
+
+[2026-02-08 19:51:57,631 INFO metrics.write_per_dataset_table]   Dataset        Accuracy   Chunk Count
+
+[2026-02-08 19:51:57,631 INFO metrics.write_per_dataset_table]   ────────────  ──────────  ────────────
+
+[2026-02-08 19:51:57,631 INFO metrics.write_per_dataset_table]   AX_MALIK         98.41%           504
+
+[2026-02-08 19:51:57,631 INFO metrics.write_per_dataset_table]   CANE             70.08%          3901
+
+[2026-02-08 19:51:57,631 INFO metrics.write_per_dataset_table]   MDD              88.06%          3535
+
+[2026-02-08 19:51:57,631 INFO metrics.write_per_dataset_table]   ────────────  ──────────  ────────────
+
+[2026-02-08 19:51:57,631 INFO metrics.write_per_dataset_table]   Total            79.89%          7940
+
+[2026-02-08 19:51:57,631 INFO main.train_cross_validation] ================================================================================
+
+[2026-02-08 19:51:57,639 INFO main.train] 
+Results saved to experiments/both-014b-all-binary-smallerall_krh/results.txt
+[2026-02-08 19:51:57,639 INFO main.train] Generating training curves...
+[2026-02-08 19:52:06,284 INFO main.train] Training curves saved to experiments/both-014b-all-binary-smallerall_krh/loss_curves
+[2026-02-08 19:52:06,285 INFO main.train] Training completed!

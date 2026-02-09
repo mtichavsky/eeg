@@ -1,16 +1,37 @@
 # EXPERIMENTS
 
-| model              | accuracy                          | sensitivity (Recall)                   | specificity                      | directory                                  |
-|--------------------|-----------------------------------|----------------------------------------|----------------------------------|--------------------------------------------|
-| binary, in-ear     |                                   |                                        |                                  |                                            |
-| 4-class, in-ear    |                                   |                                        |                                  |                                            |
-| binary, 8-channel  | 78.88% ± 3.70%, (72.72% - 83.90%) | 95.69% ± 6.60% (Min: 81.82% - 100.00%) | 51.81% ± 6.95% (40.00% - 59.92%) | experiments/both-012-all-binary-smallerall |
-| 4-class, 8-channel |                                   |                                        |                                  |                                            |
+| model                         | accuracy                          | sensitivity (Recall)                   | specificity                      | directory                                                      |
+|-------------------------------|-----------------------------------|----------------------------------------|----------------------------------|----------------------------------------------------------------|
+| binary, in-ear                | 80.79% ± 4.77%                    | 94.53% ± 2.36%                         | 55.48% ± 13.52%                  | all3-014b-inear-binary-smaller                                 |
+| 4-class, in-ear               |                                   |                                        |                                  |                                                                |
+| binary, 8-channel, MDD+CANE   | 78.88% ± 3.70%, (72.72% - 83.90%) | 95.69% ± 6.60% (Min: 81.82% - 100.00%) | 51.81% ± 6.95% (40.00% - 59.92%) | both-012-all-binary-smallerall                                 |
+| binary, 8-channel, 3 datasets | 79.72% ± 3.51%                    | 93.56% ± 5.03%                         | 54.75% ± 10.13%                  | all3-014b-all-binary-smallerallall3-014b-all-binary-smallerall |
+| 4-class, 8-channel, 3 dts.    | 64.58% ± 6.64%                    |                                        |                                  | all3-014b-all-4class-smallerall                                |
 
 
 Make sure I get all the necessary stats.
 Run something to figure out impact of adding weights to cross entropy.
 Default is 2 class
+
+### all3-014b-all-binary-smallerall
+
+- Loss curve visualization doesn't work after switch to JSON logs
+- Problem AX_MALIK missing healthy classes drives accuracy through the roof, also the specificity is still low
+- Command: `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-binary-smallerall`
+
+
+### all3-014b-all-4class-smallerall
+
+- The confusion matrix doesn't make sense, there's definitely more depression samples, why is that???
+  - but MDD shows good performance, probably in anxiety+depression I'd be looking for a problem
+- AX_MALIK 100% accuracy, CANE absolutely shitty
+- Command `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-4class-smallerall --class-mode=4`
+
+### all3-014b-inear-binary-smaller
+
+- Command: `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014-inear-binary-smaller`
+
+---
 
 ```bash
 python main.py train --skip-ica --channel all --batch-size 64 --dataset both --model SmallerAll --condition ec+eo --n-folds 6 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/both-testing01

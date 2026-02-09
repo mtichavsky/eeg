@@ -1,0 +1,1200 @@
+[2026-02-08 15:35:48,783 INFO main.setup_logging] Logging to console and file: experiments/both-014b-inear-binary-smaller/training_ec+eo_in-ear_20260208_153548.log
+[2026-02-08 15:35:48,784 INFO main.train] Starting EEG Classification Training
+[2026-02-08 15:35:48,784 INFO main.train] Hyperparameters:
+[2026-02-08 15:35:48,784 INFO main.train]   Dataset: all
+[2026-02-08 15:35:48,784 INFO main.train]   Condition: ec+eo
+[2026-02-08 15:35:48,784 INFO main.train]   Channel: in-ear
+[2026-02-08 15:35:48,784 INFO main.train]   N-Fold CV: 6
+[2026-02-08 15:35:48,784 INFO main.train]   Batch Size: 64
+[2026-02-08 15:35:48,784 INFO main.train]   Learning Rate: 0.0001
+[2026-02-08 15:35:48,785 INFO main.train]   Dropout: 0.1
+[2026-02-08 15:35:48,785 INFO main.train]   Weight decay (L2 penalty): 0.0001
+[2026-02-08 15:35:48,785 INFO main.train]   Max Epochs: 100
+[2026-02-08 15:35:48,785 INFO main.train]   Validation Every: 1 epochs
+[2026-02-08 15:35:48,785 INFO main.train]   Save Checkpoint Every: 100 epochs
+[2026-02-08 15:35:48,785 INFO main.train]   Early Stopping Patience: 20 epochs
+[2026-02-08 15:35:48,785 INFO main.train]   Skip Artifact Removal: False
+[2026-02-08 15:35:48,785 INFO main.train]   Data Augmentation: disabled
+[2026-02-08 15:35:48,785 INFO main.train]   Pretrained Checkpoint: None
+[2026-02-08 15:35:48,785 INFO main.train]   Freeze CNN: False
+[2026-02-08 15:35:48,785 INFO main.train]   Freeze LSTM: False
+[2026-02-08 15:35:48,785 INFO main.train]   Class mode: 2
+[2026-02-08 15:35:48,785 INFO main.train]   Test mode: False
+[2026-02-08 15:35:48,786 INFO main.train]   Device: cpu
+[2026-02-08 15:35:48,786 INFO main.train]   Checkpoint Directory: experiments/both-014b-inear-binary-smaller
+[2026-02-08 15:35:48,786 INFO main.train]   Log File: experiments/both-014b-inear-binary-smaller/training_ec+eo_in-ear_20260208_153548.log
+[2026-02-08 15:35:48,786 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 15:35:48,786 INFO main.train_cross_validation] Starting 6-Fold Cross-Validation Training
+[2026-02-08 15:35:48,786 INFO main.train_cross_validation] Dataset: all, Condition(s): ['EC', 'EO']
+[2026-02-08 15:35:48,786 INFO main.train_cross_validation] Batch Size: 64, LR: 0.0001
+[2026-02-08 15:35:48,786 INFO main.train_cross_validation] Device: cpu
+[2026-02-08 15:35:48,786 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 15:35:48,787 INFO main.train_cross_validation] Classification mode: 2-class
+[2026-02-08 15:35:48,787 INFO main.train_cross_validation] Label mapping: {0: 0, 1: 1, 2: 1, 3: 1} (collapsing to binary)
+[2026-02-08 15:35:48,790 INFO dataset._log_file_discovery] Discovered 58 MDD files: {'H': 28, 'MDD': 30} labels, {'EC': 58} conditions
+[2026-02-08 15:35:48,790 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:36:10,936 INFO dataset.__init__] Built index with 1741 total chunks
+[2026-02-08 15:36:10,975 INFO dataset._log_file_discovery] Discovered 60 MDD files: {'H': 28, 'MDD': 32} labels, {'EO': 60} conditions
+[2026-02-08 15:36:10,976 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:36:32,775 INFO dataset.__init__] Built index with 1794 total chunks
+[2026-02-08 15:36:32,810 INFO dataset._log_file_discovery] Discovered 64 CANE files: {'normal': 19, 'anxiety': 18, 'depression': 1, 'anxiety-depression': 26} labels, {'ec': 64} conditions
+[2026-02-08 15:36:32,810 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:36:33,317 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.97 Hz
+[2026-02-08 15:36:33,400 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:33,401 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:33,422 INFO dataset._process_single_channel] Channel T7: Found 9 artifacts (0.01%)
+[2026-02-08 15:36:33,471 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:33,471 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:33,508 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 1, 5000])
+[2026-02-08 15:36:33,937 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.07 Hz
+[2026-02-08 15:36:34,017 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:34,018 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:34,063 INFO dataset._process_single_channel] Channel T8: Found 8 artifacts (0.01%)
+[2026-02-08 15:36:34,089 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:34,089 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:34,140 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:36:34,670 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.67 Hz
+[2026-02-08 15:36:34,772 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:34,773 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:34,786 INFO dataset._process_single_channel] Channel T7: Found 469 artifacts (0.30%)
+[2026-02-08 15:36:35,132 INFO dataset._process_single_channel] Channel T8: Found 21 artifacts (0.01%)
+[2026-02-08 15:36:35,158 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:35,158 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:35,200 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:36:35,629 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.65 Hz
+[2026-02-08 15:36:35,707 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:35,708 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:35,748 INFO dataset._process_single_channel] Channel T8: Found 2136 artifacts (1.39%)
+[2026-02-08 15:36:37,222 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:37,222 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:37,263 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:37,597 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.17 Hz
+[2026-02-08 15:36:37,666 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:37,667 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:37,684 INFO dataset._process_single_channel] Channel T7: Found 3402 artifacts (2.65%)
+[2026-02-08 15:36:39,852 INFO dataset._process_single_channel] Channel T8: Found 1273 artifacts (0.99%)
+[2026-02-08 15:36:40,728 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:40,728 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:40,764 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:36:41,116 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.41 Hz
+[2026-02-08 15:36:41,177 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:41,177 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:41,187 INFO dataset._process_single_channel] Channel T7: Found 6 artifacts (0.00%)
+[2026-02-08 15:36:41,212 INFO dataset._process_single_channel] Channel T8: Found 6 artifacts (0.00%)
+[2026-02-08 15:36:41,225 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:41,225 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:41,255 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:36:41,613 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.44 Hz
+[2026-02-08 15:36:41,687 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:41,688 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:41,700 INFO dataset._process_single_channel] Channel T7: Found 345 artifacts (0.25%)
+[2026-02-08 15:36:41,979 INFO dataset._process_single_channel] Channel T8: Found 406 artifacts (0.29%)
+[2026-02-08 15:36:42,267 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:42,267 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:42,306 INFO dataset.load_and_preprocess_cane_raw_file] Created 27 chunks of shape torch.Size([27, 1, 5000])
+[2026-02-08 15:36:42,673 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.12 Hz
+[2026-02-08 15:36:42,740 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:42,765 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:42,814 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:42,815 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:42,851 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:36:43,265 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.10 Hz
+[2026-02-08 15:36:43,331 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:43,332 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:43,346 INFO dataset._process_single_channel] Channel T7: Found 59 artifacts (0.05%)
+[2026-02-08 15:36:43,412 INFO dataset._process_single_channel] Channel T8: Found 21 artifacts (0.02%)
+[2026-02-08 15:36:43,439 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:43,439 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:43,480 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:36:43,952 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.21 Hz
+[2026-02-08 15:36:44,029 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:44,030 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:44,047 INFO dataset._process_single_channel] Channel T7: Found 1609 artifacts (1.05%)
+[2026-02-08 15:36:45,191 INFO dataset._process_single_channel] Channel T8: Found 2770 artifacts (1.81%)
+[2026-02-08 15:36:46,979 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:46,979 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:47,018 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:47,392 INFO dataset.verify_sampling_rate] Detected sampling rate: 495.81 Hz
+[2026-02-08 15:36:47,467 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:47,468 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:47,515 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:47,515 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:47,562 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:48,065 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.50 Hz
+[2026-02-08 15:36:48,149 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:48,150 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:48,171 INFO dataset._process_single_channel] Channel T7: Found 2156 artifacts (1.15%)
+[2026-02-08 15:36:49,558 INFO dataset._process_single_channel] Channel T8: Found 1139 artifacts (0.61%)
+[2026-02-08 15:36:50,237 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:50,237 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:50,286 INFO dataset.load_and_preprocess_cane_raw_file] Created 37 chunks of shape torch.Size([37, 1, 5000])
+[2026-02-08 15:36:50,722 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.26 Hz
+[2026-02-08 15:36:50,817 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:50,818 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:50,833 INFO dataset._process_single_channel] Channel T7: Found 915 artifacts (0.60%)
+[2026-02-08 15:36:51,689 INFO dataset._process_single_channel] Channel T8: Found 299 artifacts (0.20%)
+[2026-02-08 15:36:51,899 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:51,899 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:51,953 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:52,458 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.51 Hz
+[2026-02-08 15:36:52,548 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:52,549 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:52,615 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:52,615 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:52,666 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:53,165 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.61 Hz
+[2026-02-08 15:36:53,254 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:53,255 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:53,271 INFO dataset._process_single_channel] Channel T7: Found 2323 artifacts (1.48%)
+[2026-02-08 15:36:54,986 INFO dataset._process_single_channel] Channel T8: Found 446 artifacts (0.28%)
+[2026-02-08 15:36:55,279 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:55,279 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:55,320 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:36:55,765 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.42 Hz
+[2026-02-08 15:36:55,849 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:55,850 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:55,908 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:55,909 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:55,974 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:56,371 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.74 Hz
+[2026-02-08 15:36:56,452 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:56,453 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:56,469 INFO dataset._process_single_channel] Channel T7: Found 103 artifacts (0.07%)
+[2026-02-08 15:36:56,560 INFO dataset._process_single_channel] Channel T8: Found 104 artifacts (0.07%)
+[2026-02-08 15:36:56,638 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:56,638 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:56,682 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:57,087 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.45 Hz
+[2026-02-08 15:36:57,175 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:57,175 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:57,225 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:57,225 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:57,272 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:57,667 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.60 Hz
+[2026-02-08 15:36:57,745 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:57,746 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:57,796 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:57,796 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:57,842 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:58,225 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.28 Hz
+[2026-02-08 15:36:58,309 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:58,309 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:58,326 INFO dataset._process_single_channel] Channel T7: Found 531 artifacts (0.35%)
+[2026-02-08 15:36:58,632 INFO dataset._process_single_channel] Channel T8: Found 1091 artifacts (0.71%)
+[2026-02-08 15:36:59,330 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:59,330 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:59,374 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:36:59,802 INFO dataset.verify_sampling_rate] Detected sampling rate: 497.83 Hz
+[2026-02-08 15:36:59,886 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:36:59,886 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:36:59,905 INFO dataset._process_single_channel] Channel T7: Found 11 artifacts (0.01%)
+[2026-02-08 15:36:59,937 INFO dataset._process_single_channel] Channel T8: Found 10 artifacts (0.01%)
+[2026-02-08 15:36:59,954 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:36:59,954 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:36:59,992 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:00,457 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.53 Hz
+[2026-02-08 15:37:00,562 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:00,563 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:00,578 INFO dataset._process_single_channel] Channel T7: Found 195 artifacts (0.13%)
+[2026-02-08 15:37:00,792 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:00,792 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:00,855 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:01,308 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:37:01,390 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:01,391 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:01,406 INFO dataset._process_single_channel] Channel T7: Found 666 artifacts (0.43%)
+[2026-02-08 15:37:01,875 INFO dataset._process_single_channel] Channel T8: Found 366 artifacts (0.24%)
+[2026-02-08 15:37:02,213 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:02,214 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:02,261 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:02,750 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.58 Hz
+[2026-02-08 15:37:02,846 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:02,847 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:02,868 INFO dataset._process_single_channel] Channel T7: Found 53 artifacts (0.03%)
+[2026-02-08 15:37:02,955 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:02,955 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:03,006 INFO dataset.load_and_preprocess_cane_raw_file] Created 33 chunks of shape torch.Size([33, 1, 5000])
+[2026-02-08 15:37:03,414 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.56 Hz
+[2026-02-08 15:37:03,499 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:03,499 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:03,514 INFO dataset._process_single_channel] Channel T7: Found 768 artifacts (0.50%)
+[2026-02-08 15:37:03,963 INFO dataset._process_single_channel] Channel T8: Found 1979 artifacts (1.29%)
+[2026-02-08 15:37:05,114 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:05,115 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:05,159 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:05,526 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.57 Hz
+[2026-02-08 15:37:05,591 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:05,591 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:05,641 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:05,641 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:05,684 INFO dataset.load_and_preprocess_cane_raw_file] Created 26 chunks of shape torch.Size([26, 1, 5000])
+[2026-02-08 15:37:06,111 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.57 Hz
+[2026-02-08 15:37:06,198 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:06,199 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:06,246 INFO dataset._process_single_channel] Channel T8: Found 1 artifacts (0.00%)
+[2026-02-08 15:37:06,259 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:06,259 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:06,301 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:06,713 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.57 Hz
+[2026-02-08 15:37:06,793 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:06,794 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:06,843 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:06,843 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:06,884 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:07,218 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.36 Hz
+[2026-02-08 15:37:07,282 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:07,283 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:07,293 INFO dataset._process_single_channel] Channel T7: Found 512 artifacts (0.40%)
+[2026-02-08 15:37:07,592 INFO dataset._process_single_channel] Channel T8: Found 763 artifacts (0.59%)
+[2026-02-08 15:37:08,002 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:08,002 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:08,030 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:37:08,654 INFO dataset.verify_sampling_rate] Detected sampling rate: 496.97 Hz
+[2026-02-08 15:37:08,791 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:08,792 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:08,811 INFO dataset._process_single_channel] Channel T7: Found 757 artifacts (0.40%)
+[2026-02-08 15:37:09,452 INFO dataset._process_single_channel] Channel T8: Found 1400 artifacts (0.74%)
+[2026-02-08 15:37:10,359 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:10,359 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:10,417 INFO dataset.load_and_preprocess_cane_raw_file] Created 37 chunks of shape torch.Size([37, 1, 5000])
+[2026-02-08 15:37:11,080 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.05 Hz
+[2026-02-08 15:37:11,182 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:11,183 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:11,204 INFO dataset._process_single_channel] Channel T7: Found 426 artifacts (0.19%)
+[2026-02-08 15:37:11,506 INFO dataset._process_single_channel] Channel T8: Found 200 artifacts (0.09%)
+[2026-02-08 15:37:11,639 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:11,640 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:11,699 INFO dataset.load_and_preprocess_cane_raw_file] Created 45 chunks of shape torch.Size([45, 1, 5000])
+[2026-02-08 15:37:12,283 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.08 Hz
+[2026-02-08 15:37:12,387 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:12,388 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:12,453 INFO dataset._process_single_channel] Channel T8: Found 54 artifacts (0.03%)
+[2026-02-08 15:37:12,514 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:12,515 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:12,590 INFO dataset.load_and_preprocess_cane_raw_file] Created 41 chunks of shape torch.Size([41, 1, 5000])
+[2026-02-08 15:37:13,260 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.56 Hz
+[2026-02-08 15:37:13,349 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:13,349 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:13,364 INFO dataset._process_single_channel] Channel T7: Found 941 artifacts (0.59%)
+[2026-02-08 15:37:14,070 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:14,072 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:14,164 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:15,095 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.16 Hz
+[2026-02-08 15:37:15,256 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:15,258 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:15,351 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:15,351 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:15,442 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:16,616 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.21 Hz
+[2026-02-08 15:37:16,764 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:16,766 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:16,856 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:16,856 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:16,933 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:17,829 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.62 Hz
+[2026-02-08 15:37:18,032 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:18,033 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:18,055 INFO dataset._process_single_channel] Channel T7: Found 8 artifacts (0.01%)
+[2026-02-08 15:37:18,135 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:18,135 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:18,226 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:19,047 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.62 Hz
+[2026-02-08 15:37:19,235 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:19,240 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:19,272 INFO dataset._process_single_channel] Channel T7: Found 1442 artifacts (0.93%)
+[2026-02-08 15:37:21,296 INFO dataset._process_single_channel] Channel T8: Found 1576 artifacts (1.01%)
+[2026-02-08 15:37:23,215 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:23,216 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:23,320 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:24,114 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.49 Hz
+[2026-02-08 15:37:24,241 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:24,242 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:24,262 INFO dataset._process_single_channel] Channel T7: Found 11 artifacts (0.01%)
+[2026-02-08 15:37:24,345 INFO dataset._process_single_channel] Channel T8: Found 11 artifacts (0.01%)
+[2026-02-08 15:37:24,384 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:24,385 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:24,475 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:25,260 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.44 Hz
+[2026-02-08 15:37:25,374 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:25,375 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:25,395 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:37:25,437 INFO dataset._process_single_channel] Channel T8: Found 4 artifacts (0.00%)
+[2026-02-08 15:37:25,459 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:25,459 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:25,531 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:26,198 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.38 Hz
+[2026-02-08 15:37:26,306 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:26,307 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:26,326 INFO dataset._process_single_channel] Channel T7: Found 194 artifacts (0.12%)
+[2026-02-08 15:37:26,531 INFO dataset._process_single_channel] Channel T8: Found 176 artifacts (0.11%)
+[2026-02-08 15:37:26,728 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:26,728 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:26,782 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:27,435 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.21 Hz
+[2026-02-08 15:37:27,530 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:27,530 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:27,548 INFO dataset._process_single_channel] Channel T7: Found 701 artifacts (0.46%)
+[2026-02-08 15:37:28,145 INFO dataset._process_single_channel] Channel T8: Found 347 artifacts (0.23%)
+[2026-02-08 15:37:28,379 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:28,379 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:28,420 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:28,866 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.31 Hz
+[2026-02-08 15:37:28,943 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:28,944 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:28,959 INFO dataset._process_single_channel] Channel T7: Found 143 artifacts (0.09%)
+[2026-02-08 15:37:29,074 INFO dataset._process_single_channel] Channel T8: Found 279 artifacts (0.18%)
+[2026-02-08 15:37:29,281 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:29,282 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:29,333 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:29,805 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.65 Hz
+[2026-02-08 15:37:29,885 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:29,886 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:29,902 INFO dataset._process_single_channel] Channel T7: Found 69 artifacts (0.04%)
+[2026-02-08 15:37:29,972 INFO dataset._process_single_channel] Channel T8: Found 1054 artifacts (0.68%)
+[2026-02-08 15:37:30,630 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:30,630 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:30,667 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:31,105 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.33 Hz
+[2026-02-08 15:37:31,181 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:31,182 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:31,225 INFO dataset._process_single_channel] Channel T8: Found 6 artifacts (0.00%)
+[2026-02-08 15:37:31,241 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:31,241 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:31,297 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:31,809 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.44 Hz
+[2026-02-08 15:37:31,929 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:31,930 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:31,944 INFO dataset._process_single_channel] Channel T7: Found 2 artifacts (0.00%)
+[2026-02-08 15:37:31,973 INFO dataset._process_single_channel] Channel T8: Found 2 artifacts (0.00%)
+[2026-02-08 15:37:31,989 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:31,989 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:32,036 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:32,584 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.49 Hz
+[2026-02-08 15:37:32,668 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:32,669 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:32,688 INFO dataset._process_single_channel] Channel T7: Found 11 artifacts (0.01%)
+[2026-02-08 15:37:32,725 INFO dataset._process_single_channel] Channel T8: Found 40 artifacts (0.03%)
+[2026-02-08 15:37:32,771 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:32,771 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:32,826 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:33,348 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.26 Hz
+[2026-02-08 15:37:33,437 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:33,438 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:33,500 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:33,501 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:33,541 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:34,051 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.40 Hz
+[2026-02-08 15:37:34,127 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:34,127 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:34,140 INFO dataset._process_single_channel] Channel T7: Found 23 artifacts (0.02%)
+[2026-02-08 15:37:34,178 INFO dataset._process_single_channel] Channel T8: Found 47 artifacts (0.03%)
+[2026-02-08 15:37:34,228 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:34,228 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:34,268 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:34,768 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.70 Hz
+[2026-02-08 15:37:34,843 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:34,844 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:34,857 INFO dataset._process_single_channel] Channel T7: Found 252 artifacts (0.16%)
+[2026-02-08 15:37:35,062 INFO dataset._process_single_channel] Channel T8: Found 484 artifacts (0.31%)
+[2026-02-08 15:37:35,372 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:35,372 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:35,417 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:35,936 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.48 Hz
+[2026-02-08 15:37:36,053 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:36,054 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:36,129 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:36,129 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:36,191 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:37,371 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.55 Hz
+[2026-02-08 15:37:37,488 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:37,489 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:37,578 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:37,578 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:37,649 INFO dataset.load_and_preprocess_cane_raw_file] Created 43 chunks of shape torch.Size([43, 1, 5000])
+[2026-02-08 15:37:38,159 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.80 Hz
+[2026-02-08 15:37:38,241 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:38,241 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:38,295 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:38,295 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:38,338 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:38,947 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.29 Hz
+[2026-02-08 15:37:39,046 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:39,047 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:39,069 INFO dataset._process_single_channel] Channel T7: Found 66 artifacts (0.03%)
+[2026-02-08 15:37:39,143 INFO dataset._process_single_channel] Channel T8: Found 502 artifacts (0.24%)
+[2026-02-08 15:37:39,482 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:39,482 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:39,541 INFO dataset.load_and_preprocess_cane_raw_file] Created 42 chunks of shape torch.Size([42, 1, 5000])
+[2026-02-08 15:37:40,008 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.49 Hz
+[2026-02-08 15:37:40,081 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:40,081 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:40,096 INFO dataset._process_single_channel] Channel T7: Found 43 artifacts (0.03%)
+[2026-02-08 15:37:40,150 INFO dataset._process_single_channel] Channel T8: Found 28 artifacts (0.02%)
+[2026-02-08 15:37:40,176 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:40,176 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:40,218 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:40,652 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.25 Hz
+[2026-02-08 15:37:40,742 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:40,743 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:40,767 INFO dataset._process_single_channel] Channel T7: Found 9 artifacts (0.01%)
+[2026-02-08 15:37:40,815 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:40,816 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:40,871 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:41,339 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.21 Hz
+[2026-02-08 15:37:41,420 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:41,421 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:41,474 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:41,474 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:41,517 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:42,020 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:37:42,095 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:42,096 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:42,110 INFO dataset._process_single_channel] Channel T7: Found 5 artifacts (0.00%)
+[2026-02-08 15:37:42,136 INFO dataset._process_single_channel] Channel T8: Found 1 artifacts (0.00%)
+[2026-02-08 15:37:42,149 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:42,149 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:42,188 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:42,740 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.22 Hz
+[2026-02-08 15:37:42,831 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:42,831 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:42,873 INFO dataset._process_single_channel] Channel T8: Found 423 artifacts (0.28%)
+[2026-02-08 15:37:43,122 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:43,122 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:43,156 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:43,545 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.59 Hz
+[2026-02-08 15:37:43,618 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:43,618 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:43,664 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:43,664 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:43,699 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:44,151 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.40 Hz
+[2026-02-08 15:37:44,230 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:44,230 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:44,246 INFO dataset._process_single_channel] Channel T7: Found 813 artifacts (0.53%)
+[2026-02-08 15:37:44,842 INFO dataset._process_single_channel] Channel T8: Found 10 artifacts (0.01%)
+[2026-02-08 15:37:44,869 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:44,869 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:44,913 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:45,482 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.65 Hz
+[2026-02-08 15:37:45,576 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:45,577 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:45,593 INFO dataset._process_single_channel] Channel T7: Found 423 artifacts (0.28%)
+[2026-02-08 15:37:45,900 INFO dataset._process_single_channel] Channel T8: Found 971 artifacts (0.63%)
+[2026-02-08 15:37:46,506 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:46,506 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:46,548 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:46,997 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.73 Hz
+[2026-02-08 15:37:47,072 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:47,074 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:47,127 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:47,127 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:47,165 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:47,660 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.65 Hz
+[2026-02-08 15:37:47,743 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:47,744 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:47,756 INFO dataset._process_single_channel] Channel T7: Found 131 artifacts (0.08%)
+[2026-02-08 15:37:47,863 INFO dataset._process_single_channel] Channel T8: Found 304 artifacts (0.19%)
+[2026-02-08 15:37:48,071 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:48,071 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:48,116 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:37:48,665 INFO dataset.verify_sampling_rate] Detected sampling rate: 497.71 Hz
+[2026-02-08 15:37:48,748 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:48,749 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:48,805 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:48,805 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:48,845 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:48,874 INFO dataset.__init__] Built index with 1972 total chunks
+[2026-02-08 15:37:48,911 INFO dataset._log_file_discovery] Discovered 62 CANE files: {'normal': 18, 'anxiety': 18, 'depression': 1, 'anxiety-depression': 25} labels, {'eo': 62} conditions
+[2026-02-08 15:37:48,912 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:37:49,350 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.15 Hz
+[2026-02-08 15:37:49,500 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:49,501 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:49,514 INFO dataset._process_single_channel] Channel T7: Found 36 artifacts (0.02%)
+[2026-02-08 15:37:49,559 INFO dataset._process_single_channel] Channel T8: Found 16 artifacts (0.01%)
+[2026-02-08 15:37:49,580 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:49,581 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:49,627 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:50,122 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.06 Hz
+[2026-02-08 15:37:50,203 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:50,204 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:50,248 INFO dataset._process_single_channel] Channel T8: Found 67 artifacts (0.04%)
+[2026-02-08 15:37:50,307 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:50,308 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:50,353 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:51,059 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.81 Hz
+[2026-02-08 15:37:51,183 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:51,187 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:51,211 INFO dataset._process_single_channel] Channel T7: Found 546 artifacts (0.34%)
+[2026-02-08 15:37:51,704 INFO dataset._process_single_channel] Channel T8: Found 9 artifacts (0.01%)
+[2026-02-08 15:37:51,727 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:51,728 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:51,788 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 1, 5000])
+[2026-02-08 15:37:52,337 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.86 Hz
+[2026-02-08 15:37:52,426 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:52,427 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:52,447 INFO dataset._process_single_channel] Channel T7: Found 603 artifacts (0.39%)
+[2026-02-08 15:37:52,869 INFO dataset._process_single_channel] Channel T8: Found 1430 artifacts (0.93%)
+[2026-02-08 15:37:53,716 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:53,717 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:53,754 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:37:54,278 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.24 Hz
+[2026-02-08 15:37:54,374 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:54,375 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:54,391 INFO dataset._process_single_channel] Channel T7: Found 161 artifacts (0.13%)
+[2026-02-08 15:37:54,578 INFO dataset._process_single_channel] Channel T8: Found 29 artifacts (0.02%)
+[2026-02-08 15:37:54,620 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:54,621 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:54,672 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:37:55,321 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.51 Hz
+[2026-02-08 15:37:55,412 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:55,412 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:55,430 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:37:55,461 INFO dataset._process_single_channel] Channel T8: Found 5 artifacts (0.00%)
+[2026-02-08 15:37:55,482 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:55,483 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:55,545 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:37:56,120 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.47 Hz
+[2026-02-08 15:37:56,220 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:56,221 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:56,241 INFO dataset._process_single_channel] Channel T7: Found 737 artifacts (0.57%)
+[2026-02-08 15:37:56,839 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:56,839 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:56,878 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:37:57,313 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.23 Hz
+[2026-02-08 15:37:57,393 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:57,394 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:57,409 INFO dataset._process_single_channel] Channel T7: Found 31 artifacts (0.02%)
+[2026-02-08 15:37:57,448 INFO dataset._process_single_channel] Channel T8: Found 177 artifacts (0.14%)
+[2026-02-08 15:37:57,592 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:57,592 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:57,629 INFO dataset.load_and_preprocess_cane_raw_file] Created 26 chunks of shape torch.Size([26, 1, 5000])
+[2026-02-08 15:37:58,131 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.20 Hz
+[2026-02-08 15:37:58,218 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:58,219 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:58,237 INFO dataset._process_single_channel] Channel T7: Found 3 artifacts (0.00%)
+[2026-02-08 15:37:58,270 INFO dataset._process_single_channel] Channel T8: Found 322 artifacts (0.25%)
+[2026-02-08 15:37:58,521 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:58,521 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:58,570 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:37:59,221 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.28 Hz
+[2026-02-08 15:37:59,305 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:37:59,306 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:37:59,319 INFO dataset._process_single_channel] Channel T7: Found 14 artifacts (0.01%)
+[2026-02-08 15:37:59,361 INFO dataset._process_single_channel] Channel T8: Found 4 artifacts (0.00%)
+[2026-02-08 15:37:59,381 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:37:59,381 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:37:59,428 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:00,023 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.55 Hz
+[2026-02-08 15:38:00,132 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:00,133 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:00,155 INFO dataset._process_single_channel] Channel T7: Found 2366 artifacts (1.10%)
+[2026-02-08 15:38:01,673 INFO dataset._process_single_channel] Channel T8: Found 1493 artifacts (0.70%)
+[2026-02-08 15:38:02,487 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:02,487 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:02,532 INFO dataset.load_and_preprocess_cane_raw_file] Created 42 chunks of shape torch.Size([42, 1, 5000])
+[2026-02-08 15:38:02,932 INFO dataset.verify_sampling_rate] Detected sampling rate: 491.57 Hz
+[2026-02-08 15:38:03,001 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:03,002 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:03,014 INFO dataset._process_single_channel] Channel T7: Found 964 artifacts (0.64%)
+[2026-02-08 15:38:03,636 INFO dataset._process_single_channel] Channel T8: Found 995 artifacts (0.66%)
+[2026-02-08 15:38:04,483 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:04,484 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:04,541 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:05,073 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.57 Hz
+[2026-02-08 15:38:05,152 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:05,153 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:05,206 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:05,207 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:05,249 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:05,698 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.69 Hz
+[2026-02-08 15:38:05,778 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:05,779 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:05,795 INFO dataset._process_single_channel] Channel T7: Found 6 artifacts (0.00%)
+[2026-02-08 15:38:05,825 INFO dataset._process_single_channel] Channel T8: Found 5 artifacts (0.00%)
+[2026-02-08 15:38:05,841 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:05,842 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:05,883 INFO dataset.load_and_preprocess_cane_raw_file] Created 34 chunks of shape torch.Size([34, 1, 5000])
+[2026-02-08 15:38:06,328 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:38:06,400 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:06,401 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:06,415 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:06,454 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:06,454 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:06,490 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:06,885 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.94 Hz
+[2026-02-08 15:38:06,985 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:06,985 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:07,001 INFO dataset._process_single_channel] Channel T7: Found 22 artifacts (0.01%)
+[2026-02-08 15:38:07,044 INFO dataset._process_single_channel] Channel T8: Found 20 artifacts (0.01%)
+[2026-02-08 15:38:07,073 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:07,073 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:07,119 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:38:07,550 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:38:07,623 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:07,624 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:07,670 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:07,670 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:07,710 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:08,113 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.71 Hz
+[2026-02-08 15:38:08,187 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:08,188 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:08,243 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:08,243 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:08,284 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:08,699 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.29 Hz
+[2026-02-08 15:38:08,770 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:08,771 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:08,785 INFO dataset._process_single_channel] Channel T7: Found 122 artifacts (0.08%)
+[2026-02-08 15:38:08,879 INFO dataset._process_single_channel] Channel T8: Found 237 artifacts (0.15%)
+[2026-02-08 15:38:09,015 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:09,015 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:09,050 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:09,499 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.93 Hz
+[2026-02-08 15:38:09,569 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:09,570 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:09,585 INFO dataset._process_single_channel] Channel T7: Found 3333 artifacts (2.05%)
+[2026-02-08 15:38:11,382 INFO dataset._process_single_channel] Channel T8: Found 1994 artifacts (1.23%)
+[2026-02-08 15:38:12,393 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:12,393 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:12,428 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 1, 5000])
+[2026-02-08 15:38:12,760 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.64 Hz
+[2026-02-08 15:38:12,822 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:12,823 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:12,834 INFO dataset._process_single_channel] Channel T7: Found 1 artifacts (0.00%)
+[2026-02-08 15:38:12,857 INFO dataset._process_single_channel] Channel T8: Found 34 artifacts (0.02%)
+[2026-02-08 15:38:12,885 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:12,885 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:12,918 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:13,302 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.64 Hz
+[2026-02-08 15:38:13,370 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:13,370 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:13,384 INFO dataset._process_single_channel] Channel T7: Found 11 artifacts (0.01%)
+[2026-02-08 15:38:13,414 INFO dataset._process_single_channel] Channel T8: Found 1632 artifacts (1.01%)
+[2026-02-08 15:38:14,599 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:14,600 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:14,639 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 1, 5000])
+[2026-02-08 15:38:15,051 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.79 Hz
+[2026-02-08 15:38:15,131 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:15,132 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:15,182 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:15,182 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:15,225 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:38:15,642 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.56 Hz
+[2026-02-08 15:38:15,712 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:15,713 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:15,725 INFO dataset._process_single_channel] Channel T7: Found 233 artifacts (0.15%)
+[2026-02-08 15:38:15,883 INFO dataset._process_single_channel] Channel T8: Found 2165 artifacts (1.41%)
+[2026-02-08 15:38:17,233 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:17,234 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:17,271 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:17,655 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.69 Hz
+[2026-02-08 15:38:17,726 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:17,727 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:17,768 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:17,768 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:17,800 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:38:18,189 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.32 Hz
+[2026-02-08 15:38:18,268 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:18,269 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:18,299 INFO dataset._process_single_channel] Channel T8: Found 108 artifacts (0.08%)
+[2026-02-08 15:38:18,380 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:18,381 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:18,415 INFO dataset.load_and_preprocess_cane_raw_file] Created 25 chunks of shape torch.Size([25, 1, 5000])
+[2026-02-08 15:38:18,803 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.57 Hz
+[2026-02-08 15:38:18,873 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:18,874 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:18,921 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:18,921 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:18,962 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:38:19,431 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.50 Hz
+[2026-02-08 15:38:19,517 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:19,518 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:19,571 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:19,571 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:19,613 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 1, 5000])
+[2026-02-08 15:38:20,114 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.62 Hz
+[2026-02-08 15:38:20,194 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:20,194 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:20,211 INFO dataset._process_single_channel] Channel T7: Found 537 artifacts (0.29%)
+[2026-02-08 15:38:20,499 INFO dataset._process_single_channel] Channel T8: Found 663 artifacts (0.36%)
+[2026-02-08 15:38:20,856 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:20,856 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:20,899 INFO dataset.load_and_preprocess_cane_raw_file] Created 37 chunks of shape torch.Size([37, 1, 5000])
+[2026-02-08 15:38:21,411 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.70 Hz
+[2026-02-08 15:38:21,511 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:21,512 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:21,532 INFO dataset._process_single_channel] Channel T7: Found 1385 artifacts (0.63%)
+[2026-02-08 15:38:22,348 INFO dataset._process_single_channel] Channel T8: Found 186 artifacts (0.09%)
+[2026-02-08 15:38:22,458 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:22,459 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:22,506 INFO dataset.load_and_preprocess_cane_raw_file] Created 43 chunks of shape torch.Size([43, 1, 5000])
+[2026-02-08 15:38:22,930 INFO dataset.verify_sampling_rate] Detected sampling rate: 497.74 Hz
+[2026-02-08 15:38:23,019 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:23,019 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:23,074 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:23,074 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:23,121 INFO dataset.load_and_preprocess_cane_raw_file] Created 38 chunks of shape torch.Size([38, 1, 5000])
+[2026-02-08 15:38:23,489 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.84 Hz
+[2026-02-08 15:38:23,561 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:23,561 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:23,577 INFO dataset._process_single_channel] Channel T7: Found 1209 artifacts (0.73%)
+[2026-02-08 15:38:24,349 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:24,349 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:24,384 INFO dataset.load_and_preprocess_cane_raw_file] Created 33 chunks of shape torch.Size([33, 1, 5000])
+[2026-02-08 15:38:24,781 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.26 Hz
+[2026-02-08 15:38:24,886 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:24,887 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:24,962 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:24,963 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:25,029 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:25,551 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.30 Hz
+[2026-02-08 15:38:25,655 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:25,656 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:25,714 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:25,714 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:25,758 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:26,271 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.70 Hz
+[2026-02-08 15:38:26,356 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:26,357 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:26,373 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:26,402 INFO dataset._process_single_channel] Channel T8: Found 7 artifacts (0.00%)
+[2026-02-08 15:38:26,421 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:26,422 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:26,465 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:38:26,850 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.82 Hz
+[2026-02-08 15:38:26,967 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:26,969 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:27,039 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:27,039 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:27,095 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:27,588 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.52 Hz
+[2026-02-08 15:38:27,707 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:27,708 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:27,726 INFO dataset._process_single_channel] Channel T7: Found 7 artifacts (0.00%)
+[2026-02-08 15:38:27,768 INFO dataset._process_single_channel] Channel T8: Found 3058 artifacts (2.00%)
+[2026-02-08 15:38:29,414 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:29,414 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:29,445 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:29,736 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.49 Hz
+[2026-02-08 15:38:29,796 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:29,796 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:29,809 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:29,836 INFO dataset._process_single_channel] Channel T8: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:29,852 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:29,852 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:29,883 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:30,262 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.36 Hz
+[2026-02-08 15:38:30,330 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:30,330 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:30,345 INFO dataset._process_single_channel] Channel T7: Found 505 artifacts (0.29%)
+[2026-02-08 15:38:30,642 INFO dataset._process_single_channel] Channel T8: Found 4115 artifacts (2.37%)
+[2026-02-08 15:38:32,881 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:32,881 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:32,926 INFO dataset.load_and_preprocess_cane_raw_file] Created 34 chunks of shape torch.Size([34, 1, 5000])
+[2026-02-08 15:38:33,263 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.29 Hz
+[2026-02-08 15:38:33,332 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:33,333 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:33,370 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:33,370 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:33,403 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:33,771 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.44 Hz
+[2026-02-08 15:38:33,842 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:33,842 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:33,856 INFO dataset._process_single_channel] Channel T7: Found 2170 artifacts (1.25%)
+[2026-02-08 15:38:35,008 INFO dataset._process_single_channel] Channel T8: Found 2457 artifacts (1.42%)
+[2026-02-08 15:38:36,578 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:36,578 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:36,627 INFO dataset.load_and_preprocess_cane_raw_file] Created 34 chunks of shape torch.Size([34, 1, 5000])
+[2026-02-08 15:38:37,175 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.75 Hz
+[2026-02-08 15:38:37,273 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:37,274 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:37,289 INFO dataset._process_single_channel] Channel T7: Found 424 artifacts (0.26%)
+[2026-02-08 15:38:37,599 INFO dataset._process_single_channel] Channel T8: Found 558 artifacts (0.35%)
+[2026-02-08 15:38:37,978 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:37,978 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:38,028 INFO dataset.load_and_preprocess_cane_raw_file] Created 32 chunks of shape torch.Size([32, 1, 5000])
+[2026-02-08 15:38:38,497 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.42 Hz
+[2026-02-08 15:38:38,584 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:38,584 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:38,596 INFO dataset._process_single_channel] Channel T7: Found 263 artifacts (0.17%)
+[2026-02-08 15:38:38,788 INFO dataset._process_single_channel] Channel T8: Found 246 artifacts (0.16%)
+[2026-02-08 15:38:38,941 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:38,941 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:38,975 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:39,420 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.65 Hz
+[2026-02-08 15:38:39,487 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:39,487 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:39,504 INFO dataset._process_single_channel] Channel T7: Found 8 artifacts (0.01%)
+[2026-02-08 15:38:39,534 INFO dataset._process_single_channel] Channel T8: Found 35 artifacts (0.02%)
+[2026-02-08 15:38:39,564 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:39,564 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:39,604 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:38:40,106 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.34 Hz
+[2026-02-08 15:38:40,181 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:40,182 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:40,230 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:40,231 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:40,270 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:40,709 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.43 Hz
+[2026-02-08 15:38:40,780 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:40,780 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:40,792 INFO dataset._process_single_channel] Channel T7: Found 1477 artifacts (0.96%)
+[2026-02-08 15:38:41,625 INFO dataset._process_single_channel] Channel T8: Found 1489 artifacts (0.97%)
+[2026-02-08 15:38:42,443 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:42,444 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:42,490 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:42,971 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.89 Hz
+[2026-02-08 15:38:43,052 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:43,053 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:43,111 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:43,112 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:43,151 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:38:43,648 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.71 Hz
+[2026-02-08 15:38:43,720 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:43,720 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:43,764 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:43,765 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:43,801 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:44,560 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.61 Hz
+[2026-02-08 15:38:44,672 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:44,673 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:44,705 INFO dataset._process_single_channel] Channel T7: Found 1081 artifacts (0.43%)
+[2026-02-08 15:38:45,557 INFO dataset._process_single_channel] Channel T8: Found 422 artifacts (0.17%)
+[2026-02-08 15:38:45,958 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:45,958 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:46,021 INFO dataset.load_and_preprocess_cane_raw_file] Created 50 chunks of shape torch.Size([50, 1, 5000])
+[2026-02-08 15:38:46,423 INFO dataset.verify_sampling_rate] Detected sampling rate: 494.10 Hz
+[2026-02-08 15:38:46,488 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:46,489 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:46,503 INFO dataset._process_single_channel] Channel T7: Found 454 artifacts (0.30%)
+[2026-02-08 15:38:46,765 INFO dataset._process_single_channel] Channel T8: Found 154 artifacts (0.10%)
+[2026-02-08 15:38:46,858 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:46,858 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:46,892 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:47,305 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.55 Hz
+[2026-02-08 15:38:47,376 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:47,377 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:47,390 INFO dataset._process_single_channel] Channel T7: Found 56 artifacts (0.03%)
+[2026-02-08 15:38:47,450 INFO dataset._process_single_channel] Channel T8: Found 61 artifacts (0.03%)
+[2026-02-08 15:38:47,510 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:47,511 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:47,554 INFO dataset.load_and_preprocess_cane_raw_file] Created 35 chunks of shape torch.Size([35, 1, 5000])
+[2026-02-08 15:38:48,026 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.58 Hz
+[2026-02-08 15:38:48,106 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:48,107 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:48,123 INFO dataset._process_single_channel] Channel T7: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:48,154 INFO dataset._process_single_channel] Channel T8: Found 4 artifacts (0.00%)
+[2026-02-08 15:38:48,169 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:48,170 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:48,218 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:48,744 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.33 Hz
+[2026-02-08 15:38:48,831 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:48,832 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:48,844 INFO dataset._process_single_channel] Channel T7: Found 1518 artifacts (0.99%)
+[2026-02-08 15:38:49,702 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:49,702 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:49,734 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:50,127 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.25 Hz
+[2026-02-08 15:38:50,203 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:50,204 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:50,262 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:50,262 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:50,298 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:50,758 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.74 Hz
+[2026-02-08 15:38:50,841 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:50,841 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:50,856 INFO dataset._process_single_channel] Channel T7: Found 6 artifacts (0.00%)
+[2026-02-08 15:38:50,908 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:50,909 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:50,955 INFO dataset.load_and_preprocess_cane_raw_file] Created 35 chunks of shape torch.Size([35, 1, 5000])
+[2026-02-08 15:38:51,460 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.29 Hz
+[2026-02-08 15:38:51,553 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:51,554 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:51,614 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:51,614 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:51,651 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:52,169 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.68 Hz
+[2026-02-08 15:38:52,251 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:52,251 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:52,264 INFO dataset._process_single_channel] Channel T7: Found 158 artifacts (0.10%)
+[2026-02-08 15:38:52,405 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:52,405 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:52,463 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:53,002 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.50 Hz
+[2026-02-08 15:38:53,102 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:53,103 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:53,141 INFO dataset._process_single_channel] Channel T8: Found 911 artifacts (0.59%)
+[2026-02-08 15:38:53,714 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:53,714 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:53,746 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:54,186 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.78 Hz
+[2026-02-08 15:38:54,277 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:54,278 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:54,294 INFO dataset._process_single_channel] Channel T7: Found 3 artifacts (0.00%)
+[2026-02-08 15:38:54,324 INFO dataset._process_single_channel] Channel T8: Found 163 artifacts (0.10%)
+[2026-02-08 15:38:54,436 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:54,436 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:54,472 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:38:54,886 INFO dataset.verify_sampling_rate] Detected sampling rate: 499.89 Hz
+[2026-02-08 15:38:54,958 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:54,959 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:55,003 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:55,003 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:55,042 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:55,439 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.86 Hz
+[2026-02-08 15:38:55,512 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:55,513 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:55,547 INFO dataset._process_single_channel] Channel T8: Found 24 artifacts (0.02%)
+[2026-02-08 15:38:55,569 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:55,570 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:55,611 INFO dataset.load_and_preprocess_cane_raw_file] Created 31 chunks of shape torch.Size([31, 1, 5000])
+[2026-02-08 15:38:55,988 INFO dataset.verify_sampling_rate] Detected sampling rate: 498.88 Hz
+[2026-02-08 15:38:56,048 INFO dataset.load_and_preprocess_cane_raw_file] Applied Common Average Reference
+[2026-02-08 15:38:56,049 INFO dataset.load_and_preprocess_cane_raw_file] Computing in-ear bipolar derivation (T8 - T7)
+[2026-02-08 15:38:56,058 INFO dataset._process_single_channel] Channel T7: Found 359 artifacts (0.23%)
+[2026-02-08 15:38:56,256 INFO dataset._process_single_channel] Channel T8: Found 6 artifacts (0.00%)
+[2026-02-08 15:38:56,268 INFO dataset.load_and_preprocess_cane_raw_file] Using sampling rate: 500 Hz
+[2026-02-08 15:38:56,268 INFO dataset.load_and_preprocess_cane_raw_file] Chunk size: 5000 samples (10s)
+[2026-02-08 15:38:56,303 INFO dataset.load_and_preprocess_cane_raw_file] Created 30 chunks of shape torch.Size([30, 1, 5000])
+[2026-02-08 15:38:56,323 INFO dataset.__init__] Built index with 1929 total chunks
+[2026-02-08 15:38:56,347 INFO dataset._log_file_discovery] Discovered 21 AX_MALIK files: {'AX': 21} labels, {'EC': 21} conditions
+[2026-02-08 15:38:56,347 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:39:01,523 INFO dataset.__init__] Built index with 252 total chunks
+[2026-02-08 15:39:01,532 INFO dataset._log_file_discovery] Discovered 21 AX_MALIK files: {'AX': 21} labels, {'EO': 21} conditions
+[2026-02-08 15:39:01,532 INFO dataset.__init__] Building chunk index for FlattenedSpectrogramDataset...
+[2026-02-08 15:39:05,626 INFO dataset.__init__] Built index with 252 total chunks
+[2026-02-08 15:39:05,635 INFO data_preparation.create_balanced_folds] Created 6 balanced folds:
+[2026-02-08 15:39:05,635 INFO data_preparation.create_balanced_folds]   Normal subjects per fold: ~15.5
+[2026-02-08 15:39:05,635 INFO data_preparation.create_balanced_folds]   Anxiety subjects per fold: ~13.0
+[2026-02-08 15:39:05,635 INFO data_preparation.create_balanced_folds]   Depression subjects per fold: ~10.7
+[2026-02-08 15:39:05,635 INFO data_preparation.create_balanced_folds]   Anxiety+Depression subjects per fold: ~8.5
+[2026-02-08 15:39:05,636 INFO main.train_cross_validation] Created 6 balanced folds with subjects from MDD, CANE, and AX_MALIK datasets
+[2026-02-08 15:39:05,636 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 15:39:05,636 INFO main.train_cross_validation] FOLD 1/6
+[2026-02-08 15:39:05,636 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 15:39:05,636 INFO data_preparation.get_datasets_for_fold] Train subjects (231): ['mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO', 'cane:AXDEP S1100 EO', 'cane:AXDEP S1100 EC', 'cane:AXDEP S1052 EC', 'cane:AXDEP S1052 EO', 'cane:AXDEP S1038 EC', 'cane:AXDEP S1038 EO', 'mdd:H S13 EC', 'mdd:H S13 EO', 'mdd:H S16 EO', 'mdd:H S16 EC', 'mdd:H S11 EO', 'mdd:H S11 EC', 'mdd:H S19 EC', 'mdd:H S19 EO', 'mdd:H S27 EC', 'mdd:H S27 EO', 'cane:H S1008 EO', 'cane:H S1008 EC', 'cane:H S1028 EC', 'cane:H S1096 EO', 'cane:H S1096 EC', 'cane:AX S1087 EC', 'cane:AX S1087 EO', 'cane:AX S1027 EO', 'cane:AX S1027 EC', 'cane:AX S1007 EC', 'cane:AX S1007 EO', 'ax_malik:AX S13 EC', 'ax_malik:AX S13 EO', 'ax_malik:AX S10 EC', 'ax_malik:AX S10 EO', 'ax_malik:AX S2 EC', 'ax_malik:AX S2 EO', 'ax_malik:AX S12 EC', 'ax_malik:AX S12 EO', 'mdd:MDD S15 EO', 'mdd:MDD S15 EC', 'mdd:MDD S21 EC', 'mdd:MDD S21 EO', 'mdd:MDD S4 EO', 'mdd:MDD S6 EC', 'mdd:MDD S6 EO', 'mdd:MDD S9 EO', 'mdd:MDD S9 EC', 'mdd:MDD S1 EC', 'mdd:MDD S1 EO', 'cane:AXDEP S1094 EC', 'cane:AXDEP S1094 EO', 'cane:AXDEP S1034 EC', 'cane:AXDEP S1034 EO', 'cane:AXDEP S1019 EO', 'cane:AXDEP S1019 EC', 'cane:AXDEP S0042 EO', 'cane:AXDEP S0042 EC', 'mdd:H S9 EC']...
+[2026-02-08 15:39:05,636 INFO data_preparation.get_datasets_for_fold] Val subjects (55): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO']
+[2026-02-08 15:39:05,640 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2916, CANE=3080, AX_MALIK=408, Total=6404
+[2026-02-08 15:39:05,640 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=619, CANE=821, AX_MALIK=96, Total=1536
+[2026-02-08 15:41:24,856 INFO main.train_cross_validation] Fold 1 | Class weights | tensor([1.4112, 0.7744])
+[2026-02-08 15:41:24,884 INFO model.__init__] Initialized LSTM with input_size=864, hidden_size=64, batch_first=True
+[2026-02-08 15:41:27,791 INFO main.train_one_fold] Starting training for fold 1
+[2026-02-08 15:46:46,228 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.6589, subject=0.6909, combined=0.4552)
+[2026-02-08 15:46:46,230 INFO early_stopping.__call__] Early stopping initialized: best score 0.6589 at epoch 1
+[2026-02-08 15:52:14,755 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.7474, subject=0.7091, combined=0.5300)
+[2026-02-08 15:52:14,764 INFO early_stopping.__call__] Validation improved from 0.6589 to 0.7474 (+0.0885) at epoch 2
+[2026-02-08 15:56:03,861 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.7650, subject=0.7636, combined=0.5842)
+[2026-02-08 15:56:03,861 INFO early_stopping.__call__] Validation improved from 0.7474 to 0.7650 (+0.0176) at epoch 3
+[2026-02-08 15:59:53,961 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8021, subject=0.8364, combined=0.6708)
+[2026-02-08 15:59:53,961 INFO early_stopping.__call__] Validation improved from 0.7650 to 0.8021 (+0.0371) at epoch 4
+[2026-02-08 16:07:30,447 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8112, subject=0.8545, combined=0.6932)
+[2026-02-08 16:07:30,447 INFO early_stopping.__call__] Validation improved from 0.8021 to 0.8112 (+0.0091) at epoch 6
+[2026-02-08 16:10:59,346 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8164, subject=0.8545, combined=0.6977)
+[2026-02-08 16:10:59,354 INFO early_stopping.__call__] Validation improved from 0.8112 to 0.8164 (+0.0052) at epoch 7
+[2026-02-08 16:17:49,750 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8177, subject=0.8545, combined=0.6988)
+[2026-02-08 16:17:49,801 INFO early_stopping.__call__] Validation improved from 0.8164 to 0.8177 (+0.0013) at epoch 9
+[2026-02-08 16:21:13,556 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8216, subject=0.8545, combined=0.7021)
+[2026-02-08 16:21:13,556 INFO early_stopping.__call__] Validation improved from 0.8177 to 0.8216 (+0.0039) at epoch 10
+[2026-02-08 16:24:42,048 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8229, subject=0.8545, combined=0.7032)
+[2026-02-08 16:24:42,048 INFO early_stopping.__call__] Validation improved from 0.8216 to 0.8229 (+0.0013) at epoch 11
+[2026-02-08 16:31:41,254 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8353, subject=0.8545, combined=0.7138)
+[2026-02-08 16:31:41,306 INFO early_stopping.__call__] Validation improved from 0.8229 to 0.8353 (+0.0124) at epoch 13
+[2026-02-08 16:38:38,650 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8451, subject=0.8727, combined=0.7375)
+[2026-02-08 16:38:38,651 INFO early_stopping.__call__] Validation improved from 0.8353 to 0.8451 (+0.0098) at epoch 15
+[2026-02-08 16:42:09,748 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_1_best.pth (chunk=0.8470, subject=0.8727, combined=0.7392)
+[2026-02-08 16:42:09,757 INFO early_stopping.__call__] Validation improved from 0.8451 to 0.8470 (+0.0020) at epoch 16
+[2026-02-08 18:02:02,162 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8470 at epoch 16
+[2026-02-08 18:02:02,212 INFO main.train_one_fold] Early stopping triggered at epoch 36
+[2026-02-08 18:02:02,212 INFO main.train_one_fold] 
+Fold 1 training completed. Best Chunk Val Acc: 0.8470 at epoch 16
+[2026-02-08 18:02:02,212 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 18:02:02,213 INFO main.train_cross_validation] FOLD 2/6
+[2026-02-08 18:02:02,213 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 18:02:02,213 INFO data_preparation.get_datasets_for_fold] Train subjects (235): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S13 EC', 'mdd:H S13 EO', 'mdd:H S16 EO', 'mdd:H S16 EC', 'mdd:H S11 EO', 'mdd:H S11 EC', 'mdd:H S19 EC', 'mdd:H S19 EO', 'mdd:H S27 EC', 'mdd:H S27 EO', 'cane:H S1008 EO', 'cane:H S1008 EC', 'cane:H S1028 EC', 'cane:H S1096 EO', 'cane:H S1096 EC', 'cane:AX S1087 EC', 'cane:AX S1087 EO', 'cane:AX S1027 EO', 'cane:AX S1027 EC', 'cane:AX S1007 EC', 'cane:AX S1007 EO', 'ax_malik:AX S13 EC', 'ax_malik:AX S13 EO', 'ax_malik:AX S10 EC', 'ax_malik:AX S10 EO', 'ax_malik:AX S2 EC', 'ax_malik:AX S2 EO', 'ax_malik:AX S12 EC', 'ax_malik:AX S12 EO', 'mdd:MDD S15 EO', 'mdd:MDD S15 EC', 'mdd:MDD S21 EC', 'mdd:MDD S21 EO', 'mdd:MDD S4 EO', 'mdd:MDD S6 EC', 'mdd:MDD S6 EO', 'mdd:MDD S9 EO', 'mdd:MDD S9 EC', 'mdd:MDD S1 EC', 'mdd:MDD S1 EO', 'cane:AXDEP S1094 EC', 'cane:AXDEP S1094 EO', 'cane:AXDEP S1034 EC', 'cane:AXDEP S1034 EO', 'cane:AXDEP S1019 EO']...
+[2026-02-08 18:02:02,244 INFO data_preparation.get_datasets_for_fold] Val subjects (51): ['mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO', 'cane:AXDEP S1100 EO', 'cane:AXDEP S1100 EC', 'cane:AXDEP S1052 EC', 'cane:AXDEP S1052 EO', 'cane:AXDEP S1038 EC', 'cane:AXDEP S1038 EO']
+[2026-02-08 18:02:02,250 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2904, CANE=3255, AX_MALIK=408, Total=6567
+[2026-02-08 18:02:02,250 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=631, CANE=646, AX_MALIK=96, Total=1373
+[2026-02-08 18:03:57,678 INFO main.train_cross_validation] Fold 2 | Class weights | tensor([1.3955, 0.7792])
+[2026-02-08 18:03:57,693 INFO model.__init__] Initialized LSTM with input_size=864, hidden_size=64, batch_first=True
+[2026-02-08 18:03:57,696 INFO main.train_one_fold] Starting training for fold 2
+[2026-02-08 18:07:23,149 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_2_best.pth (chunk=0.6788, subject=0.7059, combined=0.4792)
+[2026-02-08 18:07:23,149 INFO early_stopping.__call__] Early stopping initialized: best score 0.6788 at epoch 1
+[2026-02-08 18:10:51,053 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_2_best.pth (chunk=0.7822, subject=0.7059, combined=0.5522)
+[2026-02-08 18:10:51,053 INFO early_stopping.__call__] Validation improved from 0.6788 to 0.7822 (+0.1034) at epoch 2
+[2026-02-08 18:14:15,051 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_2_best.pth (chunk=0.8179, subject=0.7451, combined=0.6094)
+[2026-02-08 18:14:15,051 INFO early_stopping.__call__] Validation improved from 0.7822 to 0.8179 (+0.0357) at epoch 3
+[2026-02-08 18:17:39,844 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_2_best.pth (chunk=0.8500, subject=0.8627, combined=0.7333)
+[2026-02-08 18:17:39,845 INFO early_stopping.__call__] Validation improved from 0.8179 to 0.8500 (+0.0320) at epoch 4
+[2026-02-08 18:24:21,357 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_2_best.pth (chunk=0.8529, subject=0.8627, combined=0.7358)
+[2026-02-08 18:24:21,357 INFO early_stopping.__call__] Validation improved from 0.8500 to 0.8529 (+0.0029) at epoch 6
+[2026-02-08 18:31:14,151 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_2_best.pth (chunk=0.8704, subject=0.8824, combined=0.7680)
+[2026-02-08 18:31:14,151 INFO early_stopping.__call__] Validation improved from 0.8529 to 0.8704 (+0.0175) at epoch 8
+[2026-02-08 18:58:36,964 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_2_best.pth (chunk=0.8769, subject=0.9020, combined=0.7909)
+[2026-02-08 18:58:36,964 INFO early_stopping.__call__] Validation improved from 0.8704 to 0.8769 (+0.0066) at epoch 16
+[2026-02-08 20:12:54,566 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8769 at epoch 16
+[2026-02-08 20:12:54,567 INFO main.train_one_fold] Early stopping triggered at epoch 36
+[2026-02-08 20:12:54,567 INFO main.train_one_fold] 
+Fold 2 training completed. Best Chunk Val Acc: 0.8769 at epoch 16
+[2026-02-08 20:12:54,568 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 20:12:54,568 INFO main.train_cross_validation] FOLD 3/6
+[2026-02-08 20:12:54,568 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 20:12:54,572 INFO data_preparation.get_datasets_for_fold] Train subjects (238): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO']...
+[2026-02-08 20:12:54,572 INFO data_preparation.get_datasets_for_fold] Val subjects (48): ['mdd:H S13 EC', 'mdd:H S13 EO', 'mdd:H S16 EO', 'mdd:H S16 EC', 'mdd:H S11 EO', 'mdd:H S11 EC', 'mdd:H S19 EC', 'mdd:H S19 EO', 'mdd:H S27 EC', 'mdd:H S27 EO', 'cane:H S1008 EO', 'cane:H S1008 EC', 'cane:H S1028 EC', 'cane:H S1096 EO', 'cane:H S1096 EC', 'cane:AX S1087 EC', 'cane:AX S1087 EO', 'cane:AX S1027 EO', 'cane:AX S1027 EC', 'cane:AX S1007 EC', 'cane:AX S1007 EO', 'ax_malik:AX S13 EC', 'ax_malik:AX S13 EO', 'ax_malik:AX S10 EC', 'ax_malik:AX S10 EO', 'ax_malik:AX S2 EC', 'ax_malik:AX S2 EO', 'ax_malik:AX S12 EC', 'ax_malik:AX S12 EO', 'mdd:MDD S15 EO', 'mdd:MDD S15 EC', 'mdd:MDD S21 EC', 'mdd:MDD S21 EO', 'mdd:MDD S4 EO', 'mdd:MDD S6 EC', 'mdd:MDD S6 EO', 'mdd:MDD S9 EO', 'mdd:MDD S9 EC', 'mdd:MDD S1 EC', 'mdd:MDD S1 EO', 'cane:AXDEP S1094 EC', 'cane:AXDEP S1094 EO', 'cane:AXDEP S1034 EC', 'cane:AXDEP S1034 EO', 'cane:AXDEP S1019 EO', 'cane:AXDEP S1019 EC', 'cane:AXDEP S0042 EO', 'cane:AXDEP S0042 EC']
+[2026-02-08 20:12:54,648 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2904, CANE=3282, AX_MALIK=408, Total=6594
+[2026-02-08 20:12:54,648 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=631, CANE=619, AX_MALIK=96, Total=1346
+[2026-02-08 20:16:01,597 INFO main.train_cross_validation] Fold 3 | Class weights | tensor([1.4012, 0.7774])
+[2026-02-08 20:16:01,603 INFO model.__init__] Initialized LSTM with input_size=864, hidden_size=64, batch_first=True
+[2026-02-08 20:16:01,604 INFO main.train_one_fold] Starting training for fold 3
+[2026-02-08 20:21:26,949 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_3_best.pth (chunk=0.3276, subject=0.3125, combined=0.1024)
+[2026-02-08 20:21:26,949 INFO early_stopping.__call__] Early stopping initialized: best score 0.3276 at epoch 1
+[2026-02-08 20:26:54,458 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_3_best.pth (chunk=0.7504, subject=0.6875, combined=0.5159)
+[2026-02-08 20:26:54,459 INFO early_stopping.__call__] Validation improved from 0.3276 to 0.7504 (+0.4227) at epoch 2
+[2026-02-08 21:29:24,057 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_3_best.pth (chunk=0.7593, subject=0.7917, combined=0.6011)
+[2026-02-08 21:29:24,057 INFO early_stopping.__call__] Validation improved from 0.7504 to 0.7593 (+0.0089) at epoch 16
+[2026-02-08 23:02:58,459 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.7593 at epoch 16
+[2026-02-08 23:02:58,459 INFO main.train_one_fold] Early stopping triggered at epoch 36
+[2026-02-08 23:02:58,459 INFO main.train_one_fold] 
+Fold 3 training completed. Best Chunk Val Acc: 0.7593 at epoch 16
+[2026-02-08 23:02:58,459 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 23:02:58,460 INFO main.train_cross_validation] FOLD 4/6
+[2026-02-08 23:02:58,460 INFO main.train_cross_validation] ================================================================================
+[2026-02-08 23:02:58,460 INFO data_preparation.get_datasets_for_fold] Train subjects (242): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO']...
+[2026-02-08 23:02:58,460 INFO data_preparation.get_datasets_for_fold] Val subjects (44): ['mdd:H S9 EC', 'mdd:H S9 EO', 'mdd:H S28 EO', 'mdd:H S28 EC', 'mdd:H S6 EO', 'mdd:H S6 EC', 'mdd:H S25 EC', 'mdd:H S2 EC', 'mdd:H S2 EO', 'cane:H S1022 EC', 'cane:H S1022 EO', 'cane:H S0012 EO', 'cane:H S0012 EC', 'cane:H S1085 EC', 'cane:H S1085 EO', 'cane:AX S0074 EO', 'cane:AX S0074 EC', 'cane:AX S0056 EO', 'cane:AX S0056 EC', 'cane:AX S1050 EC', 'cane:AX S1050 EO', 'ax_malik:AX S8 EO', 'ax_malik:AX S8 EC', 'ax_malik:AX S17 EO', 'ax_malik:AX S17 EC', 'ax_malik:AX S18 EC', 'ax_malik:AX S18 EO', 'mdd:MDD S5 EC', 'mdd:MDD S5 EO', 'mdd:MDD S10 EO', 'mdd:MDD S10 EC', 'mdd:MDD S33 EC', 'mdd:MDD S33 EO', 'mdd:MDD S22 EO', 'mdd:MDD S22 EC', 'mdd:MDD S16 EO', 'cane:AXDEP S0076 EC', 'cane:AXDEP S0076 EO', 'cane:AXDEP S0039 EC', 'cane:AXDEP S0039 EO', 'cane:AXDEP S1089 EO', 'cane:AXDEP S1089 EC', 'cane:AXDEP S0026 EO', 'cane:AXDEP S0026 EC']
+[2026-02-08 23:02:58,468 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2994, CANE=3280, AX_MALIK=432, Total=6706
+[2026-02-08 23:02:58,468 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=541, CANE=621, AX_MALIK=72, Total=1234
+[2026-02-08 23:03:56,674 INFO main.train_cross_validation] Fold 4 | Class weights | tensor([1.4354, 0.7673])
+[2026-02-08 23:03:56,678 INFO model.__init__] Initialized LSTM with input_size=864, hidden_size=64, batch_first=True
+[2026-02-08 23:03:56,679 INFO main.train_one_fold] Starting training for fold 4
+[2026-02-08 23:06:09,957 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_4_best.pth (chunk=0.3809, subject=0.3409, combined=0.1298)
+[2026-02-08 23:06:09,957 INFO early_stopping.__call__] Early stopping initialized: best score 0.3809 at epoch 1
+[2026-02-08 23:08:25,846 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_4_best.pth (chunk=0.7083, subject=0.6818, combined=0.4829)
+[2026-02-08 23:08:25,846 INFO early_stopping.__call__] Validation improved from 0.3809 to 0.7083 (+0.3274) at epoch 2
+[2026-02-08 23:10:40,589 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_4_best.pth (chunk=0.7358, subject=0.7500, combined=0.5519)
+[2026-02-08 23:10:40,589 INFO early_stopping.__call__] Validation improved from 0.7083 to 0.7358 (+0.0276) at epoch 3
+[2026-02-08 23:12:53,757 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_4_best.pth (chunk=0.7480, subject=0.7727, combined=0.5780)
+[2026-02-08 23:12:53,757 INFO early_stopping.__call__] Validation improved from 0.7358 to 0.7480 (+0.0122) at epoch 4
+[2026-02-08 23:15:09,359 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_4_best.pth (chunk=0.7634, subject=0.7955, combined=0.6072)
+[2026-02-08 23:15:09,359 INFO early_stopping.__call__] Validation improved from 0.7480 to 0.7634 (+0.0154) at epoch 5
+[2026-02-08 23:17:23,644 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_4_best.pth (chunk=0.7739, subject=0.7955, combined=0.6156)
+[2026-02-08 23:17:23,645 INFO early_stopping.__call__] Validation improved from 0.7634 to 0.7739 (+0.0105) at epoch 6
+[2026-02-09 00:03:03,753 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.7739 at epoch 6
+[2026-02-09 00:03:03,753 INFO main.train_one_fold] Early stopping triggered at epoch 26
+[2026-02-09 00:03:03,753 INFO main.train_one_fold] 
+Fold 4 training completed. Best Chunk Val Acc: 0.7739 at epoch 6
+[2026-02-09 00:03:03,753 INFO main.train_cross_validation] ================================================================================
+[2026-02-09 00:03:03,754 INFO main.train_cross_validation] FOLD 5/6
+[2026-02-09 00:03:03,754 INFO main.train_cross_validation] ================================================================================
+[2026-02-09 00:03:03,754 INFO data_preparation.get_datasets_for_fold] Train subjects (241): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO']...
+[2026-02-09 00:03:03,754 INFO data_preparation.get_datasets_for_fold] Val subjects (45): ['mdd:H S12 EO', 'mdd:H S7 EO', 'mdd:H S7 EC', 'mdd:H S3 EO', 'mdd:H S3 EC', 'mdd:H S21 EC', 'mdd:H S21 EO', 'mdd:H S30 EO', 'mdd:H S30 EC', 'cane:H S1003 EO', 'cane:H S1003 EC', 'cane:H S0015 EO', 'cane:H S0015 EC', 'cane:H S0078 EO', 'cane:H S0078 EC', 'cane:AX S1024 EC', 'cane:AX S1024 EO', 'cane:AX S1005 EO', 'cane:AX S1005 EC', 'cane:AX S0072 EO', 'cane:AX S0072 EC', 'ax_malik:AX S19 EC', 'ax_malik:AX S19 EO', 'ax_malik:AX S15 EO', 'ax_malik:AX S15 EC', 'ax_malik:AX S6 EC', 'ax_malik:AX S6 EO', 'mdd:MDD S23 EO', 'mdd:MDD S23 EC', 'mdd:MDD S3 EC', 'mdd:MDD S3 EO', 'mdd:MDD S31 EC', 'mdd:MDD S31 EO', 'mdd:MDD S24 EC', 'mdd:MDD S24 EO', 'mdd:MDD S2 EC', 'mdd:MDD S2 EO', 'cane:AXDEP S0013 EC', 'cane:AXDEP S0013 EO', 'cane:AXDEP S1092 EC', 'cane:AXDEP S1092 EO', 'cane:AXDEP S0018 EO', 'cane:AXDEP S0018 EC', 'cane:AXDEP S1035 EO', 'cane:AXDEP S1035 EC']
+[2026-02-09 00:03:03,756 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2966, CANE=3278, AX_MALIK=432, Total=6676
+[2026-02-09 00:03:03,756 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=569, CANE=623, AX_MALIK=72, Total=1264
+[2026-02-09 00:04:04,855 INFO main.train_cross_validation] Fold 5 | Class weights | tensor([1.4271, 0.7697])
+[2026-02-09 00:04:04,858 INFO model.__init__] Initialized LSTM with input_size=864, hidden_size=64, batch_first=True
+[2026-02-09 00:04:04,859 INFO main.train_one_fold] Starting training for fold 5
+[2026-02-09 00:06:21,168 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_5_best.pth (chunk=0.7049, subject=0.6667, combined=0.4699)
+[2026-02-09 00:06:21,168 INFO early_stopping.__call__] Early stopping initialized: best score 0.7049 at epoch 1
+[2026-02-09 00:08:37,166 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_5_best.pth (chunk=0.7532, subject=0.7778, combined=0.5858)
+[2026-02-09 00:08:37,166 INFO early_stopping.__call__] Validation improved from 0.7049 to 0.7532 (+0.0483) at epoch 2
+[2026-02-09 00:54:21,160 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.7532 at epoch 2
+[2026-02-09 00:54:21,160 INFO main.train_one_fold] Early stopping triggered at epoch 22
+[2026-02-09 00:54:21,160 INFO main.train_one_fold] 
+Fold 5 training completed. Best Chunk Val Acc: 0.7532 at epoch 2
+[2026-02-09 00:54:21,160 INFO main.train_cross_validation] ================================================================================
+[2026-02-09 00:54:21,160 INFO main.train_cross_validation] FOLD 6/6
+[2026-02-09 00:54:21,160 INFO main.train_cross_validation] ================================================================================
+[2026-02-09 00:54:21,160 INFO data_preparation.get_datasets_for_fold] Train subjects (243): ['mdd:H S1 EC', 'mdd:H S1 EO', 'mdd:H S15 EC', 'mdd:H S14 EO', 'mdd:H S14 EC', 'mdd:H S23 EC', 'mdd:H S23 EO', 'mdd:H S29 EC', 'mdd:H S29 EO', 'cane:H S1054 EC', 'cane:H S1054 EO', 'cane:H S1095 EC', 'cane:H S1095 EO', 'cane:H S1033 EO', 'cane:H S1033 EC', 'cane:H S0079 EC', 'cane:H S0079 EO', 'cane:AX S1009 EO', 'cane:AX S1009 EC', 'cane:AX S1084 EO', 'cane:AX S1084 EC', 'cane:AX S0057 EO', 'cane:AX S0057 EC', 'ax_malik:AX S11 EO', 'ax_malik:AX S11 EC', 'ax_malik:AX S1 EO', 'ax_malik:AX S1 EC', 'ax_malik:AX S21 EC', 'ax_malik:AX S21 EO', 'ax_malik:AX S9 EC', 'ax_malik:AX S9 EO', 'mdd:MDD S25 EO', 'mdd:MDD S25 EC', 'mdd:MDD S19 EO', 'mdd:MDD S19 EC', 'mdd:MDD S30 EO', 'mdd:MDD S30 EC', 'mdd:MDD S29 EC', 'mdd:MDD S29 EO', 'mdd:MDD S28 EO', 'mdd:MDD S28 EC', 'mdd:MDD S14 EC', 'mdd:MDD S14 EO', 'cane:DEP S0016 EC', 'cane:DEP S0016 EO', 'cane:AXDEP S0075 EC', 'cane:AXDEP S0075 EO', 'cane:AXDEP S1046 EO', 'cane:AXDEP S1046 EC', 'cane:AXDEP S0044 EC', 'cane:AXDEP S0044 EO', 'cane:AXDEP S1032 EO', 'cane:AXDEP S1032 EC', 'cane:AXDEP S1029 EC', 'cane:AXDEP S1029 EO', 'mdd:H S4 EO', 'mdd:H S4 EC', 'mdd:H S18 EO', 'mdd:H S8 EC', 'mdd:H S8 EO', 'mdd:H S26 EO', 'mdd:H S26 EC', 'mdd:H S22 EC', 'mdd:H S22 EO', 'cane:H S1002 EC', 'cane:H S1002 EO', 'cane:H S1060 EO', 'cane:H S1060 EC', 'cane:H S1101 EO', 'cane:H S1101 EC', 'cane:AX S1006 EC', 'cane:AX S1006 EO', 'cane:AX S1065 EC', 'cane:AX S1065 EO', 'cane:AX S0041 EC', 'cane:AX S0041 EO', 'ax_malik:AX S14 EC', 'ax_malik:AX S14 EO', 'ax_malik:AX S5 EC', 'ax_malik:AX S5 EO', 'ax_malik:AX S20 EO', 'ax_malik:AX S20 EC', 'ax_malik:AX S3 EC', 'ax_malik:AX S3 EO', 'mdd:MDD S32 EO', 'mdd:MDD S32 EC', 'mdd:MDD S26 EO', 'mdd:MDD S26 EC', 'mdd:MDD S34 EO', 'mdd:MDD S34 EC', 'mdd:MDD S17 EO', 'mdd:MDD S17 EC', 'mdd:MDD S11 EC', 'mdd:MDD S11 EO', 'mdd:MDD S20 EC', 'mdd:MDD S20 EO', 'cane:AXDEP S0071 EO', 'cane:AXDEP S0071 EC', 'cane:AXDEP S1047 EC', 'cane:AXDEP S1047 EO']...
+[2026-02-09 00:54:21,161 INFO data_preparation.get_datasets_for_fold] Val subjects (43): ['mdd:H S10 EO', 'mdd:H S10 EC', 'mdd:H S24 EO', 'mdd:H S24 EC', 'mdd:H S20 EO', 'mdd:H S20 EC', 'mdd:H S17 EO', 'mdd:H S17 EC', 'mdd:H S5 EC', 'mdd:H S5 EO', 'cane:H S1091 EO', 'cane:H S1091 EC', 'cane:H S1001 EC', 'cane:H S1001 EO', 'cane:H S1010 EC', 'cane:H S1010 EO', 'cane:AX S1051 EO', 'cane:AX S1051 EC', 'cane:AX S1023 EO', 'cane:AX S1023 EC', 'cane:AX S0073 EO', 'cane:AX S0073 EC', 'ax_malik:AX S16 EC', 'ax_malik:AX S16 EO', 'ax_malik:AX S4 EO', 'ax_malik:AX S4 EC', 'ax_malik:AX S7 EO', 'ax_malik:AX S7 EC', 'mdd:MDD S12 EO', 'mdd:MDD S27 EC', 'mdd:MDD S27 EO', 'mdd:MDD S7 EC', 'mdd:MDD S13 EC', 'mdd:MDD S13 EO', 'mdd:MDD S18 EO', 'mdd:MDD S18 EC', 'cane:AXDEP S1093 EO', 'cane:AXDEP S1093 EC', 'cane:AXDEP S0099 EC', 'cane:AXDEP S0099 EO', 'cane:AXDEP S0068 EO', 'cane:AXDEP S0068 EC', 'cane:AXDEP S0043 EC']
+[2026-02-09 00:54:21,164 INFO data_preparation.get_datasets_for_fold] Training chunks: MDD=2991, CANE=3330, AX_MALIK=432, Total=6753
+[2026-02-09 00:54:21,164 INFO data_preparation.get_datasets_for_fold] Validation chunks: MDD=544, CANE=571, AX_MALIK=72, Total=1187
+[2026-02-09 00:55:23,984 INFO main.train_cross_validation] Fold 6 | Class weights | tensor([1.4554, 0.7617])
+[2026-02-09 00:55:23,988 INFO model.__init__] Initialized LSTM with input_size=864, hidden_size=64, batch_first=True
+[2026-02-09 00:55:23,989 INFO main.train_one_fold] Starting training for fold 6
+[2026-02-09 00:57:40,675 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_6_best.pth (chunk=0.6807, subject=0.5814, combined=0.3958)
+[2026-02-09 00:57:40,675 INFO early_stopping.__call__] Early stopping initialized: best score 0.6807 at epoch 1
+[2026-02-09 00:59:55,449 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_6_best.pth (chunk=0.7515, subject=0.6744, combined=0.5068)
+[2026-02-09 00:59:55,449 INFO early_stopping.__call__] Validation improved from 0.6807 to 0.7515 (+0.0708) at epoch 2
+[2026-02-09 01:02:10,546 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_6_best.pth (chunk=0.7902, subject=0.7674, combined=0.6065)
+[2026-02-09 01:02:10,546 INFO early_stopping.__call__] Validation improved from 0.7515 to 0.7902 (+0.0388) at epoch 3
+[2026-02-09 01:04:26,057 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_6_best.pth (chunk=0.8079, subject=0.8140, combined=0.6576)
+[2026-02-09 01:04:26,057 INFO early_stopping.__call__] Validation improved from 0.7902 to 0.8079 (+0.0177) at epoch 4
+[2026-02-09 01:06:39,659 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_6_best.pth (chunk=0.8104, subject=0.8140, combined=0.6597)
+[2026-02-09 01:06:39,660 INFO early_stopping.__call__] Validation improved from 0.8079 to 0.8104 (+0.0025) at epoch 5
+[2026-02-09 01:17:49,758 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_6_best.pth (chunk=0.8113, subject=0.8140, combined=0.6604)
+[2026-02-09 01:17:49,758 INFO early_stopping.__call__] Validation improved from 0.8104 to 0.8113 (+0.0008) at epoch 10
+[2026-02-09 02:13:44,254 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_6_best.pth (chunk=0.8248, subject=0.8140, combined=0.6713)
+[2026-02-09 02:13:44,254 INFO early_stopping.__call__] Validation improved from 0.8113 to 0.8248 (+0.0135) at epoch 30
+[2026-02-09 03:12:48,267 INFO main.train_one_fold] ✓ Saved best model: experiments/both-014b-inear-binary-smaller/fold_6_best.pth (chunk=0.8374, subject=0.8372, combined=0.7011)
+[2026-02-09 03:12:48,267 INFO early_stopping.__call__] Validation improved from 0.8248 to 0.8374 (+0.0126) at epoch 43
+[2026-02-09 05:42:16,057 INFO early_stopping.__call__] Early stopping triggered after 20 epochs without improvement. Best score: 0.8374 at epoch 43
+[2026-02-09 05:42:16,057 INFO main.train_one_fold] Early stopping triggered at epoch 63
+[2026-02-09 05:42:16,057 INFO main.train_one_fold] 
+Fold 6 training completed. Best Chunk Val Acc: 0.8374 at epoch 43
+[2026-02-09 05:42:16,058 INFO main.train_cross_validation] ================================================================================
+[2026-02-09 05:42:16,058 INFO main.train_cross_validation] 6-FOLD CROSS-VALIDATION RESULTS
+[2026-02-09 05:42:16,058 INFO main.train_cross_validation] ================================================================================
+[2026-02-09 05:42:16,059 INFO main.train_cross_validation] 
+Per-fold best validation accuracy (chunk):
+[2026-02-09 05:42:16,059 INFO main.train_cross_validation]   Fold 1: 0.8470 (epoch 16)
+[2026-02-09 05:42:16,059 INFO main.train_cross_validation]   Fold 2: 0.8769 (epoch 16)
+[2026-02-09 05:42:16,059 INFO main.train_cross_validation]   Fold 3: 0.7593 (epoch 16)
+[2026-02-09 05:42:16,059 INFO main.train_cross_validation]   Fold 4: 0.7739 (epoch 6)
+[2026-02-09 05:42:16,060 INFO main.train_cross_validation]   Fold 5: 0.7532 (epoch 2)
+[2026-02-09 05:42:16,060 INFO main.train_cross_validation]   Fold 6: 0.8374 (epoch 43)
+[2026-02-09 05:42:16,061 INFO metrics._write_metrics_block] CHUNK Accuracy Mean: 80.79% ± 4.77%, Min: 75.32%, Max: 87.69%
+
+[2026-02-09 05:42:16,062 INFO metrics._write_metrics_block] CHUNK Sensitivity Mean: 94.53% ± 2.36%, Min: 92.27%, Max: 98.02%
+
+[2026-02-09 05:42:16,062 INFO metrics._write_metrics_block] CHUNK Specificity Mean: 55.48% ± 13.52%, Min: 34.95%, Max: 69.20%
+
+[2026-02-09 05:42:16,063 INFO metrics._write_metrics_block] SUBJECT Accuracy Mean: 82.95% ± 4.55%, Min: 77.78%, Max: 90.20%
+
+[2026-02-09 05:42:16,063 INFO metrics._write_metrics_block] SUBJECT Sensitivity Mean: 96.85% ± 2.54%, Min: 93.10%, Max: 100.00%
+
+[2026-02-09 05:42:16,064 INFO metrics._write_metrics_block] SUBJECT Specificity Mean: 54.40% ± 13.73%, Min: 33.33%, Max: 70.59%
+
+[2026-02-09 05:42:16,064 INFO metrics.write_results] COMBINED Accuracy Mean (chunk×subject): 67.23% ± 7.65%, Min: 58.58%, Max: 79.09%
+
+[2026-02-09 05:42:16,065 INFO metrics._format_confusion_matrix] 
+Aggregated Chunk Confusion Matrix (across folds; TN, FP, FN, TP):
+
+
+[2026-02-09 05:42:16,065 INFO metrics._format_confusion_matrix] ACTUAL ↓/PRED →        Healthy    Pathological 
+
+[2026-02-09 05:42:16,066 INFO metrics._format_confusion_matrix] -----------------------------------------------
+
+[2026-02-09 05:42:16,066 INFO metrics._format_confusion_matrix]         Healthy            1562            1232 
+
+[2026-02-09 05:42:16,066 INFO metrics._format_confusion_matrix]    Pathological             280            4866 
+
+[2026-02-09 05:42:16,066 INFO metrics._format_confusion_matrix] 
+
+[2026-02-09 05:42:16,067 INFO metrics._format_confusion_matrix] Total Predictions: 7940
+
+[2026-02-09 05:42:16,067 INFO metrics._format_confusion_matrix] Correct Predictions: 6428
+
+[2026-02-09 05:42:16,067 INFO metrics._format_confusion_matrix] Overall Accuracy: 0.8096 (80.96%)
+
+[2026-02-09 05:42:16,068 INFO metrics.write_per_dataset_table] 
+Per-Dataset Chunk Accuracy (aggregated across folds):
+
+[2026-02-09 05:42:16,068 INFO metrics.write_per_dataset_table]   Dataset        Accuracy   Chunk Count
+
+[2026-02-09 05:42:16,068 INFO metrics.write_per_dataset_table]   ────────────  ──────────  ────────────
+
+[2026-02-09 05:42:16,144 INFO metrics.write_per_dataset_table]   AX_MALIK         96.83%           504
+
+[2026-02-09 05:42:16,145 INFO metrics.write_per_dataset_table]   CANE             73.90%          3901
+
+[2026-02-09 05:42:16,145 INFO metrics.write_per_dataset_table]   MDD              86.48%          3535
+
+[2026-02-09 05:42:16,145 INFO metrics.write_per_dataset_table]   ────────────  ──────────  ────────────
+
+[2026-02-09 05:42:16,146 INFO metrics.write_per_dataset_table]   Total            80.96%          7940
+
+[2026-02-09 05:42:16,146 INFO main.train_cross_validation] ================================================================================
+
+[2026-02-09 05:42:16,153 INFO main.train] 
+Results saved to experiments/both-014b-inear-binary-smaller/results.txt
+[2026-02-09 05:42:16,153 INFO main.train] Generating training curves...
+[2026-02-09 05:42:20,379 INFO main.train] Training curves saved to experiments/both-014b-inear-binary-smaller/loss_curves
+[2026-02-09 05:42:20,379 INFO main.train] Training completed!

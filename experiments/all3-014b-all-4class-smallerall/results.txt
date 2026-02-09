@@ -1,0 +1,55 @@
+6-Fold Cross-Validation Results
+================================================================================
+
+Dataset: all
+Condition: ec+eo
+Batch Size: 64
+Learning Rate: 0.0001
+Dropout: 0.1
+Weight Decay (L2 regularization): 0.0001
+Skip Artifact Removal: False
+Data Augmentation: disabled
+Pretrained Checkpoint: None
+Freeze CNN: False
+Freeze LSTM: False
+
+Per-fold best validation accuracy:
+  Fold 1: chunk=0.5599, subject=0.6182, combined=0.3461 (epoch 7, stopped at epoch 27)
+  Fold 2: chunk=0.7109, subject=0.7059, combined=0.5018 (epoch 98, stopped at epoch 100)
+  Fold 3: chunk=0.7467, subject=0.8333, combined=0.6222 (epoch 42, stopped at epoch 62)
+  Fold 4: chunk=0.5875, subject=0.6591, combined=0.3872 (epoch 9, stopped at epoch 29)
+  Fold 5: chunk=0.6574, subject=0.7111, combined=0.4675 (epoch 20, stopped at epoch 40)
+  Fold 6: chunk=0.6125, subject=0.6744, combined=0.4131 (epoch 8, stopped at epoch 28)
+CHUNK Accuracy Mean: 64.58% ± 6.64%, Min: 55.99%, Max: 74.67%
+CHUNK Recall (Normal) Mean: 58.44% ± 9.12%, Min: 45.78%, Max: 69.61%
+CHUNK Recall (Anxiety) Mean: 68.59% ± 13.89%, Min: 46.50%, Max: 85.92%
+CHUNK Recall (Depression) Mean: 0.00% ± 0.00%, Min: 0.00%, Max: 0.00%
+CHUNK Recall (Anxiety+depression) Mean: 68.70% ± 15.30%, Min: 42.00%, Max: 93.81%
+SUBJECT Accuracy Mean: 70.03% ± 6.70%, Min: 61.82%, Max: 83.33%
+SUBJECT Recall (Normal) Mean: 58.34% ± 8.90%, Min: 43.75%, Max: 66.67%
+SUBJECT Recall (Anxiety) Mean: 77.91% ± 12.25%, Min: 57.69%, Max: 96.00%
+SUBJECT Recall (Depression) Mean: 0.00% ± 0.00%, Min: 0.00%, Max: 0.00%
+SUBJECT Recall (Anxiety+depression) Mean: 72.74% ± 17.47%, Min: 40.00%, Max: 100.00%
+COMBINED Accuracy Mean (chunk×subject): 45.63% ± 8.99%, Min: 34.61%, Max: 62.22%
+
+Aggregated Chunk Confusion Matrix (across folds; TN, FP, FN, TP):
+
+ACTUAL ↓/PRED →         Normal         Anxiety      Depression Anxiety+Depression 
+-------------------------------------------------------------------------------
+         Normal            1622             493              39             640 
+        Anxiety             304            2397              22             757 
+     Depression               0               0               0              60 
+Anxiety+Depression             165             310              26            1105 
+
+Total Predictions: 7940
+Correct Predictions: 5124
+Overall Accuracy: 0.6453 (64.53%)
+
+Per-Dataset Chunk Accuracy (aggregated across folds):
+  Dataset        Accuracy   Chunk Count
+  ────────────  ──────────  ────────────
+  AX_MALIK        100.00%           504
+  CANE             42.96%          3901
+  MDD              83.28%          3535
+  ────────────  ──────────  ────────────
+  Total            64.53%          7940
