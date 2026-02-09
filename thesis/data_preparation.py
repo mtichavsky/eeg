@@ -61,6 +61,7 @@ def _prepare_dataset_generic(
     fs: float,
     augmentation: Callable | None = None,
     test_mode: bool = False,
+    label_mapping: Optional[dict[int, int]] = None,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
     Generic dataset preparation for datasets following the MDD pattern.
@@ -75,6 +76,8 @@ def _prepare_dataset_generic(
     :param float fs: Sampling frequency for STFT.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
+    :param Optional[dict[int, int]] label_mapping: Optional label remapping dict
+           (e.g., {0: 0, 1: 2} for MDD in 4-class).
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
     """
@@ -93,7 +96,7 @@ def _prepare_dataset_generic(
         spec_dataset = SpectrogramDataset(
             dataset, fs=fs, augmentation=augmentation, channel=channel
         )
-        flat_dataset = FlattenedSpectrogramDataset(spec_dataset)
+        flat_dataset = FlattenedSpectrogramDataset(spec_dataset, label_mapping=label_mapping)
 
         # Validate shape
         spec_shape = flat_dataset[0][0].shape[1:]
@@ -121,19 +124,34 @@ def prepare_mdd_dataset(
     rng: np.random.RandomState,
     augmentation: Callable | None = None,
     test_mode: bool = False,
+    num_classes: int = 2,
+    label_mapping: Optional[dict[int, int]] = None,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
-    Prepare MDD dataset with spectrograms and split subjects by class.
+    Prepare MDD dataset with proper label mapping for multi-class classification.
 
     :param list[str] conditions: EEG conditions to load (e.g., ["EC", "EO"]).
     :param str channel: Channel to use (e.g., "Fp1" or "all").
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
+    :param int num_classes: Number of classes (2 or 4).
+    :param Optional[dict[int, int]] label_mapping: Optional label remapping dict. If None and
+           num_classes==4, applies MDD-specific remapping {0: 0, 1: 2} to align with 4-class
+           convention (0=normal, 2=depression).
     :return: Tuple of (flat_dataset, SubjectClasses).
              Note: anxiety and anxiety_depression are empty for MDD dataset.
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
     """
+    # Apply MDD-specific label remapping for 4-class mode
+    effective_label_mapping = label_mapping
+    if label_mapping is None and num_classes == 4:
+        # Remap MDD binary labels to 4-class convention:
+        # 0 (healthy) → 0 (normal)
+        # 1 (depressed) → 2 (depression)
+        effective_label_mapping = {0: 0, 1: 2}
+        logger.info(f"Applying MDD label remapping for 4-class mode: {effective_label_mapping}")
+
     return _prepare_dataset_generic(
         dataset_class=MDDDataset,
         dataset_label="mdd",
@@ -143,6 +161,7 @@ def prepare_mdd_dataset(
         fs=MDDDataset.FS,
         augmentation=augmentation,
         test_mode=test_mode,
+        label_mapping=effective_label_mapping,
     )
 
 
@@ -218,6 +237,8 @@ def prepare_ax_malik_dataset(
     rng: np.random.RandomState,
     augmentation: Callable | None = None,
     test_mode: bool = False,
+    num_classes: int = 2,
+    label_mapping: Optional[dict[int, int]] = None,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
     Prepare AX_MALIK dataset with spectrograms and split subjects by class.
@@ -227,6 +248,9 @@ def prepare_ax_malik_dataset(
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
+    :param int num_classes: Number of classes (2 or 4).
+    :param Optional[dict[int, int]] label_mapping: Optional label remapping dict (AX_MALIK doesn't
+           need remapping in 4-class mode since all subjects are anxiety = label 1).
     :return: Tuple of (flat_dataset, SubjectClasses).
              Note: All subjects are anxiety class; normal, depression, and
              anxiety_depression will be empty.
@@ -241,6 +265,7 @@ def prepare_ax_malik_dataset(
         fs=AX_MALIKDataset.FS,
         augmentation=augmentation,
         test_mode=test_mode,
+        label_mapping=label_mapping,
     )
 
 
