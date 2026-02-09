@@ -9,10 +9,6 @@
 | 4-class, 8-channel, 3 dts.    | 64.58% ± 6.64%                    |                                        |                                  | all3-014b-all-4class-smallerall                                |
 
 
-Make sure I get all the necessary stats.
-Run something to figure out impact of adding weights to cross entropy.
-Default is 2 class
-
 ### all3-014b-all-binary-smallerall
 
 - Loss curve visualization doesn't work after switch to JSON logs

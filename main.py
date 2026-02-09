@@ -560,6 +560,7 @@ def train_cross_validation(
     freeze_lstm: bool = False,
     augmentation: Callable | None = None,
     test_mode: bool = False,
+    log_file: Path | None = None,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -589,6 +590,7 @@ def train_cross_validation(
         Can be used alone or with freeze_cnn.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG during training.
     :param bool test_mode: If True, load only one file per class for debugging.
+    :param Path | None log_file: Path to the log file for JSON metrics output.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
     :rtype: dict
@@ -817,6 +819,7 @@ def train_cross_validation(
             patience=patience,
             checkpoint_dir=checkpoint_dir,
             val_subject_dataset_map=val_subject_dataset_map,
+            log_file=log_file,
         )
 
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
@@ -909,6 +912,7 @@ def train(args: argparse.Namespace) -> None:
         freeze_lstm=args.freeze_lstm,
         augmentation=augmentation,
         test_mode=args.test_mode,
+        log_file=log_path,
     )
 
     # Save final results to file
