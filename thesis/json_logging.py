@@ -19,10 +19,10 @@ def _metrics_to_json_dict(metrics: dict, num_classes: int, include_confusion: bo
     """
     if num_classes == 2:
         out: dict = {
-            "acc": float(metrics["accuracy"]),
-            "prec": float(metrics["precision"]),
-            "rec": float(metrics["recall"]),
-            "spec": float(metrics["specificity"]),
+            "acc": round(float(metrics["accuracy"]), 4),
+            "prec": round(float(metrics["precision"]), 4),
+            "rec": round(float(metrics["recall"]), 4),
+            "spec": round(float(metrics["specificity"]), 4),
         }
         if include_confusion:
             cm = metrics.get("confusion_matrix")
@@ -32,14 +32,14 @@ def _metrics_to_json_dict(metrics: dict, num_classes: int, include_confusion: bo
         return out
 
     # Multi-class: per-class precision and recall
-    out = {"acc": float(metrics["accuracy"])}
+    out = {"acc": round(float(metrics["accuracy"]), 4)}
     class_names = ["normal", "anxiety", "depression", "anxiety+depression"]
     for name in class_names:
         prec_key = f"precision_{name}"
         rec_key = f"recall_{name}"
         if prec_key in metrics:
-            out[f"prec_{name}"] = float(metrics[prec_key])
-            out[f"rec_{name}"] = float(metrics[rec_key])
+            out[f"prec_{name}"] = round(float(metrics[prec_key]), 4)
+            out[f"rec_{name}"] = round(float(metrics[rec_key]), 4)
     return out
 
 
