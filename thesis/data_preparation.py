@@ -16,6 +16,7 @@ from thesis.dataset import (
     MDDDataset,
     SpectrogramDataset,
 )
+from thesis.labels import LabelMapping
 
 logger = logging.getLogger(__name__)
 
@@ -36,17 +37,23 @@ class SubjectClasses(NamedTuple):
 
 def determine_num_classes(class_mode: str) -> tuple[int, Optional[dict[int, int]]]:
     """
-    Determine number of classes and label mapping based on dataset and class_mode.
+    Determine number of classes and label mapping based on class_mode.
 
-    :param class_mode: Class mode (2", or "4")
+    Note: Returns binary collapse mapping for 2-class mode (collapses all pathological
+    classes to 1). Dataset-specific remapping (e.g., MDD depression → canonical position 2)
+    is handled separately in prepare_*_dataset() functions.
+
+    :param class_mode: Class mode ("2" or "4")
     :return: Tuple of (num_classes, label_mapping)
         - label_mapping is None for 4-class (use original labels)
-        - label_mapping remaps for 2-class: {0:0, 1:1, 2:1, 3:1}
+        - label_mapping remaps for 2-class: {0:HEALTHY, 1:PATHOLOGICAL, 2:PATHOLOGICAL,
+          3:PATHOLOGICAL}
     :rtype: tuple[int, Optional[dict[int, int]]]
     """
     if class_mode == "2":
         # Force binary: healthy vs any-pathological
-        return 2, {0: 0, 1: 1, 2: 1, 3: 1}
+        # Uses centralized mapping from thesis.labels module
+        return 2, LabelMapping.get_canonical_to_binary()
     elif class_mode == "4":
         return 4, None
     else:
@@ -129,7 +136,10 @@ def prepare_mdd_dataset(
     label_mapping: Optional[dict[int, int]] = None,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
-    Prepare MDD dataset with proper label mapping for multi-class classification.
+    Prepare MDD dataset for classification.
+
+    MDDDataset now returns CanonicalLabel instances directly (NORMAL=0, DEPRESSION_ONLY=2).
+    No remapping needed for 4-class mode; binary mode applies CanonicalLabel → BinaryLabel.
 
     :param list[str] conditions: EEG conditions to load (e.g., ["EC", "EO"]).
     :param str channel: Channel to use (e.g., "Fp1" or "all").
@@ -137,21 +147,16 @@ def prepare_mdd_dataset(
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param int num_classes: Number of classes (2 or 4).
-    :param Optional[dict[int, int]] label_mapping: Optional label remapping dict. If None and
-           num_classes==4, applies MDD-specific remapping {0: 0, 1: 2} to align with 4-class
-           convention (0=normal, 2=depression).
+    :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
+           If None, automatically applies CanonicalLabel → BinaryLabel mapping for 2-class mode.
     :return: Tuple of (flat_dataset, SubjectClasses).
              Note: anxiety and anxiety_depression are empty for MDD dataset.
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
     """
-    # Apply MDD-specific label remapping for 4-class mode
+    # In binary mode, apply CanonicalLabel → BinaryLabel mapping
     effective_label_mapping = label_mapping
-    if label_mapping is None and num_classes == 4:
-        # Remap MDD binary labels to 4-class convention:
-        # 0 (healthy) → 0 (normal)
-        # 1 (depressed) → 2 (depression)
-        effective_label_mapping = {0: 0, 1: 2}
-        logger.info(f"Applying MDD label remapping for 4-class mode: {effective_label_mapping}")
+    if label_mapping is None and num_classes == 2:
+        effective_label_mapping = LabelMapping.get_canonical_to_binary()
 
     return _prepare_dataset_generic(
         dataset_class=MDDDataset,

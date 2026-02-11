@@ -14,6 +14,8 @@ from scipy.signal import butter, detrend, filtfilt, iirnotch, stft
 from scipy.stats import zscore
 from torch.utils.data import Dataset
 
+from thesis.labels import CanonicalLabel
+
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore")
@@ -243,7 +245,9 @@ class MDDDataset(Dataset):
                     "label": label,
                     "subject": subject_id,
                     "condition": cond,
-                    "label_int": 0 if label == "H" else 1,  # H=0 (healthy), MDD=1
+                    "label_int": (
+                        CanonicalLabel.HEALTHY if label == "H" else CanonicalLabel.DEPRESSION_ONLY
+                    ),
                 }
             )
 
@@ -339,7 +343,12 @@ class CANEDataset(Dataset):
 
     CLASS_DIRECTORIES = ["normal", "anxiety", "depression", "anxiety-depression"]
     LABEL_MAP = {"normal": "H", "anxiety": "AX", "depression": "DEP", "anxiety-depression": "AXDEP"}
-    LABEL_INT_MAP = {"normal": 0, "anxiety": 1, "depression": 2, "anxiety-depression": 3}
+    LABEL_INT_MAP = {
+        "normal": CanonicalLabel.HEALTHY,
+        "anxiety": CanonicalLabel.ANXIETY_ONLY,
+        "depression": CanonicalLabel.DEPRESSION_ONLY,
+        "anxiety-depression": CanonicalLabel.COMORBID,
+    }
     CHANNEL_MAPPING = {
         "d1": "Fp1",
         "d2": "Fp2",
@@ -936,7 +945,7 @@ class AX_MALIKDataset(MDDDataset):
                         "label": "AX",
                         "subject": subject_id,
                         "condition": condition_dir.upper(),
-                        "label_int": 1,  # Anxiety class (consistent with CANE)
+                        "label_int": CanonicalLabel.ANXIETY_ONLY,
                     }
                 )
 
@@ -981,10 +990,10 @@ class IDUNDataset(Dataset):
         "comorbid": "AXDEP",
     }
     LABEL_INT_MAP: dict[str, int] = {
-        "normals": 0,
-        "anxiety": 1,
-        "depression": 2,
-        "comorbid": 3,
+        "normals": CanonicalLabel.HEALTHY,
+        "anxiety": CanonicalLabel.ANXIETY_ONLY,
+        "depression": CanonicalLabel.DEPRESSION_ONLY,
+        "comorbid": CanonicalLabel.COMORBID,
     }
 
     # Subjects with non-standard filenames (no condition suffix) — skip them

@@ -259,3 +259,146 @@ class TestLabelRemappingEdgeCases:
         assert unique_labels.issubset({0, 2}), (
             f"MDD multi-channel should only have labels {{0, 2}}, got: {unique_labels}"
         )
+
+
+class TestCentralizedLabelMappings:
+    """Tests for centralized label mapping functions in thesis.labels module."""
+
+    def test_canonical_label_enum_values(self):
+        """Verify canonical label enum has correct values."""
+        from thesis.labels import CanonicalLabel
+
+        assert CanonicalLabel.HEALTHY == 0
+        assert CanonicalLabel.ANXIETY_ONLY == 1
+        assert CanonicalLabel.DEPRESSION_ONLY == 2
+        assert CanonicalLabel.COMORBID == 3
+
+    def test_binary_label_enum_values(self):
+        """Verify binary label enum has correct values."""
+        from thesis.labels import BinaryLabel
+
+        assert BinaryLabel.HEALTHY == 0
+        assert BinaryLabel.PATHOLOGICAL == 1
+
+    def test_mdd_to_canonical_mapping(self):
+        """Test MDD to canonical 4-class mapping function."""
+        from thesis.labels import CanonicalLabel, LabelMapping
+
+        mapping = LabelMapping.get_mdd_to_canonical()
+
+        # Verify mapping dictionary
+        assert mapping == {0: 0, 1: 2}
+
+        # Verify mapping is correct
+        assert mapping[0] == CanonicalLabel.HEALTHY  # MDD healthy → Canonical HEALTHY
+        assert mapping[1] == CanonicalLabel.DEPRESSION_ONLY  # MDD depression → Canonical DEPRESSION
+
+    def test_canonical_to_binary_mapping(self):
+        """Test canonical 4-class to binary mapping function."""
+        from thesis.labels import BinaryLabel, CanonicalLabel, LabelMapping
+
+        mapping = LabelMapping.get_canonical_to_binary()
+
+        # Verify all pathological classes map to 1
+        assert mapping == {0: 0, 1: 1, 2: 1, 3: 1}
+
+        # Verify using named enums
+        assert mapping[CanonicalLabel.HEALTHY] == BinaryLabel.HEALTHY
+        assert mapping[CanonicalLabel.ANXIETY_ONLY] == BinaryLabel.PATHOLOGICAL
+        assert mapping[CanonicalLabel.DEPRESSION_ONLY] == BinaryLabel.PATHOLOGICAL
+        assert mapping[CanonicalLabel.COMORBID] == BinaryLabel.PATHOLOGICAL
+
+    def test_get_label_mapping_for_dataset_mdd_4class(self):
+        """Test get_label_mapping_for_dataset for MDD in 4-class mode."""
+        from thesis.labels import LabelMapping
+
+        mapping = LabelMapping.get_for_dataset("mdd", num_classes=4)
+
+        # Datasets now return CanonicalLabel directly, so no mapping needed for 4-class
+        assert mapping is None
+
+    def test_get_label_mapping_for_dataset_mdd_2class(self):
+        """Test get_label_mapping_for_dataset for MDD in 2-class mode."""
+        from thesis.labels import LabelMapping
+
+        mapping = LabelMapping.get_for_dataset("mdd", num_classes=2)
+
+        # Should return canonical to binary mapping
+        assert mapping == {0: 0, 1: 1, 2: 1, 3: 1}
+
+    def test_get_label_mapping_for_dataset_cane_4class(self):
+        """Test get_label_mapping_for_dataset for CANE in 4-class mode."""
+        from thesis.labels import LabelMapping
+
+        mapping = LabelMapping.get_for_dataset("cane", num_classes=4)
+
+        # CANE uses canonical labels already, no remapping needed
+        assert mapping is None
+
+    def test_get_label_mapping_for_dataset_explicit_override(self):
+        """Test that explicit mapping overrides defaults."""
+        from thesis.labels import LabelMapping
+
+        explicit_mapping = {0: 99, 1: 98}
+        mapping = LabelMapping.get_for_dataset(
+            "mdd", num_classes=4, explicit_mapping=explicit_mapping
+        )
+
+        # Should return the explicit mapping
+        assert mapping == explicit_mapping
+
+    def test_get_canonical_label_name(self):
+        """Test canonical label name utility function."""
+        from thesis.labels import LabelUtils
+
+        assert LabelUtils.get_canonical_name(0) == "Healthy"
+        assert LabelUtils.get_canonical_name(1) == "Anxiety Only"
+        assert LabelUtils.get_canonical_name(2) == "Depression Only"
+        assert LabelUtils.get_canonical_name(3) == "Comorbid"
+        assert LabelUtils.get_canonical_name(999) == "Unknown(999)"
+
+    def test_get_binary_label_name(self):
+        """Test binary label name utility function."""
+        from thesis.labels import LabelUtils
+
+        assert LabelUtils.get_binary_name(0) == "Healthy"
+        assert LabelUtils.get_binary_name(1) == "Pathological"
+        assert LabelUtils.get_binary_name(999) == "Unknown(999)"
+
+    def test_validate_labels_for_dataset_mdd_4class_valid(self):
+        """Test validation passes for valid MDD 4-class labels."""
+        from thesis.labels import LabelUtils
+
+# Valid MDD 4-class labels: {0, 2}
+        labels = {0, 2}
+        # Should not raise
+        LabelUtils.validate_for_dataset(labels, "mdd", num_classes=4)
+
+    def test_validate_labels_for_dataset_mdd_4class_invalid(self):
+        """Test validation fails for invalid MDD 4-class labels."""
+        from thesis.labels import LabelUtils
+
+# Invalid: MDD should not have label 1 (anxiety) in 4-class mode
+        labels = {0, 1, 2}
+
+        with pytest.raises(ValueError, match="forbidden labels"):
+            LabelUtils.validate_for_dataset(labels, "mdd", num_classes=4)
+
+    def test_validate_labels_for_dataset_binary_mode_valid(self):
+        """Test validation passes for valid binary mode labels."""
+        from thesis.labels import LabelUtils
+
+        labels = {0, 1}
+        # Should not raise for any dataset
+        LabelUtils.validate_for_dataset(labels, "mdd", num_classes=2)
+        LabelUtils.validate_for_dataset(labels, "cane", num_classes=2)
+
+    def test_validate_labels_for_dataset_binary_mode_invalid(self):
+        """Test validation fails for invalid binary mode labels."""
+        from thesis.labels import LabelUtils
+
+        # Invalid: binary mode should only have {0, 1}
+        labels = {0, 1, 2}
+
+        with pytest.raises(ValueError, match="should only have labels"):
+            LabelUtils.validate_for_dataset(labels, "mdd", num_classes=2)
