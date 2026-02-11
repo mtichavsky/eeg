@@ -12,6 +12,7 @@ from thesis.dataset import (
     AX_MALIKDataset,
     CANEDataset,
     FlattenedSpectrogramDataset,
+    IDUNDataset,
     MDDDataset,
     SpectrogramDataset,
 )
@@ -267,6 +268,74 @@ def prepare_ax_malik_dataset(
         test_mode=test_mode,
         label_mapping=label_mapping,
     )
+
+
+def prepare_idun_dataset(
+    conditions: list[Literal["ec", "eo"]],
+    channel: str,
+    rng: np.random.RandomState,
+    label_mapping: Optional[dict[int, int]] = None,
+    augmentation: Callable | None = None,
+    test_mode: bool = False,
+    quality_threshold: float = 0.0,
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, "SubjectClasses"]:
+    """
+    Prepare IDUN real in-ear dataset with spectrograms and split subjects by class.
+
+    Uses ``dataset_label="cane"`` so that ``get_datasets_for_fold()`` works unchanged
+    (IDUN occupies the CANE slot in balanced folds).
+
+    :param list[str] conditions: EEG conditions to load (e.g., ["ec", "eo"]).
+    :param str channel: Channel to use (should be "in-ear" for IDUN).
+    :param np.random.RandomState rng: Random number generator for shuffling.
+    :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
+    :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param bool test_mode: If True, load only one file per class for debugging.
+    :param float quality_threshold: Reject IDUN chunks with quality at or below this value.
+    :return: Tuple of (flat_dataset, SubjectClasses).
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
+    """
+    all_flat_datasets = []
+    all_subjects = []
+
+    for condition in conditions:
+        idun_dataset = IDUNDataset(
+            condition=condition,
+            quality_threshold=quality_threshold,
+            test_mode=test_mode,
+        )
+
+        idun_spec_dataset = SpectrogramDataset(
+            idun_dataset,
+            fs=IDUNDataset.FS,
+            nperseg=256,
+            noverlap=192,
+            augmentation=augmentation,
+            channel=channel,
+        )
+
+        idun_flat_dataset = FlattenedSpectrogramDataset(
+            idun_spec_dataset, label_mapping=label_mapping
+        )
+
+        spec_shape = idun_flat_dataset[0][0].shape[1:]
+        assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+            f"Expected (129, 41), got {spec_shape}. "
+            f"The neural net was designed using this assumption."
+        )
+
+        all_flat_datasets.append(idun_flat_dataset)
+        all_subjects.extend(idun_dataset.get_sorted_subjects())
+
+    # Combine datasets if multiple conditions
+    if len(all_flat_datasets) == 1:
+        combined_flat = all_flat_datasets[0]
+    else:
+        combined_flat = ConcatDataset(all_flat_datasets)
+
+    # Use dataset_label="cane" so IDUN occupies the CANE slot in balanced folds
+    subject_classes = split_subjects_into_classes(all_subjects, "cane", rng)
+    return combined_flat, subject_classes
 
 
 def split_subjects_into_classes(

@@ -50,6 +50,27 @@ Expected location at `../CANE/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
 - **Sampling Rate**: 500 Hz
 - **Preprocessing**: Optional artifact removal via `--skip-artifact-removal` flag
 
+**Note:** When using `--channel in-ear`, CANE is automatically replaced with the IDUN dataset (see below) for real in-ear EEG recordings.
+
+### IDUN Dataset
+
+Expected location at `../IDUN_IN_EAR/`. Files follow pattern: `{class_dir}/{subject_id}/eeg_{subject_id}{condition}.csv`
+
+**Dataset Structure:**
+- **Real in-ear EEG recordings** from IDUN device (single-channel CSV format)
+- **Classes**: normals (17), anxiety (20), depression (1), comorbid (15) - 53 usable subjects
+- **Conditions**: ec (eyes closed), eo (eyes open) - case-insensitive
+- **Channel**: Single in-ear channel (no multi-channel support)
+- **Sampling Rate**: 250 Hz (verified from timestamps)
+- **Quality Metrics**: Signal quality data available in `quality_*.csv` files (0=not measured, 90+=good)
+- **Preprocessing**: z-score → detrend → bandpass 1-70 Hz → notch 50 Hz → 10s chunking → quality-based rejection
+
+**Usage:**
+- IDUN is **automatically used** when `--channel in-ear` is specified with `--dataset cane` or `--dataset all`
+- Provides real in-ear EEG instead of synthetic bipolar derivations (T8-T7)
+- Occupies the "CANE" slot in fold creation, so logs may report "CANE" but IDUN data is actually used
+- Quality threshold (default 0.0) rejects chunks with unmeasured signal quality
+
 ### AX_MALIK Dataset
 
 Expected location at `../AX_MALIK/`. Files follow pattern: `{ec|eo}/C{N}.edf`
@@ -67,8 +88,10 @@ Expected location at `../AX_MALIK/`. Files follow pattern: `{ec|eo}/C{N}.edf`
 
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
+  - **With `--channel in-ear`**: Automatically uses IDUN real in-ear data instead
 - `--dataset ax_malik`: AX_MALIK only (anxiety subjects only - no healthy controls in this dataset)
 - `--dataset all`: Combined (supports 2-class and 4-class modes)
+  - **With `--channel in-ear`**: Uses MDD (synthetic T8-T7) + IDUN (real in-ear) + AX_MALIK (synthetic T8-T7)
 
 ### Classification Modes
 
@@ -108,7 +131,9 @@ poetry run python main.py train \
   --weight-decay 1e-4 \
   --val-every 1
 
-# Synthetic in-ear EEG training (bipolar derivation T8-T7)
+# In-ear EEG training
+# - MDD/AX_MALIK: synthetic bipolar derivation T8-T7
+# - CANE: real IDUN in-ear recordings (automatic replacement)
 poetry run python main.py train \
   --channel in-ear \
   --batch-size 32 \
@@ -185,10 +210,12 @@ The inference script outputs:
 **Channel Options:**
 - **Single channel** (e.g., `--channel Fp1`): Use a specific EEG electrode
 - **Multi-channel** (`--channel all`): Use all 8 electrodes for spatial feature learning
-- **Synthetic in-ear** (`--channel in-ear`): Bipolar derivation T8 - T7 simulating IDUN-style in-ear EEG
+- **In-ear EEG** (`--channel in-ear`): In-ear EEG recordings
+  - **MDD/AX_MALIK**: Synthetic bipolar derivation T8 - T7
+  - **CANE**: Real IDUN in-ear recordings (automatic replacement)
+  - **All datasets**: MDD (synthetic) + IDUN (real) + AX_MALIK (synthetic)
   - Based on research: "Estimating cognitive workload using a commercial in-ear EEG headset"
   - Applies 50% sign flip augmentation per chunk to handle polarity ambiguity
-  - Works with all datasets (MDD, CANE, AX_MALIK, all)
 
 **Common Features:**
 - Configurable dropout (default 0.5) and L2 weight decay (default 1e-4)
@@ -197,6 +224,7 @@ The inference script outputs:
 
 ## Preprocessing Pipeline
 
+### MDD/CANE/AX_MALIK Preprocessing
 Each EDF file undergoes the following preprocessing (see `thesis/dataset.py`):
 
 1. Load EDF file
@@ -211,6 +239,21 @@ Each EDF file undergoes the following preprocessing (see `thesis/dataset.py`):
 7. Optional artifact removal for CANE: (`--skip-artifact-removal` to disable)
 8. Segmentation: 10-second chunks
 9. For in-ear: Apply 50% sign flip augmentation per chunk during training
+10. STFT transformation: Convert to spectrograms
+11. Normalization: Log-magnitude spectrograms
+
+### IDUN Preprocessing
+IDUN CSV files undergo a separate preprocessing pipeline (see `IDUNDataset.load_and_preprocess_idun_file()`):
+
+1. Load CSV file (timestamp, ch1 columns)
+2. Z-score normalize raw values
+3. Detrend (linear)
+4. Bandpass filter: 1-70 Hz (IIR)
+5. Notch filter: 50 Hz (remove power line noise)
+6. Segmentation: 10-second chunks (2500 samples at 250 Hz)
+7. Quality-based chunk rejection (threshold=0.0 by default, rejects unmeasured chunks)
+8. Per-chunk z-score normalization
+9. Apply 50% sign flip augmentation per chunk during training
 10. STFT transformation: Convert to spectrograms
 11. Normalization: Log-magnitude spectrograms
 
@@ -257,7 +300,8 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 
 ## Important Notes
 
-- Dataset paths are hardcoded in `thesis/dataset.py` as `MDD_DIR`, `CANE_DIR`, and `AX_MALIK_DIR`
+- Dataset paths are hardcoded in `thesis/dataset.py` as `MDD_DIR`, `CANE_DIR`, `AX_MALIK_DIR`, and `IDUN_DIR`
+- **IDUN replacement**: When using `--channel in-ear` with `--dataset cane` or `--dataset all`, CANE is automatically replaced with IDUN real in-ear data. Logs may report "CANE" due to internal fold labeling, but IDUN data is actually used.
 - Channel selection: Use `--channel all` (default) for 8 channels or specify single channel (Fp1, T7, etc.)
 - Multi-channel mode uses SmallerAll model with Conv3D for spatial feature learning
 - 4-class mode requires `--dataset all` (normal/anxiety/depression/comorbid)
