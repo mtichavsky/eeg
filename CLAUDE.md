@@ -38,7 +38,27 @@ Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern:
 - **Sampling**: 500 Hz
 - **Preprocessing**: Artifact removal optional via `--skip-artifact-removal` flag
 
-### 3. AX_MALIK Dataset
+**IMPORTANT**: When using `--channel in-ear`, CANE is automatically replaced with IDUN real in-ear data (see below).
+
+### 3. IDUN Dataset
+Located at `/home/milan/Documents/diplomka/IDUN_IN_EAR/`. Files follow pattern: `{class_dir}/{subject_id}/eeg_{subject_id}{condition}.csv`
+
+- **Real in-ear EEG recordings** from IDUN device (single-channel CSV format)
+- **Classes**: normals (17), anxiety (20), depression (1), comorbid (15) - 53 usable subjects for EC condition
+- **Conditions**: ec (eyes closed), eo (eyes open) - case-insensitive in filenames
+- **Channel**: Single in-ear channel (no multi-channel support)
+- **Sampling**: 250 Hz (same as MDD)
+- **Quality Metrics**: Signal quality data in `quality_*.csv` files (0=not measured, 90+=good signal)
+- **Edge cases**: Subjects 1001, 1002 have non-standard filenames (skipped automatically)
+- **Preprocessing**: Custom pipeline for CSV files (z-score → detrend → bandpass → notch → chunking → quality filtering)
+
+**Usage**:
+- Automatically used when `--channel in-ear` is specified with `--dataset cane` or `--dataset all`
+- Provides real in-ear EEG instead of synthetic bipolar derivations (T8-T7)
+- Uses `dataset_label="cane"` internally for fold compatibility, so logs may report "CANE" but IDUN data is actually used
+- Quality threshold (default 0.0) rejects chunks where quality=0 (unmeasured signal)
+
+### 4. AX_MALIK Dataset
 Located at `/home/milan/Documents/diplomka/AX_MALIK/`. Files follow pattern: `{ec|eo}/C{N}.edf`
 
 - **All subjects are anxiety class** (no healthy controls in this dataset)
@@ -53,7 +73,9 @@ Located at `/home/milan/Documents/diplomka/AX_MALIK/`. Files follow pattern: `{e
 The system supports training on:
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
+  - **With `--channel in-ear`**: Automatically uses IDUN real in-ear data instead of CANE
 - `--dataset all`: Combined (supports both 2-class and 4-class modes)
+  - **With `--channel in-ear`**: Uses MDD (synthetic T8-T7) + IDUN (real in-ear) + AX_MALIK (synthetic T8-T7)
 
 ### Classification Modes
 - `--class-mode 2`: Binary classification (healthy vs any-pathological)
@@ -104,12 +126,20 @@ poetry run python main.py train --skip-ica \
   --weight-decay 1e-4 \
   --val-every 1
 
-# Synthetic in-ear EEG training (bipolar derivation T8-T7)
+# In-ear EEG training (synthetic for MDD, real IDUN for CANE)
 poetry run python main.py train --skip-ica \
   --channel in-ear \
   --batch-size 32 \
   --checkpoint-dir=experiments/mdd_008_inear_ec \
   --dataset mdd \
+  --condition ec
+
+# Real in-ear EEG with IDUN dataset (automatic replacement)
+poetry run python main.py train --skip-ica \
+  --channel in-ear \
+  --batch-size 32 \
+  --checkpoint-dir=experiments/idun_001_inear_ec \
+  --dataset cane \
   --condition ec
 
 # 4-class classification (requires --dataset all)
@@ -201,10 +231,15 @@ Run with: `poetry run jupyter notebook`
 **`thesis/`** - Main package containing core functionality
 
 1. **`thesis/dataset.py`** - EEG data loading and preprocessing
-   - `MDDDataset`: PyTorch Dataset with lazy/preload modes, LRU caching
+   - `MDDDataset`: PyTorch Dataset with lazy/preload modes, LRU caching for EDF files
+   - `CANEDataset`: PyTorch Dataset for CANE EDF files with optional artifact removal
+   - `IDUNDataset`: PyTorch Dataset for IDUN real in-ear CSV files with quality filtering
+   - `AX_MALIKDataset`: PyTorch Dataset for AX_MALIK EDF files (inherits from MDDDataset)
    - `create_cross_validation_splits()`: Subject-level stratified K-fold CV
    - `get_preprocessed_chunks()`: Legacy function for single-file processing
-   - Preprocessing pipeline: bandpass filter (1-70 Hz) → notch filter (50 Hz) → optional artifact removal → 10s chunking
+   - Preprocessing pipelines:
+     - EDF files (MDD/CANE/AX_MALIK): bandpass filter (1-70 Hz) → notch filter (50 Hz) → optional artifact removal → 10s chunking
+     - CSV files (IDUN): z-score → detrend → bandpass filter (1-70 Hz) → notch filter (50 Hz) → 10s chunking → quality-based rejection
    - CANE artifact removal can be skipped with `--skip-artifact-removal` flag
 
 2. **`thesis/model.py`** - Neural network architectures
@@ -256,13 +291,16 @@ The `MDDDataset` supports two modes:
 
 **Raw EEG Input:**
 - Single channel: `(batch_size, 1, 2500)` - 1 channel × 2500 samples
-- In-ear channel: `(batch_size, 1, 2500)` - synthetic in-ear EEG (T8-T7 bipolar derivation)
+- In-ear channel: `(batch_size, 1, 2500)` - in-ear EEG
+  - MDD/AX_MALIK: Synthetic bipolar derivation T8-T7
+  - IDUN (replaces CANE): Real in-ear recordings from IDUN device
 - Multi-channel: `(batch_size, 8, 2500)` - 8 channels × 2500 samples
 - Output from datasets as `batch['eeg']`
 
 **Spectrogram Input:**
 - Single channel (CNN_LSTM_DepCap, Smaller): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
 - In-ear channel: Same as single channel `(batch_size, 1, H, W)` with 50% sign flip augmentation per chunk
+  - IDUN or synthetic in-ear depending on dataset
 - Multi-channel (SmallerAll): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
 - Current default: `(129, 41)` with nperseg=256, noverlap=192
 - Paper target: `(254, 342)` (may require parameter tuning)
@@ -271,6 +309,7 @@ The `MDDDataset` supports two modes:
 **Labels (2-class mode):**
 - MDD dataset: 0 = Healthy, 1 = Depressed
 - CANE dataset: 0 = Healthy, 1 = Anxious
+- IDUN dataset: 0 = Healthy (normals), 1 = Any pathological (anxiety/depression/comorbid)
 - AX_MALIK dataset: All subjects are labeled as 1 (Anxious) - no healthy controls
 - All datasets: 0 = Healthy, 1 = Any pathological
 
@@ -289,12 +328,13 @@ The `MDDDataset` supports two modes:
 - **Standard**: 10-fold CV as per EEG depression literature
 
 **Design Principles:**
-1. **Modularity**: Dataset preparation separated into `prepare_mdd_dataset()` and `prepare_cane_dataset()` functions
+1. **Modularity**: Dataset preparation separated into `prepare_mdd_dataset()`, `prepare_cane_dataset()`, `prepare_idun_dataset()`, and `prepare_ax_malik_dataset()` functions
 2. **Extensibility**: Adding new datasets requires implementing a prepare function following the same pattern
 3. **Data leakage prevention**: Never split chunks from the same subject across train/val
 4. **Reproducibility**: Fixed random seed (42) for deterministic fold creation
 5. **Dataset independence**: When combining datasets, maintain separate preprocessing pipelines
 6. **Channel standardization**: Unified 8-channel ordering (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) with automatic T3→T7, T4→T8 mapping for cross-dataset compatibility
+7. **IDUN/CANE substitution**: When `--channel in-ear` is used, IDUN automatically replaces CANE to provide real in-ear recordings instead of synthetic derivations. Uses `dataset_label="cane"` internally for fold compatibility.
 
 **Preprocessing Pipeline (in `thesis/dataset.py`):**
 
@@ -363,22 +403,32 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Artificially inflated performance metrics
 
 **Why Separate Dataset Classes?**
-- Different preprocessing requirements (CANE uses artifact detection with interpolation/clipping, MDD uses simpler pipeline)
+- Different preprocessing requirements:
+  - CANE uses artifact detection with interpolation/clipping
+  - MDD uses simpler pipeline
+  - IDUN has custom CSV pipeline with quality-based rejection
+- Different file formats (EDF vs CSV for IDUN)
 - Different STFT parameters (though standardized to same output shape)
 - Different channel names/orderings in raw files
-- Different sampling rates (MDD: 250 Hz, CANE: 500 Hz)
+- Different sampling rates (MDD: 250 Hz, CANE: 500 Hz, IDUN: 250 Hz, AX_MALIK: 256 Hz)
 - Different channel naming in raw files (requires mapping to canonical names)
 - Allows independent evolution of preprocessing pipelines
-- Channel standardization: Both datasets now use unified 8-channel canonical ordering
+- Channel standardization: EDF datasets use unified 8-channel canonical ordering
 
 ## Code Evolution Notes
 
 **Recent Major Changes:**
-- **Synthetic in-ear EEG channel** (Feb 2026): Added `--channel in-ear` option
-  - Bipolar derivation T8 - T7 simulating IDUN-style in-ear EEG
+- **IDUN real in-ear EEG integration** (Feb 2026): Added `IDUNDataset` for real in-ear recordings
+  - 53 subjects (17 normals, 20 anxiety, 1 depression, 15 comorbid) at 250 Hz
+  - CSV format with quality metrics for chunk rejection
+  - Automatically replaces CANE when `--channel in-ear` is used
+  - Uses `dataset_label="cane"` internally for fold compatibility
+  - Custom preprocessing pipeline: z-score → detrend → bandpass → notch → quality filtering
+- **In-ear EEG channel** (Feb 2026): Added `--channel in-ear` option
+  - MDD/AX_MALIK: Synthetic bipolar derivation T8 - T7
+  - CANE: Real IDUN in-ear recordings (automatic replacement)
   - 50% sign flip augmentation per chunk to handle polarity ambiguity
   - Based on research: "Estimating cognitive workload using a commercial in-ear EEG headset"
-  - Works with all datasets (MDD, CANE, AX_MALIK, all)
 - **Multi-channel EEG support** (Jan 2026): Can use all 8 channels (`--channel all`) or single channel
   - New `SmallerAll` model with Conv3d for multi-channel spatial feature learning
   - Channel standardization: T3→T7, T4→T8 mapping for cross-dataset compatibility
@@ -435,7 +485,14 @@ Use today's date and a short title derived from the task. Existing plans in that
 ## Quick Reference Files
 - `docs/plans/` - Saved plan mode outputs, dated and titled
 - `EXPERIMENTS.md` - Log of experiment configurations and results
-- `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, SpectrogramDataset)
+- `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, IDUNDataset, AX_MALIKDataset, SpectrogramDataset)
+- `thesis/data_preparation.py` - Dataset preparation functions (prepare_mdd_dataset, prepare_cane_dataset, prepare_idun_dataset, prepare_ax_malik_dataset)
 - `thesis/cli.py` - CLI argument parser with all training options
-- `main.py` - Training orchestration, cross-validation logic, and transfer learning support
+- `main.py` - Training orchestration, cross-validation logic, transfer learning support, and CANE/IDUN swap logic
 - `plot_training_curves.py` - Training curve visualization utility
+
+## Important Implementation Notes
+- **IDUN/CANE replacement**: When using `--channel in-ear` with `--dataset cane` or `--dataset all`, CANE is automatically replaced with IDUN real in-ear data
+- **Fold labeling**: IDUN uses `dataset_label="cane"` internally for fold compatibility, so validation logs may report "CANE" but IDUN data is actually used
+- **Quality threshold**: IDUN's default quality threshold (0.0) rejects only unmeasured chunks (quality=0); some subjects may have all-zero quality values
+- **Edge cases**: IDUN subjects 1001 and 1002 have non-standard filenames and are automatically skipped during discovery

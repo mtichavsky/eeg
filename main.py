@@ -25,6 +25,7 @@ from thesis.data_preparation import (
     get_datasets_for_fold,
     prepare_ax_malik_dataset,
     prepare_cane_dataset,
+    prepare_idun_dataset,
     prepare_mdd_dataset,
     split_into_folds,
 )
@@ -653,25 +654,37 @@ def train_cross_validation(
         )
         logger.info(f"MDD dataset: {len(normal)} normal, {len(depression)} depression subjects")
     elif dataset_type == "cane":
-        # Convert to lowercase for CANE
+        # Convert to lowercase for CANE/IDUN
         cane_conditions = [c.lower() for c in conditions]
-        flat_dataset, subject_classes = prepare_cane_dataset(
-            cane_conditions,
-            channel,
-            rng,
-            label_mapping=label_mapping,
-            skip_artifact_removal=skip_artifact_removal,
-            augmentation=augmentation,
-            test_mode=test_mode,
-        )
+        if channel == "in-ear":
+            logger.info("Using IDUN real in-ear dataset instead of CANE synthetic derivation")
+            flat_dataset, subject_classes = prepare_idun_dataset(
+                cane_conditions,
+                channel,
+                rng,
+                label_mapping=label_mapping,
+                augmentation=augmentation,
+                test_mode=test_mode,
+            )
+        else:
+            flat_dataset, subject_classes = prepare_cane_dataset(
+                cane_conditions,
+                channel,
+                rng,
+                label_mapping=label_mapping,
+                skip_artifact_removal=skip_artifact_removal,
+                augmentation=augmentation,
+                test_mode=test_mode,
+            )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
             subject_classes.anxiety,
             subject_classes.depression,
             subject_classes.anxiety_depression,
         )
+        dataset_name = "IDUN" if channel == "in-ear" else "CANE"
         logger.info(
-            f"CANE dataset: {len(normal)} normal, {len(anxiety)} anxiety, "
+            f"{dataset_name} dataset: {len(normal)} normal, {len(anxiety)} anxiety, "
             f"{len(depression)} depression, {len(anxiety_depression)} anxiety+depression subjects"
         )
     elif dataset_type == "all":
@@ -697,17 +710,28 @@ def train_cross_validation(
         if channel in ["T3", "T4"]:
             channel = {"T3": "T7", "T4": "T8"}[channel]
 
-        # Load CANE dataset
+        # Load CANE dataset (or IDUN real in-ear when channel == "in-ear")
         cane_conditions = [c.lower() for c in conditions]
-        cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
-            cane_conditions,
-            channel,
-            rng,
-            label_mapping=label_mapping,
-            skip_artifact_removal=skip_artifact_removal,
-            augmentation=augmentation,
-            test_mode=test_mode,
-        )
+        if channel == "in-ear":
+            logger.info("Using IDUN real in-ear dataset instead of CANE synthetic derivation")
+            cane_flat_dataset, cane_subject_classes = prepare_idun_dataset(
+                cane_conditions,
+                channel,
+                rng,
+                label_mapping=label_mapping,
+                augmentation=augmentation,
+                test_mode=test_mode,
+            )
+        else:
+            cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
+                cane_conditions,
+                channel,
+                rng,
+                label_mapping=label_mapping,
+                skip_artifact_removal=skip_artifact_removal,
+                augmentation=augmentation,
+                test_mode=test_mode,
+            )
         cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
             cane_subject_classes.normal,
             cane_subject_classes.anxiety,

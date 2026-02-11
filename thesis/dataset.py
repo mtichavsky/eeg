@@ -21,6 +21,7 @@ warnings.filterwarnings("ignore")
 CANE_DIR = Path("/home/milan/Documents/diplomka/CANE/")
 MDD_DIR = Path("/home/milan/Documents/diplomka/MDD/")
 AX_MALIK_DIR = Path("/home/milan/Documents/diplomka/AX_MALIK/")
+IDUN_DIR = Path("/home/milan/Documents/diplomka/IDUN_IN_EAR/")
 
 CHUNK_DURATION_SEC = 10
 
@@ -960,6 +961,359 @@ class AX_MALIKDataset(MDDDataset):
         }
 
 
+class IDUNDataset(Dataset):
+    """
+    PyTorch Dataset for IDUN in-ear EEG data.
+
+    Loads real in-ear EEG recordings from the IDUN device. Single-channel CSV format.
+    Designed as a drop-in replacement for CANEDataset when ``--channel in-ear`` is used,
+    providing real in-ear recordings instead of synthetic bipolar derivations.
+    """
+
+    FS = 250  # Hz (verified from timestamp deltas)
+    CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)  # 2500 samples per 10s chunk
+
+    CLASS_DIRECTORIES = ["normals", "anxiety", "depression", "comorbid"]
+    LABEL_MAP: dict[str, str] = {
+        "normals": "H",
+        "anxiety": "AX",
+        "depression": "DEP",
+        "comorbid": "AXDEP",
+    }
+    LABEL_INT_MAP: dict[str, int] = {
+        "normals": 0,
+        "anxiety": 1,
+        "depression": 2,
+        "comorbid": 3,
+    }
+
+    # Subjects with non-standard filenames (no condition suffix) — skip them
+    SKIP_SUBJECTS: set[str] = {"1001", "1002"}
+
+    def __init__(
+        self,
+        data_dir: Path = IDUN_DIR,
+        condition: Optional[Literal["ec", "eo"]] = None,
+        subjects: Optional[list[str]] = None,
+        labels: Optional[list[str]] = None,
+        cache_size: Optional[int] = 100,
+        transform: Optional[Callable] = None,
+        quality_threshold: float = 0.0,
+        test_mode: bool = False,
+    ):
+        """
+        Initialize the IDUN in-ear EEG dataset.
+
+        :param Path data_dir: Path to IDUN dataset root directory.
+        :param Optional[Literal["ec", "eo"]] condition: Filter by condition or None for all.
+        :param Optional[list[str]] subjects: List of subject IDs to include. None = all.
+        :param Optional[list[str]] labels: List of class labels to include
+               (e.g., ["normals", "anxiety"]). None = all.
+        :param Optional[int] cache_size: Number of preprocessed files to cache in memory.
+        :param Optional[Callable] transform: Optional transform function to apply to EEG data.
+        :param float quality_threshold: Reject chunks where quality drops below this value.
+               Default 0.0 rejects only chunks with quality=0 (unmeasured).
+        :param bool test_mode: If True, load only one file per class for debugging.
+        """
+        self.data_dir = Path(data_dir)
+        self.condition = condition
+        self.transform = transform
+        self.quality_threshold = quality_threshold
+        self.test_mode = test_mode
+        self.channel_names: list[str] = ["in-ear"]
+
+        self.files = self._discover_files(condition, subjects, labels)
+
+        preprocess_func = IDUNDataset.load_and_preprocess_idun_file
+        if cache_size:
+            self._load_cached = lru_cache(maxsize=cache_size)(preprocess_func)
+        else:
+            self._load_cached = preprocess_func
+
+    def _discover_files(
+        self,
+        condition: Optional[Literal["ec", "eo"]],
+        subjects: Optional[list[str]],
+        labels: Optional[list[str]],
+    ) -> list[dict[str, Any]]:
+        """
+        Discover all IDUN EEG CSV files matching the criteria.
+
+        Files are organized as: ``{class_dir}/{subject_id}/eeg_{subject_id}{condition}.csv``
+        with case-insensitive condition matching.
+
+        :param Optional[Literal["ec", "eo"]] condition: Condition filter or None.
+        :param Optional[list[str]] subjects: List of subject IDs to include or None for all.
+        :param Optional[list[str]] labels: List of class labels to include or None for all.
+        :return: List of dictionaries containing file metadata.
+        :rtype: list[dict[str, Any]]
+        """
+        files: list[dict[str, Any]] = []
+        condition_map = {"ec": "EC", "eo": "EO"}
+
+        # Test mode subjects: one per class
+        # normals=0012, anxiety=0041, depression=0016, comorbid=0013
+        test_mode_subjects = {"0012", "0041", "0016", "0013"}
+
+        for class_dir in self.CLASS_DIRECTORIES:
+            class_path = self.data_dir / class_dir
+            if not class_path.exists():
+                continue
+
+            # Filter by labels
+            if labels and class_dir not in labels:
+                continue
+
+            label = self.LABEL_MAP[class_dir]
+            label_int = self.LABEL_INT_MAP[class_dir]
+
+            for subject_dir in sorted(class_path.iterdir()):
+                if not subject_dir.is_dir():
+                    continue
+
+                subject_num = subject_dir.name
+
+                # Skip subjects with non-standard filenames
+                if subject_num in self.SKIP_SUBJECTS:
+                    logger.warning(
+                        f"Skipping IDUN subject {subject_num} in {class_dir}: "
+                        f"non-standard filename format"
+                    )
+                    continue
+
+                # Test mode: only load specific subjects
+                if self.test_mode and subject_num not in test_mode_subjects:
+                    continue
+
+                # Find EEG files with case-insensitive condition matching
+                eeg_pattern = re.compile(
+                    rf"eeg_{re.escape(subject_num)}(ec|eo|erp)\.csv", re.IGNORECASE
+                )
+
+                for file_path in sorted(subject_dir.glob("eeg_*.csv")):
+                    match = eeg_pattern.match(file_path.name)
+                    if not match:
+                        logger.warning(f"Skipping IDUN file with unexpected name: {file_path}")
+                        continue
+
+                    file_condition = match.group(1).lower()
+
+                    # Skip erp condition
+                    if file_condition == "erp":
+                        continue
+
+                    # Filter by condition
+                    if condition and file_condition != condition:
+                        continue
+
+                    cond_upper = condition_map.get(file_condition, file_condition.upper())
+                    subject_id = f"{label} S{subject_num} {cond_upper}"
+
+                    # Filter by subjects
+                    if subjects and subject_id not in subjects:
+                        continue
+
+                    # Look for quality file
+                    quality_path = file_path.parent / file_path.name.replace("eeg_", "quality_")
+                    if not quality_path.exists():
+                        # Try case variations
+                        for qf in file_path.parent.glob("quality_*"):
+                            if qf.name.lower() == quality_path.name.lower():
+                                quality_path = qf
+                                break
+
+                    files.append(
+                        {
+                            "path": file_path,
+                            "quality_path": quality_path if quality_path.exists() else None,
+                            "label": class_dir,
+                            "subject": subject_id,
+                            "condition": file_condition,
+                            "label_int": label_int,
+                        }
+                    )
+
+        MDDDataset._log_file_discovery(files, "IDUN")
+        return files
+
+    @staticmethod
+    def load_and_preprocess_idun_file(
+        file_path: Path,
+        quality_path: Optional[Path] = None,
+        quality_threshold: float = 30.0,  # https://sdk-docs.idunguardian.com/data-analysis.html
+    ) -> torch.Tensor:
+        """
+        Load an IDUN CSV file, preprocess it, and return chunks.
+
+        Preprocessing pipeline: z-score raw → detrend → bandpass 1-70 Hz → notch 50 Hz
+        → chunk into 10s segments → per-chunk z-score → quality-based rejection.
+
+        :param Path file_path: Path to the EEG CSV file.
+        :param Optional[Path] quality_path: Path to the corresponding quality CSV file.
+        :param float quality_threshold: Reject chunks where quality is at or below this value.
+               Default 0.0 rejects only unmeasured (quality=0) chunks.
+        :return: Tensor of preprocessed EEG chunks with shape (num_chunks, 1, 2500).
+        :rtype: torch.Tensor
+        """
+        df = pd.read_csv(file_path)
+        signal = df["ch1"].values.astype(np.float64)
+        timestamps = df["timestamp"].values
+
+        # Verify sampling rate
+        duration = timestamps[-1] - timestamps[0]
+        detected_fs = (len(signal) - 1) / duration
+        if abs(detected_fs - IDUNDataset.FS) > 5:
+            logger.warning(
+                f"IDUN file {file_path.name}: detected Fs={detected_fs:.1f} Hz, "
+                f"expected {IDUNDataset.FS} Hz"
+            )
+
+        # Load quality data if available
+        quality_timestamps: Optional[np.ndarray] = None
+        quality_values: Optional[np.ndarray] = None
+        if quality_path is not None:
+            try:
+                qdf = pd.read_csv(quality_path)
+                quality_timestamps = qdf["timestamp"].values
+                quality_values = qdf["signalQuality"].values
+                logger.info(
+                    f"Quality stats for {file_path.name}: "
+                    f"mean={quality_values.mean():.1f}, "
+                    f"min={quality_values.min():.1f}, "
+                    f"max={quality_values.max():.1f}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to load quality file {quality_path}: {e}")
+
+        # Step 1: Z-score normalize raw values
+        signal = zscore(signal)
+
+        # Step 2: Detrend (linear)
+        signal = detrend(signal, type="linear")
+
+        # Step 3: Bandpass filter 1-70 Hz
+        nyq = 0.5 * IDUNDataset.FS
+        b_bp, a_bp = butter(4, [1.0 / nyq, 70.0 / nyq], btype="band")
+        signal = filtfilt(b_bp, a_bp, signal)
+
+        # Step 4: Notch filter 50 Hz
+        b_notch, a_notch = iirnotch(50.0, Q=30, fs=IDUNDataset.FS)
+        signal = filtfilt(b_notch, a_notch, signal)
+
+        # Step 5: Chunk into 10s segments
+        n_samples = len(signal)
+        chunk_samples = IDUNDataset.CHUNK_SAMPLES
+        chunks_list: list[torch.Tensor] = []
+        skipped_quality = 0
+
+        for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
+            chunk_start_time = timestamps[i]
+            chunk_end_time = timestamps[min(i + chunk_samples - 1, n_samples - 1)]
+
+            # Quality check: reject chunks with low quality
+            if quality_timestamps is not None and quality_values is not None:
+                # Find quality samples within this chunk's time range
+                mask = (quality_timestamps >= chunk_start_time) & (
+                    quality_timestamps <= chunk_end_time
+                )
+                chunk_quality = quality_values[mask]
+
+                if len(chunk_quality) > 0:
+                    min_quality = chunk_quality.min()
+                    if min_quality <= quality_threshold:
+                        skipped_quality += 1
+                        logger.warning(
+                            f"Skipping chunk {len(chunks_list) + skipped_quality} "
+                            f"from {file_path.name}: quality={min_quality:.1f} "
+                            f"<= threshold={quality_threshold}"
+                        )
+                        continue
+
+            # Per-chunk z-score normalization
+            chunk = signal[i : i + chunk_samples]
+            chunk = zscore(chunk)
+
+            # Shape: (1, chunk_samples) — single channel
+            chunk_tensor = torch.from_numpy(chunk.reshape(1, -1)).float()
+            chunks_list.append(chunk_tensor)
+
+        if skipped_quality > 0:
+            logger.info(
+                f"Rejected {skipped_quality} chunks from {file_path.name} due to low quality"
+            )
+
+        if chunks_list:
+            chunks_tensor = torch.stack(chunks_list)
+            logger.info(
+                f"IDUN {file_path.name}: created {len(chunks_list)} chunks "
+                f"of shape {chunks_tensor.shape}"
+            )
+            return chunks_tensor
+        else:
+            logger.warning(f"No valid chunks created from {file_path.name}")
+            return torch.empty(0, 1, chunk_samples)
+
+    def __len__(self) -> int:
+        return len(self.files)
+
+    def __getitem__(self, idx: int) -> dict[str, Any]:
+        """
+        Get preprocessed EEG data for a single file.
+
+        :param int idx: Index of the file to retrieve.
+        :return: Dictionary containing 'eeg' (tensor), 'label' (int), 'subject' (str),
+                 'condition' (str), and 'channels' (list[str]).
+        :rtype: dict[str, Any]
+        """
+        file_info = self.files[idx]
+
+        chunks = self._load_cached(
+            file_info["path"],
+            file_info.get("quality_path"),
+            self.quality_threshold,
+        )
+
+        if self.transform:
+            eeg_tensor = self.transform(chunks)
+        else:
+            eeg_tensor = chunks
+
+        return {
+            "eeg": eeg_tensor,
+            "label": file_info["label_int"],
+            "subject": file_info["subject"],
+            "condition": file_info["condition"],
+            "channels": self.channel_names,
+        }
+
+    def get_sorted_subjects(self) -> list[str]:
+        """
+        Get a sorted list of unique subjects in the dataset.
+
+        :return: Sorted list of unique subject IDs.
+        :rtype: list[str]
+        """
+        return sorted(set(f["subject"] for f in self.files))
+
+    def get_statistics(self) -> dict[str, Any]:
+        """
+        Get dataset statistics.
+
+        :return: Dictionary containing total files, per-class file counts,
+                 conditions breakdown, and number of unique subjects.
+        :rtype: dict[str, Any]
+        """
+        class_counts: dict[str, int] = Counter(f["label"] for f in self.files)
+        condition_counts: dict[str, int] = Counter(f["condition"] for f in self.files)
+
+        return {
+            "total_files": len(self.files),
+            "class_counts": dict(class_counts),
+            "conditions": dict(condition_counts),
+            "subjects": len(self.get_sorted_subjects()),
+        }
+
+
 class SpectrogramDataset(Dataset):
     """
     Wrapper dataset that converts raw EEG data to spectrograms on-the-fly.
@@ -970,7 +1324,7 @@ class SpectrogramDataset(Dataset):
 
     def __init__(
         self,
-        dataset: MDDDataset | CANEDataset,
+        dataset: MDDDataset | CANEDataset | IDUNDataset,
         fs: float = MDDDataset.FS,
         nperseg: int = 256,
         noverlap: int = 192,

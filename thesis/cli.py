@@ -40,8 +40,10 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         + ["all", "in-ear"],
         default="all",
         help="Channel to use: specific channel name (Fp1, T7, etc.), 'all' for all 8 channels, "
-        "or 'in-ear' for synthetic in-ear EEG (bipolar derivation T8-T7 with 50%% sign flip "
-        "augmentation). When 'all' is selected, model receives 8-channel spectrograms.",
+        "or 'in-ear' for in-ear EEG. When 'in-ear' is selected, CANE is replaced with real "
+        "IDUN in-ear recordings; MDD and AX_MALIK use synthetic bipolar derivation T8-T7. "
+        "Includes 50%% sign flip augmentation. "
+        "When 'all' is selected, model receives 8-channel spectrograms.",
     )
     preproc_group.add_argument(
         "--class-mode",
