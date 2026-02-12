@@ -10,7 +10,7 @@ from typing import Literal
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 
 from plot_training_curves import (
     TrainingCurvesError,
@@ -513,13 +513,22 @@ def create_model(
     return model
 
 
-def compute_class_weights(dataset: Dataset, num_classes: int, device: torch.device) -> torch.Tensor:
+def compute_class_weights(
+    dataset: Dataset, num_classes: int, device: torch.device | str = "cpu"
+) -> torch.Tensor:
     """
     Compute class weights for weighted loss based on chunk-level class distribution.
 
+    Pass ``device="cpu"`` (default) when weights are only used for
+    :class:`~torch.utils.data.WeightedRandomSampler` (CPU-only).
+    Pass the model device (e.g. ``"cuda"``) when weights will be fed to
+    ``nn.CrossEntropyLoss(weight=class_weights)``, which requires the tensor
+    to live on the same device as model outputs.
+
     :param Dataset dataset: Dataset to compute weights for (FlattenedSpectrogramDataset).
     :param int num_classes: Number of classes (2 or 4).
-    :param torch.device device: Device to place weights tensor on.
+    :param device: Device to place weights tensor on. Defaults to ``"cpu"``.
+    :type device: torch.device | str
     :return: Class weights tensor of shape (num_classes,).
     :rtype: torch.Tensor
     """
@@ -819,9 +828,16 @@ def train_cross_validation(
             flat_dataset,
         )
 
-        # Compute class weights for balanced loss
-        class_weights = compute_class_weights(train_dataset, num_classes, device)
-        logger.info(f"Fold {fold + 1} | Class weights | {class_weights.cpu().tolist()}")
+        # Compute class weights for balanced loss (CPU only used for sampler, otherwise use `device` as value)
+        class_weights = compute_class_weights(train_dataset, num_classes, device="cpu")
+        logger.info(f"Fold {fold + 1} | Class weights | {class_weights}")
+
+        # Build per-sample weights for WeightedRandomSampler
+        sample_weights: list[float] = []
+        for idx in range(len(train_dataset)):
+            _, label, _ = train_dataset[idx]
+            sample_weights.append(class_weights[label].item())
+        sampler = WeightedRandomSampler(sample_weights, num_samples=len(train_dataset))
 
         # Create DataLoaders
         # num_workers>0 overlaps CPU data loading/STFT computation with GPU training,
@@ -832,7 +848,10 @@ def train_cross_validation(
         train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
-            shuffle=True,
+            # To roll back to pure random sampling: replace sampler= with shuffle=True,
+            # recompute class_weights with device=device (needs GPU for the loss),
+            # and pass them to: nn.CrossEntropyLoss(weight=class_weights)
+            sampler=sampler,
             num_workers=num_workers,
             pin_memory=pin_memory,
             collate_fn=collate_spectrograms,
@@ -858,7 +877,7 @@ def train_cross_validation(
             freeze_lstm=freeze_lstm,
         )
 
-        criterion = nn.CrossEntropyLoss(weight=class_weights)
+        criterion = nn.CrossEntropyLoss()
         # Only optimize trainable parameters (important when CNN layers are frozen)
         optimizer = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
