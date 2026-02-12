@@ -282,7 +282,7 @@ def prepare_idun_dataset(
     label_mapping: Optional[dict[int, int]] = None,
     augmentation: Callable | None = None,
     test_mode: bool = False,
-    quality_threshold: float = 0.0,
+    quality_threshold: float = 30.0,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, "SubjectClasses"]:
     """
     Prepare IDUN real in-ear dataset with spectrograms and split subjects by class.

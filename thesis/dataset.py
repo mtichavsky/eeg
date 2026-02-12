@@ -36,6 +36,13 @@ MDD_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]  # T3→T
 CANE_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "Oz"]
 AX_MALIK_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]
 
+LABEL_INT_MAP: dict[str, int] = {
+    "normals": CanonicalLabel.HEALTHY,
+    "anxiety": CanonicalLabel.ANXIETY_ONLY,
+    "depression": CanonicalLabel.DEPRESSION_ONLY,
+    "comorbid": CanonicalLabel.COMORBID,
+}
+
 
 def load_and_preprocess_edf_file(
     file_path: Path,
@@ -341,14 +348,8 @@ class CANEDataset(Dataset):
     # Available EEG channels in raw CANE data
     CHANNELS = [f"d{i}" for i in range(1, 9)]
 
-    CLASS_DIRECTORIES = ["normal", "anxiety", "depression", "anxiety-depression"]
-    LABEL_MAP = {"normal": "H", "anxiety": "AX", "depression": "DEP", "anxiety-depression": "AXDEP"}
-    LABEL_INT_MAP = {
-        "normal": CanonicalLabel.HEALTHY,
-        "anxiety": CanonicalLabel.ANXIETY_ONLY,
-        "depression": CanonicalLabel.DEPRESSION_ONLY,
-        "anxiety-depression": CanonicalLabel.COMORBID,
-    }
+    CLASS_DIRECTORIES = ["normals", "anxiety", "depression", "comorbid"]
+    LABEL_MAP = {"normals": "H", "anxiety": "AX", "depression": "DEP", "comorbid": "AXDEP"}
     CHANNEL_MAPPING = {
         "d1": "Fp1",
         "d2": "Fp2",
@@ -386,7 +387,7 @@ class CANEDataset(Dataset):
         :param Optional[Literal["EC", "EO"]] condition: Filter by condition
                or None for all conditions.
         :param Optional[list[str]] subjects: List of subject IDs to include. None = all.
-        :param Optional[list[str]] labels: List of labels to include (e.g., ["normal", "anxiety"]).
+        :param Optional[list[str]] labels: List of labels to include (e.g., ["normals", "anxiety"]).
                None = all.
         :param int cache_size: Number of preprocessed files to cache in memory. If None,
                cache is not used.
@@ -443,18 +444,18 @@ class CANEDataset(Dataset):
         Discover all .csv files matching the criteria.
 
         Files are organized in directory structure:
-        {label}/{condition}/{subject_id}_{condition}.csv where label is "normal" or "anxiety",
+        {label}/{condition}/{subject_id}_{condition}.csv where label is "normals" or "anxiety",
         and condition is "ec" (eyes closed) or "eo" (eyes open).
 
         :param Optional[Literal["ec", "eo"]] condition: Condition filter ("ec", "eo") or None.
         :param Optional[list[str]] subjects: List of subject IDs to include or None for all.
-        :param Optional[list[str]] labels: List of labels to include ("normal", "anxiety")
+        :param Optional[list[str]] labels: List of labels to include ("normals", "anxiety")
                or None for all.
         :return: List of dictionaries containing file metadata.
         :rtype: list[dict]
         """
         # Test mode: match specific subject IDs
-        # (0012=normal, 0041=anxiety, 0016=depression, 0013=anxiety-depression)
+        # (0012=normals, 0041=anxiety, 0016=depression, 0013=comorbid)
         if self.test_mode:
             pattern = re.compile(r"(0041|0013|0012|0016)_?(EC|EO|Ec|Eo|ec|eo)\.csv", re.IGNORECASE)
         else:
@@ -505,7 +506,7 @@ class CANEDataset(Dataset):
                             "label": label_dir,
                             "subject": subject_id,
                             "condition": condition_dir,
-                            "label_int": self.LABEL_INT_MAP[label_dir],
+                            "label_int": LABEL_INT_MAP[label_dir],
                         }
                     )
 
@@ -801,7 +802,7 @@ class CANEDataset(Dataset):
                  conditions breakdown, and number of unique subjects.
         :rtype: dict[str, Any]
         """
-        normal_count = sum(1 for f in self.files if f["label"] == "normal")
+        normal_count = sum(1 for f in self.files if f["label"] == "normals")
         anxiety_count = sum(1 for f in self.files if f["label"] == "anxiety")
 
         conditions: dict[str, int] = {}
@@ -989,12 +990,6 @@ class IDUNDataset(Dataset):
         "depression": "DEP",
         "comorbid": "AXDEP",
     }
-    LABEL_INT_MAP: dict[str, int] = {
-        "normals": CanonicalLabel.HEALTHY,
-        "anxiety": CanonicalLabel.ANXIETY_ONLY,
-        "depression": CanonicalLabel.DEPRESSION_ONLY,
-        "comorbid": CanonicalLabel.COMORBID,
-    }
 
     # Subjects with non-standard filenames (no condition suffix) — skip them
     SKIP_SUBJECTS: set[str] = {"1001", "1002"}
@@ -1074,7 +1069,7 @@ class IDUNDataset(Dataset):
                 continue
 
             label = self.LABEL_MAP[class_dir]
-            label_int = self.LABEL_INT_MAP[class_dir]
+            label_int = LABEL_INT_MAP[class_dir]
 
             for subject_dir in sorted(class_path.iterdir()):
                 if not subject_dir.is_dir():
