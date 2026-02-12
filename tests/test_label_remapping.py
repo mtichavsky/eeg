@@ -369,7 +369,7 @@ class TestCentralizedLabelMappings:
         """Test validation passes for valid MDD 4-class labels."""
         from thesis.labels import LabelUtils
 
-# Valid MDD 4-class labels: {0, 2}
+        # Valid MDD 4-class labels: {0, 2}
         labels = {0, 2}
         # Should not raise
         LabelUtils.validate_for_dataset(labels, "mdd", num_classes=4)
@@ -378,7 +378,7 @@ class TestCentralizedLabelMappings:
         """Test validation fails for invalid MDD 4-class labels."""
         from thesis.labels import LabelUtils
 
-# Invalid: MDD should not have label 1 (anxiety) in 4-class mode
+        # Invalid: MDD should not have label 1 (anxiety) in 4-class mode
         labels = {0, 1, 2}
 
         with pytest.raises(ValueError, match="forbidden labels"):
