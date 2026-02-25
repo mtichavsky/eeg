@@ -802,17 +802,19 @@ def train_cross_validation(
 
         # Compute class weights for balanced loss
         class_weights = compute_class_weights(train_dataset, num_classes, device)
-        logger.info(f"Fold {fold + 1} | Class weights | {class_weights}")
+        logger.info(f"Fold {fold + 1} | Class weights | {class_weights.cpu().tolist()}")
 
         # Create DataLoaders
-        # Small dataset fits in RAM → extra workers add overhead, not speed
+        # num_workers>0 overlaps CPU data loading/STFT computation with GPU training,
+        # preventing GPU from sitting idle while spectrograms are computed on CPU.
         # pin_memory speeds up CPU→GPU transfers, enabling Direct Memory Access
-        pin_memory = True if device == "cuda" else False
+        pin_memory = device.type == "cuda"
+        num_workers = 4
         train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
             shuffle=True,
-            num_workers=0,
+            num_workers=num_workers,
             pin_memory=pin_memory,
             collate_fn=collate_spectrograms,
         )
@@ -820,7 +822,7 @@ def train_cross_validation(
             val_dataset,
             batch_size=batch_size,
             shuffle=False,
-            num_workers=0,
+            num_workers=num_workers,
             pin_memory=pin_memory,
             collate_fn=collate_spectrograms,
         )

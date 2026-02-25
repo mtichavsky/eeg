@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import warnings
 from collections import Counter
@@ -20,10 +21,12 @@ logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore")
 
-CANE_DIR = Path("/home/milan/Documents/diplomka/CANE/")
-MDD_DIR = Path("/home/milan/Documents/diplomka/MDD/")
-AX_MALIK_DIR = Path("/home/milan/Documents/diplomka/AX_MALIK/")
-IDUN_DIR = Path("/home/milan/Documents/diplomka/IDUN_IN_EAR/")
+_DEFAULT_BASE_DIR = "/home/milan/Documents/diplomka/"
+BASE_DIR = Path(os.environ.get("EEG_DATA_DIR", _DEFAULT_BASE_DIR))
+CANE_DIR = BASE_DIR / "CANE"
+MDD_DIR = BASE_DIR / "MDD"
+AX_MALIK_DIR = BASE_DIR / "AX_MALIK"
+IDUN_DIR = BASE_DIR / "IDUN_IN_EAR"
 
 CHUNK_DURATION_SEC = 10
 
