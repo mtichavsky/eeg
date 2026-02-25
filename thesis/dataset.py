@@ -131,12 +131,15 @@ class MDDDataset(Dataset):
     CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)
 
     @staticmethod
-    def _log_file_discovery(files: list[dict[str, Any]], dataset_name: str) -> None:
+    def _log_file_discovery(
+        files: list[dict[str, Any]], dataset_name: str, data_dir: Optional[Path] = None
+    ) -> None:
         """
         Log discovery statistics for a list of discovered files.
 
         :param list[dict[str, Any]] files: List of file metadata dictionaries.
         :param str dataset_name: Name of the dataset for logging purposes.
+        :param Optional[Path] data_dir: Directory that was searched, included in warning when empty.
         :rtype: None
         """
         if files:
@@ -147,7 +150,8 @@ class MDDDataset(Dataset):
                 f"{dict(label_counts)} labels, {dict(condition_counts)} conditions"
             )
         else:
-            logger.warning(f"No {dataset_name} files discovered matching criteria")
+            dir_info = f" in {data_dir}" if data_dir is not None else ""
+            logger.warning(f"No {dataset_name} files discovered matching criteria{dir_info}")
 
     def __init__(
         self,
@@ -261,7 +265,7 @@ class MDDDataset(Dataset):
                 }
             )
 
-        MDDDataset._log_file_discovery(files, "MDD")
+        MDDDataset._log_file_discovery(files, "MDD", self.data_dir)
         return files
 
     def __len__(self) -> int:
@@ -513,7 +517,7 @@ class CANEDataset(Dataset):
                         }
                     )
 
-        MDDDataset._log_file_discovery(files, "CANE")
+        MDDDataset._log_file_discovery(files, "CANE", self.data_dir)
         return files
 
     @staticmethod
@@ -953,7 +957,7 @@ class AX_MALIKDataset(MDDDataset):
                     }
                 )
 
-        MDDDataset._log_file_discovery(files, "AX_MALIK")
+        MDDDataset._log_file_discovery(files, "AX_MALIK", self.data_dir)
         return files
 
     def get_statistics(self) -> dict[str, Any]:
@@ -1140,7 +1144,7 @@ class IDUNDataset(Dataset):
                         }
                     )
 
-        MDDDataset._log_file_discovery(files, "IDUN")
+        MDDDataset._log_file_discovery(files, "IDUN", self.data_dir)
         return files
 
     @staticmethod
