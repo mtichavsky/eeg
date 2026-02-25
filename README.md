@@ -341,6 +341,8 @@ pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu126
 export EEG_DATA_DIR=/home/xticha09/
 ```
 
+- Use `CUDA_VISIBLE_DEVICES=2,3` to specify which GPUs the process can use
+
 > **Note:** For running a pre-built PyTorch wheel you don't need to load a CUDA module — PyTorch
 > bundles its own CUDA runtime. The module only matters if you're compiling CUDA extensions.
 > Loading the matching one is still good practice to avoid surprises.
