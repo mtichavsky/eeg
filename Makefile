@@ -16,3 +16,4 @@ venv:
 
 lock:
 	poetry lock
+
