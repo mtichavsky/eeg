@@ -314,3 +314,33 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 - All logging uses Python's `logging` module, not print statements
 - Default regularization: dropout=0.5, weight_decay=1e-4 (L2 penalty)
 - See `EXPERIMENTS.md` for experiment tracking and results
+
+## FIT Server Setup
+
+```bash
+# Load required modules
+ml Python/3.12.3-GCCcore-13.3.0
+ml CUDA/12.6.0
+
+# Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate
+
+# Install Poetry and project dependencies
+pip install poetry
+poetry install
+
+# Check GPU and select matching PyTorch wheel
+nvidia-smi                                                    # verify GPU is available
+nvidia-smi --query-gpu=name,compute_cap --format=csv,noheader # get compute capability
+
+# Install PyTorch with CUDA support (adjust URL for your CUDA version)
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu126
+
+# Point datasets to your data directory (default: /home/milan/Documents/diplomka/)
+export EEG_DATA_DIR=/home/xticha09/
+```
+
+> **Note:** For running a pre-built PyTorch wheel you don't need to load a CUDA module — PyTorch
+> bundles its own CUDA runtime. The module only matters if you're compiling CUDA extensions.
+> Loading the matching one is still good practice to avoid surprises.
