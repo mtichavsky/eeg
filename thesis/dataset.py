@@ -1385,9 +1385,8 @@ class SpectrogramDataset(Dataset):
         self.augmentation = augmentation
         self.is_inear: bool = channel == "in-ear"
 
-        # Disable caching when augmentation or in-ear sign flip is enabled - each access
-        # should return fresh randomness. Otherwise, use LRU cache for performance.
-        if augmentation is None and not self.is_inear:
+        # Disable caching only when augmentation is enabled (requires fresh randomness).
+        if augmentation is None:
             self._get_item_cached = lru_cache(maxsize=cache_size)(self._get_item)
         else:
             self._get_item_cached = self._get_item
@@ -1433,8 +1432,8 @@ class SpectrogramDataset(Dataset):
                 channel_data = chunk_data[ch_idx].numpy()
 
                 # Sign flip for in-ear: 50% probability per chunk, handles polarity ambiguity
-                if is_inear and np.random.random() < 0.5:
-                    channel_data = -channel_data
+                # if is_inear and np.random.random() < 0.5:
+                #    channel_data = -channel_data
 
                 # Apply augmentation to raw EEG before STFT
                 if augmentation is not None:
