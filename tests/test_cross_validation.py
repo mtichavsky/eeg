@@ -133,7 +133,7 @@ class TestCreateBalancedFolds:
 
     The function now takes MultiDatasetSubjectList (list of lists) for each class:
     - normal: [[mdd_normal], [cane_normal], ...]
-    - anxiety: [[cane_anxious], [ax_malik_anxious], ...]
+    - anxiety: [[cane_anxious], [sad_anxious], ...]
     - depression: [[mdd_depressed], ...]
     - anxiety_depression: [[cane_anxdep], ...]
 

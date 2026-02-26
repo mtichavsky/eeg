@@ -9,11 +9,11 @@ import torch
 from torch.utils.data import ConcatDataset, Subset
 
 from thesis.dataset import (
-    AX_MALIKDataset,
     CANEDataset,
     FlattenedSpectrogramDataset,
     IDUNDataset,
     MDDDataset,
+    SADDataset,
     SpectrogramDataset,
 )
 from thesis.labels import LabelMapping
@@ -61,7 +61,7 @@ def determine_num_classes(class_mode: str) -> tuple[int, Optional[dict[int, int]
 
 
 def _prepare_dataset_generic(
-    dataset_class: type[MDDDataset] | type[AX_MALIKDataset],
+    dataset_class: type[MDDDataset] | type[SADDataset],
     dataset_label: str,
     conditions: list[str],
     channel: str,
@@ -74,10 +74,10 @@ def _prepare_dataset_generic(
     """
     Generic dataset preparation for datasets following the MDD pattern.
 
-    Used by prepare_mdd_dataset and prepare_ax_malik_dataset to reduce code duplication.
+    Used by prepare_mdd_dataset and prepare_sad_dataset to reduce code duplication.
 
-    :param type dataset_class: Dataset class to instantiate (MDDDataset or AX_MALIKDataset).
-    :param str dataset_label: Label for dataset ("mdd" or "ax_malik").
+    :param type dataset_class: Dataset class to instantiate (MDDDataset or SADDataset).
+    :param str dataset_label: Label for dataset ("mdd" or "sad").
     :param list[str] conditions: EEG conditions to load.
     :param str channel: Channel to use (e.g., "Fp1" or "all").
     :param np.random.RandomState rng: Random number generator for shuffling.
@@ -237,7 +237,7 @@ def prepare_cane_dataset(
     return cane_combined_flat, subject_classes
 
 
-def prepare_ax_malik_dataset(
+def prepare_sad_dataset(
     conditions: list[Literal["EC", "EO"]],
     channel: str,
     rng: np.random.RandomState,
@@ -247,7 +247,7 @@ def prepare_ax_malik_dataset(
     label_mapping: Optional[dict[int, int]] = None,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
-    Prepare AX_MALIK dataset with spectrograms and split subjects by class.
+    Prepare SAD dataset with spectrograms and split subjects by class.
 
     :param list[str] conditions: EEG conditions to load (e.g., ["EC", "EO"]).
     :param str channel: Channel to use (e.g., "Fp1" or "all").
@@ -255,20 +255,17 @@ def prepare_ax_malik_dataset(
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param int num_classes: Number of classes (2 or 4).
-    :param Optional[dict[int, int]] label_mapping: Optional label remapping dict (AX_MALIK doesn't
-           need remapping in 4-class mode since all subjects are anxiety = label 1).
+    :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
     :return: Tuple of (flat_dataset, SubjectClasses).
-             Note: All subjects are anxiety class; normal, depression, and
-             anxiety_depression will be empty.
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
     """
     return _prepare_dataset_generic(
-        dataset_class=AX_MALIKDataset,
-        dataset_label="ax_malik",
+        dataset_class=SADDataset,
+        dataset_label="sad",
         conditions=conditions,
         channel=channel,
         rng=rng,
-        fs=AX_MALIKDataset.FS,
+        fs=SADDataset.FS,
         augmentation=augmentation,
         test_mode=test_mode,
         label_mapping=label_mapping,
@@ -520,7 +517,7 @@ def get_datasets_for_fold(
     dataset_type: str,
     mdd_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
     cane_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
-    ax_malik_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
+    sad_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
     flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
 ) -> tuple[ConcatDataset | Subset, ConcatDataset | Subset, dict[str, str]]:
     """
@@ -531,11 +528,11 @@ def get_datasets_for_fold(
     :param list anxiety_folds: Anxiety subject folds.
     :param list depression_folds: Depression subject folds.
     :param list anxiety_depression_folds: Anxiety+depression subject folds.
-    :param str dataset_type: Dataset type ("mdd", "cane", "ax_malik", or "all").
+    :param str dataset_type: Dataset type ("mdd", "cane", "sad", or "all").
     :param mdd_flat_dataset: MDD flattened dataset (for "all" mode).
     :param cane_flat_dataset: CANE flattened dataset (for "all" mode).
-    :param ax_malik_flat_dataset: AX_MALIK flattened dataset (for "all" mode).
-    :param flat_dataset: Single dataset (for "mdd", "cane", or "ax_malik" mode).
+    :param sad_flat_dataset: SAD flattened dataset (for "all" mode).
+    :param flat_dataset: Single dataset (for "mdd", "cane", or "sad" mode).
     :return: Tuple of (train_dataset, val_dataset, val_subject_dataset_map).
         val_subject_dataset_map maps subject IDs to their dataset label (e.g., "mdd", "cane").
     :rtype: tuple[ConcatDataset | Subset, ConcatDataset | Subset, dict[str, str]]
@@ -602,26 +599,22 @@ def get_datasets_for_fold(
             train_chunk_counts["CANE"] = len(cane_train_indices)
             val_chunk_counts["CANE"] = len(cane_val_indices)
 
-        # Process AX_MALIK dataset if available
-        if ax_malik_flat_dataset is not None:
-            ax_malik_train_subjects = [
-                subj for ds, subj in train_subjects_with_dataset if ds == "ax_malik"
+        # Process SAD dataset if available
+        if sad_flat_dataset is not None:
+            sad_train_subjects = [
+                subj for ds, subj in train_subjects_with_dataset if ds == "sad"
             ]
-            ax_malik_val_subjects = [
-                subj for ds, subj in val_subjects_with_dataset if ds == "ax_malik"
+            sad_val_subjects = [
+                subj for ds, subj in val_subjects_with_dataset if ds == "sad"
             ]
 
-            ax_malik_train_indices = get_indices_from_dataset(
-                ax_malik_flat_dataset, ax_malik_train_subjects
-            )
-            ax_malik_val_indices = get_indices_from_dataset(
-                ax_malik_flat_dataset, ax_malik_val_subjects
-            )
+            sad_train_indices = get_indices_from_dataset(sad_flat_dataset, sad_train_subjects)
+            sad_val_indices = get_indices_from_dataset(sad_flat_dataset, sad_val_subjects)
 
-            train_subsets.append(Subset(ax_malik_flat_dataset, ax_malik_train_indices))
-            val_subsets.append(Subset(ax_malik_flat_dataset, ax_malik_val_indices))
-            train_chunk_counts["AX_MALIK"] = len(ax_malik_train_indices)
-            val_chunk_counts["AX_MALIK"] = len(ax_malik_val_indices)
+            train_subsets.append(Subset(sad_flat_dataset, sad_train_indices))
+            val_subsets.append(Subset(sad_flat_dataset, sad_val_indices))
+            train_chunk_counts["SAD"] = len(sad_train_indices)
+            val_chunk_counts["SAD"] = len(sad_val_indices)
 
         train_dataset = ConcatDataset(train_subsets)
         val_dataset = ConcatDataset(val_subsets)
