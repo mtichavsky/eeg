@@ -41,7 +41,7 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         default="all",
         help="Channel to use: specific channel name (Fp1, T7, etc.), 'all' for all 8 channels, "
         "or 'in-ear' for in-ear EEG. When 'in-ear' is selected, CANE is replaced with real "
-        "IDUN in-ear recordings; MDD and AX_MALIK use synthetic bipolar derivation T8-T7. "
+        "IDUN in-ear recordings; MDD and SAD use synthetic bipolar derivation T8-T7. "
         "Includes 50%% sign flip augmentation. "
         "When 'all' is selected, model receives 8-channel spectrograms.",
     )
@@ -100,10 +100,10 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--dataset",
         type=str,
         default="mdd",
-        choices=["mdd", "cane", "all"],
+        choices=["mdd", "cane", "sad", "all"],
         help="Dataset to train on: 'mdd' (2 classes: normal, mdd), "
         "'cane' (2-4 classes: normal, anxious, mdd, comorbid), "
-        "'ax_malik' (not an option rn, only anxious class), "
+        "'sad' (2 classes: normal, anxious; same channel setup as MDD), "
         "or 'all' (combined datasets with 2-4 classes)",
     )
     add_model_args(train_parser)

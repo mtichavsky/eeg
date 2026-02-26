@@ -23,10 +23,10 @@ from thesis.data_preparation import (
     create_balanced_folds,
     determine_num_classes,
     get_datasets_for_fold,
-    prepare_ax_malik_dataset,
     prepare_cane_dataset,
     prepare_idun_dataset,
     prepare_mdd_dataset,
+    prepare_sad_dataset,
     split_into_folds,
 )
 from thesis.dataset import (
@@ -539,7 +539,7 @@ def compute_class_weights(dataset: Dataset, num_classes: int, device: torch.devi
 
 
 def train_cross_validation(
-    dataset_type: Literal["mdd", "cane", "ax_malik", "all"] = "mdd",
+    dataset_type: Literal["mdd", "cane", "sad", "all"] = "mdd",
     condition: str = "EC",
     class_mode: str = "2",
     n_folds: int = 10,
@@ -566,7 +566,7 @@ def train_cross_validation(
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
 
-    :param str dataset_type: Dataset to use ("mdd", "cane", "ax_malik", or "all").
+    :param str dataset_type: Dataset to use ("mdd", "cane", "sad", or "all").
     :param str condition: EEG condition to use ("EC", "EO", "TASK", or "EC+EO").
     :param str class_mode: Classification mode ("2", or "4").
     :param int n_folds: Number of cross-validation folds.
@@ -630,7 +630,7 @@ def train_cross_validation(
     if label_mapping:
         logger.info(f"Label mapping: {label_mapping} (collapsing to binary)")
 
-    mdd_flat_dataset, cane_flat_dataset, ax_malik_flat_dataset, flat_dataset = (
+    mdd_flat_dataset, cane_flat_dataset, sad_flat_dataset, flat_dataset = (
         None,
         None,
         None,
@@ -687,6 +687,25 @@ def train_cross_validation(
             f"{dataset_name} dataset: {len(normal)} normal, {len(anxiety)} anxiety, "
             f"{len(depression)} depression, {len(anxiety_depression)} anxiety+depression subjects"
         )
+    elif dataset_type == "sad":
+        flat_dataset, subject_classes = prepare_sad_dataset(
+            conditions,
+            channel,
+            rng,
+            augmentation=augmentation,
+            test_mode=test_mode,
+            num_classes=num_classes,
+            label_mapping=label_mapping,
+        )
+        normal, anxiety, depression, anxiety_depression = (
+            subject_classes.normal,
+            subject_classes.anxiety,
+            subject_classes.depression,
+            subject_classes.anxiety_depression,
+        )
+        logger.info(
+            f"SAD dataset: {len(normal)} normal, {len(anxiety)} anxiety subjects"
+        )
     elif dataset_type == "all":
         # Load MDD dataset
         # T3=T7 and T4=T8 for these purposes, otherwise I couldn't combine the datasets
@@ -739,8 +758,8 @@ def train_cross_validation(
             cane_subject_classes.anxiety_depression,
         )
 
-        # Load AX_MALIK dataset
-        ax_malik_flat_dataset, ax_malik_subject_classes = prepare_ax_malik_dataset(
+        # Load SAD dataset
+        sad_flat_dataset, sad_subject_classes = prepare_sad_dataset(
             conditions,
             channel,
             rng,
@@ -749,11 +768,11 @@ def train_cross_validation(
             num_classes=num_classes,
             label_mapping=label_mapping,
         )
-        ax_malik_normal, ax_malik_anxiety, ax_malik_depression, ax_malik_anxiety_depression = (
-            ax_malik_subject_classes.normal,
-            ax_malik_subject_classes.anxiety,
-            ax_malik_subject_classes.depression,
-            ax_malik_subject_classes.anxiety_depression,
+        sad_normal, sad_anxiety, sad_depression, sad_anxiety_depression = (
+            sad_subject_classes.normal,
+            sad_subject_classes.anxiety,
+            sad_subject_classes.depression,
+            sad_subject_classes.anxiety_depression,
         )
 
     # Create folds for each class separately (stratified)
@@ -761,15 +780,15 @@ def train_cross_validation(
         # For combined dataset, stratify each dataset separately then merge corresponding folds
         normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds = (
             create_balanced_folds(
-                [mdd_normal, cane_normal, ax_malik_normal],
-                [mdd_anxiety, cane_anxiety, ax_malik_anxiety],
-                [mdd_depression, cane_depression, ax_malik_depression],
-                [mdd_anxiety_depression, cane_anxiety_depression, ax_malik_anxiety_depression],
+                [mdd_normal, cane_normal, sad_normal],
+                [mdd_anxiety, cane_anxiety, sad_anxiety],
+                [mdd_depression, cane_depression, sad_depression],
+                [mdd_anxiety_depression, cane_anxiety_depression, sad_anxiety_depression],
                 n_folds,
             )
         )
         logger.info(
-            f"Created {n_folds} balanced folds with subjects from MDD, CANE, and AX_MALIK datasets"
+            f"Created {n_folds} balanced folds with subjects from MDD, CANE, and SAD datasets"
         )
     else:
         # Single dataset: some classes may be empty
@@ -796,7 +815,7 @@ def train_cross_validation(
             dataset_type,
             mdd_flat_dataset,
             cane_flat_dataset,
-            ax_malik_flat_dataset,
+            sad_flat_dataset,
             flat_dataset,
         )
 

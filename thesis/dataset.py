@@ -25,7 +25,7 @@ _DEFAULT_BASE_DIR = "/home/milan/Documents/diplomka/"
 BASE_DIR = Path(os.environ.get("EEG_DATA_DIR", _DEFAULT_BASE_DIR))
 CANE_DIR = BASE_DIR / "CANE"
 MDD_DIR = BASE_DIR / "MDD"
-AX_MALIK_DIR = BASE_DIR / "AX_MALIK"
+SAD_DIR = BASE_DIR / "SAD"
 IDUN_DIR = BASE_DIR / "IDUN_IN_EAR"
 
 CHUNK_DURATION_SEC = 10
@@ -37,7 +37,7 @@ CANONICAL_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2/Oz"]
 # Dataset-specific channel mappings to canonical order
 MDD_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]  # T3→T7, T4→T8
 CANE_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "Oz"]
-AX_MALIK_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]
+SAD_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]
 
 LABEL_INT_MAP: dict[str, int] = {
     "normals": CanonicalLabel.HEALTHY,
@@ -821,15 +821,23 @@ class CANEDataset(Dataset):
         }
 
 
-class AX_MALIKDataset(MDDDataset):
+class SADDataset(MDDDataset):
     """
-    PyTorch Dataset for AX_MALIK EEG data (anxiety detection).
+    PyTorch Dataset for SAD EEG data (anxiety detection).
 
-    Inherits preprocessing pipeline from MDDDataset. All subjects are anxiety class.
+    Inherits preprocessing pipeline from MDDDataset. Supports both normal and anxious classes.
+    Files are organized in: {normals|anxious}/{ec|eo}/C{N}.edf
     """
 
     FS = 256  # Hz (vs MDD's 250 Hz)
     CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)  # 2560 samples per chunk
+
+    CLASS_DIRECTORIES = ["normals", "anxious"]
+    LABEL_MAP = {"normals": "H", "anxious": "AX"}
+    LABEL_INT_MAP_SAD = {
+        "normals": CanonicalLabel.HEALTHY,
+        "anxious": CanonicalLabel.ANXIETY_ONLY,
+    }
 
     CHANNEL_MAPPING = {
         "Fp1": "Fp1",
@@ -844,7 +852,7 @@ class AX_MALIKDataset(MDDDataset):
 
     def __init__(
         self,
-        data_dir: Path = AX_MALIK_DIR,
+        data_dir: Path = SAD_DIR,
         condition: Optional[Literal["EC", "EO"]] = None,
         subjects: Optional[list[str]] = None,
         cache_size: Optional[int] = 100,
@@ -853,15 +861,15 @@ class AX_MALIKDataset(MDDDataset):
         test_mode: bool = False,
     ):
         """
-        Initialize the AX_MALIK EEG dataset.
+        Initialize the SAD EEG dataset.
 
-        :param Path data_dir: Path to directory containing .edf files.
+        :param Path data_dir: Path to directory containing class subdirectories.
         :param Optional[Literal["EC", "EO"]] condition: Filter by condition or None for all.
         :param Optional[list[str]] subjects: List of subject IDs to include. None = all.
         :param int cache_size: Number of preprocessed files to cache in memory.
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
         :param str channel: Channel to use: specific channel name or "all" for all 8 channels.
-        :param bool test_mode: If True, load only C1.edf files for debugging.
+        :param bool test_mode: If True, load only C1.edf files (one per class) for debugging.
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
@@ -876,7 +884,7 @@ class AX_MALIKDataset(MDDDataset):
         # Handle channel selection
         self.channel = channel
         self.channel_names = (
-            AX_MALIK_CHANNEL_ORDER
+            SAD_CHANNEL_ORDER
             if channel == "all"
             else ["in-ear"]
             if channel == "in-ear"
@@ -887,7 +895,7 @@ class AX_MALIKDataset(MDDDataset):
         preprocess_func = partial(
             load_and_preprocess_edf_file,
             channel_mapping=self.CHANNEL_MAPPING,
-            channel_order=AX_MALIK_CHANNEL_ORDER,
+            channel_order=SAD_CHANNEL_ORDER,
         )
 
         # Set up caching (same pattern as MDDDataset)
@@ -902,16 +910,16 @@ class AX_MALIKDataset(MDDDataset):
         self,
         condition: Optional[Literal["EC", "EO"]],
         subjects: Optional[list[str]],
-        labels: Optional[list[str]],  # Ignored - all are anxiety
+        labels: Optional[list[str]],  # Ignored - class determined by directory
     ) -> list[dict[str, Any]]:
         """
         Discover all .edf files matching the criteria.
 
-        Files are organized in: {ec|eo}/C{N}.edf
+        Files are organized in: {normals|anxious}/{ec|eo}/C{N}.edf
 
         :param Optional[Literal["EC", "EO"]] condition: Condition filter or None.
         :param Optional[list[str]] subjects: List of subject IDs to include or None for all.
-        :param Optional[list[str]] labels: Ignored (all subjects are anxiety).
+        :param Optional[list[str]] labels: Ignored (class determined by directory).
         :return: List of dictionaries containing file metadata.
         :rtype: list[dict]
         """
@@ -921,54 +929,64 @@ class AX_MALIKDataset(MDDDataset):
         else:
             pattern = re.compile(r"C(\d+)\.edf")
 
-        for condition_dir in ["ec", "eo"]:
-            # Filter by condition if specified
-            if condition and condition_dir.upper() != condition:
+        for class_dir in self.CLASS_DIRECTORIES:
+            class_path = self.data_dir / class_dir
+            if not class_path.exists():
                 continue
 
-            condition_path = self.data_dir / condition_dir
-            if not condition_path.exists():
-                continue
+            label = self.LABEL_MAP[class_dir]
+            label_int = self.LABEL_INT_MAP_SAD[class_dir]
 
-            for file_path in sorted(condition_path.glob("*.edf")):
-                match = pattern.match(file_path.name)
-                if not match:
-                    logger.warning(f"Skipping file with unexpected name: {file_path.name}")
+            for condition_dir in ["ec", "eo"]:
+                if condition and condition_dir.upper() != condition:
                     continue
 
-                subject_num = match.group(1)
-                subject_id = f"AX S{subject_num} {condition_dir.upper()}"
-
-                # Filter by subjects if specified
-                if subjects and subject_id not in subjects:
+                condition_path = class_path / condition_dir
+                if not condition_path.exists():
                     continue
 
-                files.append(
-                    {
-                        "path": file_path,
-                        "label": "AX",
-                        "subject": subject_id,
-                        "condition": condition_dir.upper(),
-                        "label_int": CanonicalLabel.ANXIETY_ONLY,
-                    }
-                )
+                for file_path in sorted(condition_path.glob("*.edf")):
+                    match = pattern.match(file_path.name)
+                    if not match:
+                        logger.warning(f"Skipping file with unexpected name: {file_path.name}")
+                        continue
 
-        MDDDataset._log_file_discovery(files, "AX_MALIK")
+                    subject_num = match.group(1)
+                    subject_id = f"{label} S{subject_num} {condition_dir.upper()}"
+
+                    # Filter by subjects if specified
+                    if subjects and subject_id not in subjects:
+                        continue
+
+                    files.append(
+                        {
+                            "path": file_path,
+                            "label": class_dir,
+                            "subject": subject_id,
+                            "condition": condition_dir.upper(),
+                            "label_int": label_int,
+                        }
+                    )
+
+        MDDDataset._log_file_discovery(files, "SAD")
         return files
 
     def get_statistics(self) -> dict[str, Any]:
         """
         Get dataset statistics.
 
-        :return: Dictionary containing total files, anxiety file count,
+        :return: Dictionary containing total files, normal/anxiety counts,
                  conditions breakdown, and number of unique subjects.
         :rtype: dict[str, Any]
         """
         conditions: dict[str, int] = Counter(f["condition"] for f in self.files)
+        normal_files = sum(1 for f in self.files if f["label"] == "normals")
+        ax_files = sum(1 for f in self.files if f["label"] == "anxious")
 
         return {
             "total_files": len(self.files),
-            "ax_files": len(self.files),  # All are anxiety
+            "normal_files": normal_files,
+            "ax_files": ax_files,
             "conditions": conditions,
             "subjects": len(self.get_sorted_subjects()),
         }
