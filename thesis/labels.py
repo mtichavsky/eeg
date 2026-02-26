@@ -26,7 +26,7 @@ Dataset Labels (returned by dataset classes):
 All datasets now return CanonicalLabel instances directly:
 - MDDDataset: HEALTHY=0, DEPRESSION_ONLY=2
 - CANEDataset/IDUNDataset: HEALTHY=0, ANXIETY_ONLY=1, DEPRESSION_ONLY=2, COMORBID=3
-- AX_MALIKDataset: ANXIETY_ONLY=1
+- SADDataset: HEALTHY=0, ANXIETY_ONLY=1
 
 Label Remapping Flow:
 ====================
@@ -120,7 +120,7 @@ class LabelMapping:
         Since datasets now return CanonicalLabel instances directly, this function
         only handles binary mode mapping (CanonicalLabel → BinaryLabel).
 
-        :param str dataset_name: Name of dataset ("mdd", "cane", "idun", "ax_malik")
+        :param str dataset_name: Name of dataset ("mdd", "cane", "idun", "sad", "ax_malik")
         :param int num_classes: Number of classes (2 or 4)
         :param Optional[dict[int, int]] explicit_mapping: Optional explicit mapping
             (overrides all defaults)
@@ -216,6 +216,12 @@ class LabelUtils:
                     raise ValueError(
                         f"CANE in 4-class mode should only have labels {expected_int}, "
                         f"but found: {labels}"
+                    )
+            elif dataset_name == "sad":
+                expected_int = {int(CanonicalLabel.HEALTHY), int(CanonicalLabel.ANXIETY_ONLY)}
+                if not labels.issubset(expected_int):
+                    raise ValueError(
+                        f"SAD should only have labels {expected_int}, but found: {labels}"
                     )
             elif dataset_name == "ax_malik":
                 expected_int = {int(CanonicalLabel.ANXIETY_ONLY)}
