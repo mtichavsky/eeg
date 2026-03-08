@@ -601,12 +601,8 @@ def get_datasets_for_fold(
 
         # Process SAD dataset if available
         if sad_flat_dataset is not None:
-            sad_train_subjects = [
-                subj for ds, subj in train_subjects_with_dataset if ds == "sad"
-            ]
-            sad_val_subjects = [
-                subj for ds, subj in val_subjects_with_dataset if ds == "sad"
-            ]
+            sad_train_subjects = [subj for ds, subj in train_subjects_with_dataset if ds == "sad"]
+            sad_val_subjects = [subj for ds, subj in val_subjects_with_dataset if ds == "sad"]
 
             sad_train_indices = get_indices_from_dataset(sad_flat_dataset, sad_train_subjects)
             sad_val_indices = get_indices_from_dataset(sad_flat_dataset, sad_val_subjects)

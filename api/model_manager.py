@@ -184,9 +184,7 @@ class ModelManager:
         # On-demand loading: try to load if not yet loaded
         if model is None and config.model_loading == "on_demand":
             logger.info(f"On-demand loading model: {key}")
-            model = self._load_single_model(
-                electrode_setup, classification_task, model_config
-            )
+            model = self._load_single_model(electrode_setup, classification_task, model_config)
 
         if model is None:
             raise ValueError(f"Model {key} is not available (failed to load)")
@@ -212,7 +210,9 @@ class ModelManager:
         :return: Channel name for preprocessing ("in-ear" or "all").
         :rtype: str
         """
-        return "in-ear" if electrode_setup == "in-ear" else "all"  # "all" = channel name for preprocessing
+        return (
+            "in-ear" if electrode_setup == "in-ear" else "all"
+        )  # "all" = channel name for preprocessing
 
     def get_num_classes(
         self,
