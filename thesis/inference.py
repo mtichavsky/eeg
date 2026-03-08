@@ -20,7 +20,7 @@ from thesis.dataset import (
     IDUNDataset,
     MDDDataset,
     SpectrogramDataset,
-    load_and_preprocess_edf_file, CANONICAL_CHANNEL_ORDER,
+    load_and_preprocess_edf_file,
 )
 from thesis.labels import get_display_names
 
@@ -229,8 +229,8 @@ def aggregate_predictions(
     final_prediction = counts.most_common(1)[0][0]
     total = len(chunk_results)
 
-    class_distribution = {class_names[k]: v for k, v in counts.items()}
-    class_percentages = {class_names[k]: v / total * 100 for k, v in counts.items()}
+    class_distribution = {name: counts.get(k, 0) for k, name in class_names.items()}
+    class_percentages = {name: counts.get(k, 0) / total * 100 for k, name in class_names.items()}
 
     return InferenceResult(
         final_prediction=final_prediction,
@@ -279,10 +279,7 @@ def preprocess_and_infer(
     fs = sampling_rate if sampling_rate is not None else detect_sampling_rate(file_path, file_format)
     logger.info(f"Using sampling rate: {fs} Hz")
 
-    if fs not in _STFT_PARAMS_BY_FS:
-        raise ValueError(f"Unsupported sampling rate: {fs}")
-    else:
-        params = _STFT_PARAMS_BY_FS[fs]
+    params = get_stft_params_for_fs(fs)
 
     # Preprocess file into EEG chunks
     chunks = preprocess_file(file_path, channel, file_format, fs, skip_artifact_removal)

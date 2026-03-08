@@ -216,7 +216,7 @@ async def predict(
         )
 
     # Save to temporary file
-    temp_file = None
+    temp_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
             temp_file.write(file_content)
@@ -281,9 +281,9 @@ async def predict(
 
     finally:
         # Cleanup temporary file
-        if temp_file is not None:
+        if temp_path is not None:
             try:
-                temp_path.unlink()
+                temp_path.unlink(missing_ok=True)
                 logger.info(f"Cleaned up temporary file: {temp_path}")
             except Exception as e:
                 logger.warning(f"Failed to clean up temporary file: {e}")

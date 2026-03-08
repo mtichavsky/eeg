@@ -121,7 +121,7 @@ class ModelManager:
             model = create_model(
                 model_name=model_config["model_name"],
                 spec_shape=self.spec_shape,
-                dropout=0.5,  # Must match training config
+                dropout=0.0,  # model.eval() disables dropout during inference
                 num_classes=model_config["num_classes"],
                 device=self.device,
                 in_channels=model_config["in_channels"],
@@ -137,6 +137,28 @@ class ModelManager:
             logger.error(f"Failed to load {key}: {e}", exc_info=True)
             self.models[key] = None
             return None
+
+    def _get_model_config(
+        self,
+        electrode_setup: str,
+        classification_task: str,
+    ) -> dict:
+        """
+        Look up model config, raising ValueError for unknown combinations.
+
+        :param str electrode_setup: Electrode configuration.
+        :param str classification_task: Classification task.
+        :return: Model config dict from MODEL_CONFIG.
+        :rtype: dict
+        :raises ValueError: If the combination is not in MODEL_CONFIG.
+        """
+        model_config = self.MODEL_CONFIG.get((electrode_setup, classification_task))
+        if not model_config:
+            raise ValueError(
+                f"Invalid combination: electrode_setup={electrode_setup}, "
+                f"classification_task={classification_task}"
+            )
+        return model_config
 
     def select_model(
         self,
@@ -154,12 +176,7 @@ class ModelManager:
         :rtype: nn.Module
         :raises ValueError: If model is not available.
         """
-        model_config = self.MODEL_CONFIG.get((electrode_setup, classification_task))
-        if not model_config:
-            raise ValueError(
-                f"Invalid combination: electrode_setup={electrode_setup}, "
-                f"classification_task={classification_task}"
-            )
+        model_config = self._get_model_config(electrode_setup, classification_task)
 
         key = model_config["key"]
         model = self.models.get(key)
@@ -210,10 +227,4 @@ class ModelManager:
         :return: Number of output classes (2 or 4).
         :rtype: int
         """
-        model_config = self.MODEL_CONFIG.get((electrode_setup, classification_task))
-        if not model_config:
-            raise ValueError(
-                f"Invalid combination: electrode_setup={electrode_setup}, "
-                f"classification_task={classification_task}"
-            )
-        return model_config["num_classes"]
+        return self._get_model_config(electrode_setup, classification_task)["num_classes"]
