@@ -115,7 +115,7 @@ def setup_logging(checkpoint_dir: Path, condition: str, channel: str | None = No
     root_logger.addHandler(console_handler)
 
     # File handler
-    file_handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
+    file_handler = logging.FileHandler(log_path, mode="a", encoding="utf-8")
     file_handler.setLevel(LOG_LEVEL)
     file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
     root_logger.addHandler(file_handler)
