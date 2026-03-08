@@ -15,9 +15,7 @@ from structlog.typing import EventDict, WrappedLogger
 from api.config import config
 
 
-def add_log_level(
-    _logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_log_level(_logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """
     Add log level to event dict.
 

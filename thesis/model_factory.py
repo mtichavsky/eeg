@@ -50,7 +50,6 @@ def create_model(
     model = model_class(
         input_shape=spec_shape,
         in_channels=in_channels,
-        rnn_type="LSTM",
         rnn_hidden=rnn_hidden,
         dropout=dropout,
         num_classes=num_classes,
@@ -76,10 +75,16 @@ def create_model(
             for param in model.dropout2d_2.parameters():
                 param.requires_grad = False
 
+        # TODO: attention doesn't have to be freezed?
         if freeze_lstm:
-            # Freeze LSTM layer
-            for param in model.rnn.parameters():
-                param.requires_grad = False
+            # Freeze RNN layer (guard against attention models that have no .rnn)
+            if hasattr(model, "rnn"):
+                for param in model.rnn.parameters():
+                    param.requires_grad = False
+            else:
+                logger.warning(
+                    "freeze_lstm requested but model has no .rnn attribute (attention model?)"
+                )
 
         # Log which layers are frozen
         if freeze_cnn or freeze_lstm:

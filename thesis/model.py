@@ -202,20 +202,42 @@ class Smaller(nn.Module):
             _, C, H, W = conv_output.shape
             rnn_input_size = H * C  # Each time step has H*C features
 
-        # Initialize RNN with correct input size
+        # Initialize temporal aggregator with correct input size
         self.rnn_type = rnn_type.upper()
-        self.rnn: Union[nn.LSTM, nn.GRU]
         if self.rnn_type == "LSTM":
-            self.rnn = nn.LSTM(input_size=rnn_input_size, hidden_size=rnn_hidden, batch_first=True)
+            self.rnn: nn.LSTM | nn.GRU = nn.LSTM(
+                input_size=rnn_input_size, hidden_size=rnn_hidden, batch_first=True
+            )
+            logger.info(
+                f"Initialized LSTM with input_size={rnn_input_size}, "
+                f"hidden_size={rnn_hidden}, batch_first=True"
+            )
         elif self.rnn_type == "GRU":
             self.rnn = nn.GRU(input_size=rnn_input_size, hidden_size=rnn_hidden, batch_first=True)
+            logger.info(
+                f"Initialized GRU with input_size={rnn_input_size}, "
+                f"hidden_size={rnn_hidden}, batch_first=True"
+            )
+        elif self.rnn_type == "ATTENTION":
+            d_model = rnn_hidden  # reuse rnn_hidden as d_model
+            nhead = max(1, d_model // 16)
+            self.proj = nn.Linear(rnn_input_size, d_model)
+            self.pos_embed = nn.Parameter(torch.zeros(1, W, d_model))
+            encoder_layer = nn.TransformerEncoderLayer(
+                d_model=d_model,
+                nhead=nhead,
+                dim_feedforward=d_model * 2,
+                dropout=dropout,
+                batch_first=True,
+                norm_first=True,  # Pre-norm for more stable training
+            )
+            self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1)
+            logger.info(
+                f"Initialized TransformerEncoder with d_model={d_model}, nhead={nhead}, "
+                f"seq_len={W}, input_size={rnn_input_size}"
+            )
         else:
-            raise ValueError("rnn_type must be 'LSTM' or 'GRU'")
-
-        logger.info(
-            f"Initialized {self.rnn_type} with input_size={rnn_input_size}, "
-            f"hidden_size={rnn_hidden}, batch_first=True"
-        )
+            raise ValueError("rnn_type must be 'LSTM', 'GRU', or 'ATTENTION'")
 
         # Classifier head - reduced
         self.dropout = nn.Dropout(dropout)
@@ -270,11 +292,14 @@ class Smaller(nn.Module):
         seq = x.permute(0, 3, 2, 1).contiguous()  # (B, W, H, C)
         seq = seq.view(B, W, H * C)  # (B, seq_len=W, features=H*C)
 
-        # RNN outputs hidden states for all time steps
-        rnn_out, _ = self.rnn(seq)  # rnn_out: (B, seq_len, hidden_size)
-
-        # Take the last time step's hidden state as the sequence representation
-        last_hidden = rnn_out[:, -1, :]  # (B, hidden_size)
+        # Temporal aggregation: LSTM/GRU takes last hidden, attention uses mean pooling
+        if self.rnn_type == "ATTENTION":
+            seq = self.proj(seq) + self.pos_embed
+            attn_out = self.transformer(seq)  # (B, seq_len, d_model)
+            last_hidden = attn_out.mean(dim=1)  # (B, d_model)
+        else:
+            rnn_out, _ = self.rnn(seq)  # (B, seq_len, hidden_size)
+            last_hidden = rnn_out[:, -1, :]  # (B, hidden_size)
 
         # Pass through classifier layers
         x = self.dropout(last_hidden)
@@ -344,9 +369,83 @@ class SmallerAll(Smaller):
         return x
 
 
+class SmallerAttn(Smaller):
+    """Smaller model with self-attention replacing LSTM.
+
+    Uses a TransformerEncoder with learned positional embeddings over the
+    CNN-produced time frames. d_model is controlled via rnn_hidden (default 128).
+    """
+
+    def __init__(
+        self,
+        input_shape: tuple[int, int],
+        in_channels: int = 1,
+        rnn_type: str = "attention",
+        rnn_hidden: int = 128,
+        dropout: float = 0.3,
+        num_classes: int = 2,
+    ):
+        """
+        Initialize Smaller with self-attention temporal aggregation.
+
+        :param tuple input_shape: Tuple of (height, width) for the input spectrogram.
+        :param int in_channels: Number of input channels (default=1).
+        :param str rnn_type: Ignored; always forces "attention".
+        :param int rnn_hidden: d_model for the attention layer (default=128).
+        :param float dropout: Dropout probability.
+        :param int num_classes: Number of output classes.
+        """
+        super().__init__(
+            input_shape,
+            in_channels,
+            rnn_type="attention",
+            rnn_hidden=rnn_hidden,
+            dropout=dropout,
+            num_classes=num_classes,
+        )
+
+
+class SmallerAllAttn(SmallerAll):
+    """SmallerAll model (8-channel Conv3d backbone) with self-attention replacing LSTM.
+
+    Identical to SmallerAttn but uses the 3D CNN backbone from SmallerAll
+    for multi-channel EEG input.
+    """
+
+    def __init__(
+        self,
+        input_shape: tuple[int, int],
+        in_channels: int = 8,
+        rnn_type: str = "attention",
+        rnn_hidden: int = 128,
+        dropout: float = 0.3,
+        num_classes: int = 2,
+    ):
+        """
+        Initialize SmallerAll with self-attention temporal aggregation.
+
+        :param tuple input_shape: Tuple of (height, width) for the input spectrogram.
+        :param int in_channels: Number of EEG channels (default=8).
+        :param str rnn_type: Ignored; always forces "attention".
+        :param int rnn_hidden: d_model for the attention layer (default=128).
+        :param float dropout: Dropout probability.
+        :param int num_classes: Number of output classes.
+        """
+        super().__init__(
+            input_shape,
+            in_channels,
+            rnn_type="attention",
+            rnn_hidden=rnn_hidden,
+            dropout=dropout,
+            num_classes=num_classes,
+        )
+
+
 # Model registry: maps model names to (model_class, default_rnn_hidden)
 MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int]] = {
     "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
     "Smaller": (Smaller, 64),
     "SmallerAll": (SmallerAll, 64),
+    "SmallerAttn": (SmallerAttn, 128),
+    "SmallerAllAttn": (SmallerAllAttn, 128),
 }
