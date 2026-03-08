@@ -88,6 +88,7 @@ def detect_sampling_rate(file_path: Path, file_format: str) -> float:
     """
     if file_format == ".edf":
         import mne  # lazy import — only needed here
+
         raw = mne.io.read_raw_edf(file_path, preload=False, verbose=False)
         return round(raw.info["sfreq"])
     elif file_format == ".csv":
@@ -276,7 +277,9 @@ def preprocess_and_infer(
     :return: Aggregated inference result.
     :rtype: InferenceResult
     """
-    fs = sampling_rate if sampling_rate is not None else detect_sampling_rate(file_path, file_format)
+    fs = (
+        sampling_rate if sampling_rate is not None else detect_sampling_rate(file_path, file_format)
+    )
     logger.info(f"Using sampling rate: {fs} Hz")
 
     params = get_stft_params_for_fs(fs)

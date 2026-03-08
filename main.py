@@ -33,6 +33,7 @@ from thesis.dataset import (
     collate_spectrograms,
 )
 from thesis.early_stopping import EarlyStopping
+from thesis.inference import preprocess_and_infer
 from thesis.json_logging import log_metrics_json
 from thesis.metrics import (
     aggregate_subject_predictions,
@@ -42,7 +43,6 @@ from thesis.metrics import (
     write_results,
 )
 from thesis.model_factory import create_model
-from thesis.inference import preprocess_and_infer
 
 RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -430,8 +430,6 @@ def train_one_fold(
     }
 
 
-
-
 def compute_class_weights(
     dataset: Dataset, num_classes: int, device: torch.device | str = "cpu"
 ) -> torch.Tensor:
@@ -631,9 +629,7 @@ def train_cross_validation(
             subject_classes.depression,
             subject_classes.anxiety_depression,
         )
-        logger.info(
-            f"SAD dataset: {len(normal)} normal, {len(anxiety)} anxiety subjects"
-        )
+        logger.info(f"SAD dataset: {len(normal)} normal, {len(anxiety)} anxiety subjects")
     elif dataset_type == "all":
         # Load MDD dataset
         # T3=T7 and T4=T8 for these purposes, otherwise I couldn't combine the datasets
@@ -1034,9 +1030,7 @@ def run(args: argparse.Namespace) -> None:
     for name, count in result.class_distribution.items():
         pct = result.class_percentages[name]
         logger.info(f"{name} predictions: {count} ({pct:.1f}%)")
-    logger.info(
-        f"Final Prediction: {result.final_class_name} (Class {result.final_prediction})"
-    )
+    logger.info(f"Final Prediction: {result.final_class_name} (Class {result.final_prediction})")
 
 
 def main() -> None:

@@ -75,8 +75,10 @@ def add_model_args(parser: argparse.ArgumentParser) -> None:
         type=str,
         default="CNN_LSTM_DepCap",
         choices=MODEL_REGISTRY.keys(),
-        help="Model architecture to use: 'CNN_LSTM_DepCap' (default, full model) "
-        "or 'Smaller' (reduced model with ~50%% fewer parameters)",
+        help="Model architecture to use: 'CNN_LSTM_DepCap' (default, full model), "
+        "'Smaller' (reduced LSTM model), 'SmallerAll' (multi-channel LSTM), "
+        "'SmallerAttn' (reduced model with self-attention), "
+        "or 'SmallerAllAttn' (multi-channel with self-attention)",
     )
 
 
@@ -174,7 +176,9 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     # Run subcommand
-    run_parser = subparsers.add_parser("run", help="Run inference on a single EEG file (.edf or .csv)")
+    run_parser = subparsers.add_parser(
+        "run", help="Run inference on a single EEG file (.edf or .csv)"
+    )
     add_preprocessing_args(run_parser)
     run_parser.add_argument("model_path", type=str, help="Path to trained model checkpoint (.pth)")
     run_parser.add_argument("file", type=str, help="Path to EEG file to classify (.edf or .csv)")
