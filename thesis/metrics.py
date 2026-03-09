@@ -294,12 +294,13 @@ def _format_confusion_matrix(
     writer("\nAggregated Chunk Confusion Matrix (across folds; TN, FP, FN, TP):\n\n")
 
     # Top-left corner label + column headers
-    header = "ACTUAL ↓/PRED →".ljust(15)
+    # Use ASCII arrows to avoid 2-wide Unicode rendering in editors/fonts
+    header = "ACTUAL v/PRED ->".ljust(16)
     header += "".join(f"{name:>15} " for name in class_names)
     writer(header + "\n")
 
-    # Separator
-    writer("-" * (15 + 16 * num_classes) + "\n")
+    # Separator — width matches header + data rows (16 label + 16 per column)
+    writer("-" * (16 + 16 * num_classes) + "\n")
 
     # Data rows
     for i, row_name in enumerate(class_names):
