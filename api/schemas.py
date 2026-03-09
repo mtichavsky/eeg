@@ -10,7 +10,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-
 class ChunkPrediction(BaseModel):
     """
     Per-chunk prediction information.

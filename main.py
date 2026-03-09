@@ -35,6 +35,7 @@ from thesis.dataset import (
 from thesis.early_stopping import EarlyStopping
 from thesis.inference import preprocess_and_infer
 from thesis.json_logging import log_metrics_json
+from thesis.loss import FocalLoss
 from thesis.metrics import (
     aggregate_subject_predictions,
     classification_metrics,
@@ -488,6 +489,8 @@ def train_cross_validation(
     augmentation: Callable | None = None,
     test_mode: bool = False,
     log_file: Path | None = None,
+    focal_loss: bool = False,
+    focal_gamma: float = 2.0,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -792,7 +795,10 @@ def train_cross_validation(
             freeze_lstm=freeze_lstm,
         )
 
-        criterion = nn.CrossEntropyLoss()
+        if focal_loss:
+            criterion: nn.Module = FocalLoss(alpha=class_weights.to(device), gamma=focal_gamma)
+        else:
+            criterion = nn.CrossEntropyLoss()
         # Only optimize trainable parameters (important when CNN layers are frozen)
         optimizer = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
@@ -881,6 +887,10 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Freeze LSTM: {args.freeze_lstm}")
     logger.info(f"  Class mode: {args.class_mode}")
     logger.info(f"  Test mode: {args.test_mode}")
+    logger.info(
+        f"  Focal Loss: {args.focal_loss}"
+        + (f" (gamma={args.focal_gamma})" if args.focal_loss else "")
+    )
     logger.info(f"  Device: {device}")
     logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
     logger.info(f"  Log File: {log_path}")
@@ -910,6 +920,8 @@ def train(args: argparse.Namespace) -> None:
         augmentation=augmentation,
         test_mode=args.test_mode,
         log_file=log_path,
+        focal_loss=args.focal_loss,
+        focal_gamma=args.focal_gamma,
     )
 
     # Save final results to file

@@ -464,6 +464,10 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - **Transfer learning**: Load pretrained weights via `--pretrained-checkpoint` and freeze layers with `--freeze-cnn`/`--freeze-lstm`
 - **Model registry**: `MODEL_REGISTRY` dict centralizes model class lookups; `create_model()` factory handles instantiation
 - **Multi-condition support**: Can now train on combined EC+EO conditions using `--condition ec+eo`
+- **Focal Loss** (Mar 2026): `--focal-loss` flag replaces CrossEntropyLoss with FocalLoss from `thesis/loss.py`
+  - Class weights computed per fold are passed as alpha (combines count + difficulty imbalance correction)
+  - Configurable exponent via `--focal-gamma` (default 2.0); gamma=0 reduces to weighted cross-entropy
+  - Complements WeightedRandomSampler: sampler handles count balance, focal modulation handles hard examples
 - **Spatial Dropout**: Added `nn.Dropout2d` after CNN pooling layers for better feature map regularization
 - **L2 Regularization**: Added weight decay parameter (default 1e-4) for L2 penalty on weights
 - **Training visualization**: Added `plot_training_curves.py` for analyzing fold performance
@@ -510,6 +514,7 @@ Use today's date and a short title derived from the task. Existing plans in that
 - `thesis/model_factory.py` - `create_model()` factory used by CLI and API
 - `thesis/version.py` - Single source of truth for version string (reads from pyproject.toml)
 - `thesis/labels.py` - Centralized label definitions, display names, and mappings
+- `thesis/loss.py` - Custom loss functions (`FocalLoss` with alpha/gamma)
 - `thesis/cli.py` - CLI argument parser with all training options
 - `main.py` - Training orchestration, cross-validation logic, transfer learning support, and CANE/IDUN swap logic
 - `plot_training_curves.py` - Training curve visualization utility

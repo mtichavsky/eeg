@@ -174,6 +174,7 @@ The inference script outputs:
 - Configurable dropout (default 0.5) and L2 weight decay (default 1e-4)
 - Supports 2-class or 4-class classification modes
 - Transfer learning support via `--pretrained-checkpoint`
+- Focal loss via `--focal-loss` (with `--focal-gamma`, default 2.0)
 
 ## Development
 
@@ -214,6 +215,7 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 - Checkpoint directories are auto-generated with random suffixes if they exist
 - All logging uses Python's `logging` module, not print statements
 - Default regularization: dropout=0.5, weight_decay=1e-4 (L2 penalty)
+- Focal loss: `--focal-loss` replaces CrossEntropyLoss with FocalLoss; class weights passed as alpha so count and difficulty imbalance are both addressed. Use with WeightedRandomSampler (already enabled by default).
 - See `EXPERIMENTS.md` for experiment tracking and results
 
 ## Container Deployment (API)
