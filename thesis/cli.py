@@ -124,6 +124,19 @@ def get_arg_parser() -> argparse.ArgumentParser:
         default=1e-4,
         help="Weight decay (L2 regularization)",
     )
+    train_parser.add_argument(
+        "--focal-loss",
+        action="store_true",
+        help="Use Focal Loss instead of cross-entropy. Class weights computed per fold "
+        "are passed as alpha. Compatible with WeightedRandomSampler.",
+    )
+    train_parser.add_argument(
+        "--focal-gamma",
+        type=float,
+        default=2.0,
+        help="Focusing exponent for Focal Loss (only used with --focal-loss). "
+        "gamma=0 reduces to weighted cross-entropy. Typical range: 1.0-5.0.",
+    )
     train_parser.add_argument("--val-every", type=int, default=2, help="Validate every N epochs")
     train_parser.add_argument(
         "--save-every", type=int, default=100, help="Save checkpoint every N epochs"
