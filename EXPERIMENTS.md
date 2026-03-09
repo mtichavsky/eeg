@@ -1,19 +1,52 @@
 # EXPERIMENTS
 
-| model                      | accuracy                        | sensitivity (Recall) | specificity    | directory                                       |
-|----------------------------|---------------------------------|----------------------|----------------|-------------------------------------------------|
-| binary, in-ear, 3 dts.     | 76.86% ± 2.84% x 77.79% ± 2.74% | 86.23% ± 4.29%       | 63.90% ± 4.66% | all3-016-inear-binary-smaller                   |
-| 4-class, in-ear, 3 dts.    | 63.62% ± 4.45%                  |                      |                | all3-016-inear-4class-smaller                   | 
-| binary, 8-channel, 3 dts.  | 76.83% ± 2.12%                  | 88.72% ± 2.86%       | 58.25% ± 6.44% | all3-017-all-binary-smallerall-weighted-sampler |
-| 4-class, 8-channel, 3 dts. | ---                             |                      |                |                                                 |
+| model                     | accuracy                        | sensitivity (Recall) | specificity    | directory                                           |
+|---------------------------|---------------------------------|----------------------|----------------|-----------------------------------------------------|
+| binary, in-ear, 3 dts.    | 76.86% ± 2.84% x 77.79% ± 2.74% | 86.23% ± 4.29%       | 63.90% ± 4.66% | all3-016-inear-binary-smaller; **6 fold only**      |
+| binary, in-ear, LSTM      | 77.44% ± 4.64% × 75.87% ± 6.78% | 88.87% ± 7.11%       | 61.96% ± 8.59% | all3-018-inear-binary-smaller-weighted-sampler      |
+| binary, in-ear, Attn      | 78.26% ± 4.92% × 77.39% ± 7.05% | 89.41% ± 7.02%       | 63.11% ± 8.76% | all3-018-inear-binary-smallerAttn                   |
+| 4-class, in-ear, 3 dts.   | 63.62% ± 4.45%                  |                      |                | all3-016-inear-4class-smaller                       | 
+| binary, 8-ch, 3 dts.      | 76.83% ± 2.12%                  | 88.72% ± 2.86%       | 58.25% ± 6.44% | all3-017-all-binary-smallerall-weighted-sampler     |
+| 4-class, 8-ch, SmallerAll | 63.46% ± 9.60% × 64.57% ±11.36% |                      |                | all3-018-all-4class-smallerAll-weighted-sampler     |
+| 4-class, 8-ch, Attn       | 64.76% ± 8.05% × 66.09% ± 8.23% |                      |                | all3-018-all-4class-smallerAllAttn-weighted-sampler |
 
+### all3-018-all-4class-smallerAll-weighted-sampler
 
-CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-017-inear-binary-smaller-weighted-sampler
-77.49% - 10 fold
-CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-017-all-binary-smallerall-weighted-sampler
+- Model: SmallerAll (LSTM), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
+- Chunk accuracy: 63.46% ± 9.60% | Subject accuracy: 64.57% ± 11.36%
+- Chunk recall: Healthy 54.64%, Anxiety 57.69%, Depression 86.06%, Comorbid 61.78%
+- Per-dataset chunk accuracy: CANE 44.40%, MDD 84.07%, SAD 65.87%
+- Overall chunk accuracy (aggregated): 63.30%
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-all-4class-smallerAll-weighted-sampler`
 
-Attention: 78.39% - all3-018-inear-binary-smallerAttn
-CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-inear-binary-smaller-weighted-sampler
+### all3-018-all-4class-smallerAllAttn-weighted-sampler
+
+- Model: SmallerAllAttn (self-attention replacing LSTM), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
+- Chunk accuracy: 64.76% ± 8.05% | Subject accuracy: 66.09% ± 8.23%
+- Chunk recall: Healthy 60.36%, Anxiety 45.98%, Depression 85.04%, Comorbid 70.34%
+- Per-dataset chunk accuracy: CANE 46.42%, MDD 86.48%, SAD 62.26%
+- Overall chunk accuracy (aggregated): 64.72%
+- Attention slightly improves overall accuracy (+1.3pp chunk, +1.5pp subject) and Comorbid recall, but hurts Anxiety recall vs LSTM baseline
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllAttn   --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-all-4class-smallerAllAttn-weighted-sampler`
+
+### all3-018-inear-binary-smaller-weighted-sampler
+
+- Model: Smaller (LSTM), binary, in-ear, ec+eo, 10-fold, weighted sampler
+- Chunk accuracy: 77.44% ± 4.64% | Subject accuracy: 75.87% ± 6.78%
+- Chunk sensitivity: 88.87% ± 7.11% | Chunk specificity: 61.96% ± 8.59%
+- Per-dataset chunk accuracy: CANE 70.30%, MDD 86.50%, SAD 66.15%
+- Overall chunk accuracy (aggregated): 77.49%
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-inear-binary-smaller-weighted-sampler`
+
+### all3-018-inear-binary-smallerAttn
+
+- Model: SmallerAttn (self-attention replacing LSTM), binary, in-ear, ec+eo, 10-fold
+- Chunk accuracy: 78.26% ± 4.92% | Subject accuracy: 77.39% ± 7.05%
+- Chunk sensitivity: 89.41% ± 7.02% | Chunk specificity: 63.11% ± 8.76%
+- Per-dataset chunk accuracy: CANE 70.73%, MDD 88.16%, SAD 65.79%
+- Overall chunk accuracy (aggregated): 78.39%
+- Attention marginally outperforms LSTM (+0.82pp chunk, +1.52pp subject), consistent with 4-class findings
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-inear-binary-smallerAttn`
 
 ### all3-014b-all-binary-smallerall
 
