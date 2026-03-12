@@ -593,6 +593,168 @@ class SmallerAllV2Attn(SmallerAllV2):
         )
 
 
+class SmallerAllV3(Smaller):
+    """
+    Multi-channel EEG model: per-channel weight-shared CNN + time-aware
+    cross-channel self-attention + temporal LSTM.
+
+    Compared to SmallerAllV2, channel importance is computed *per time frame*
+    (the W' axis is preserved when computing attention), so attention can learn
+    that a channel is informative only in certain time windows.
+
+    Architecture::
+
+        (B, n_ch, H, W)
+        → Per-channel CNN (shared weights): (B*n_ch, 1, H, W) → (B*n_ch, 16, H', W')
+        → Reshape: (B, n_ch, 16, H', W')
+        → Permute/reshape: (B*W', n_ch, 16*H')
+        → chan_proj + TransformerEncoder: (B*W', n_ch, chan_d_model)
+        → Soft gate + weighted sum: (B, W', chan_d_model)  ← temporal sequence!
+        → LSTM: last hidden (B, rnn_hidden)
+        → Classifier (→64→32→num_classes)
+
+    :param tuple input_shape: Spectrogram shape (H, W).
+    :param int in_channels: EEG channels (default 8).
+    :param str rnn_type: "LSTM", "GRU", or "ATTENTION".
+    :param int rnn_hidden: Hidden size for LSTM/GRU or d_model for attention (default 330).
+    :param float dropout: Dropout probability.
+    :param int num_classes: Output classes.
+    :param int chan_d_model: Token dimension for cross-channel attention (default 128).
+    """
+
+    def __init__(
+        self,
+        input_shape: tuple[int, int],
+        in_channels: int = 8,
+        rnn_type: str = "LSTM",
+        rnn_hidden: int = 330,
+        dropout: float = 0.3,
+        num_classes: int = 2,
+        chan_d_model: int = 128,
+    ) -> None:
+        """
+        Initialize SmallerAllV3.
+
+        :param tuple input_shape: Spectrogram shape (H, W).
+        :param int in_channels: Number of EEG channels (default 8).
+        :param str rnn_type: "LSTM", "GRU", or "ATTENTION".
+        :param int rnn_hidden: Hidden size for LSTM/GRU, or d_model for attention (default 330).
+        :param float dropout: Dropout probability.
+        :param int num_classes: Number of output classes.
+        :param int chan_d_model: Token dimension for cross-channel attention (default 128).
+        """
+        super().__init__(
+            input_shape,
+            in_channels=1,  # CNN sees 1 channel at a time (shared weights)
+            rnn_type=rnn_type,
+            rnn_hidden=rnn_hidden,
+            dropout=dropout,
+            num_classes=num_classes,
+        )
+        # Override Smaller's small classifier head with DepCap-style head
+        self.fc1 = nn.Linear(rnn_hidden, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.out = nn.Linear(32, num_classes)
+
+        self._n_eeg_channels = in_channels
+
+        # Compute CNN output dims from a dummy pass
+        with torch.no_grad():
+            dummy = torch.zeros(1, 1, *input_shape)
+            cnn_out = self._forward_conv_layers(dummy)
+            _, C_feat, H_prime, W_prime = cnn_out.shape
+
+        self._C_feat = C_feat
+        self._H_prime = H_prime
+        self._W_prime = W_prime
+
+        # Cross-channel attention components
+        self.chan_proj = nn.Linear(C_feat * H_prime, chan_d_model)
+        nhead = max(1, chan_d_model // 16)
+        chan_layer = nn.TransformerEncoderLayer(
+            d_model=chan_d_model,
+            nhead=nhead,
+            dim_feedforward=chan_d_model * 2,
+            dropout=dropout,
+            batch_first=True,
+            norm_first=True,
+        )
+        self.chan_transformer = nn.TransformerEncoder(chan_layer, num_layers=1)
+        self.chan_gate = nn.Linear(chan_d_model, 1)
+
+        # Override RNN to accept chan_d_model as input (not rnn_input_size from parent)
+        if rnn_type.upper() == "LSTM":
+            self.rnn = nn.LSTM(
+                input_size=chan_d_model, hidden_size=rnn_hidden, batch_first=True
+            )
+        elif rnn_type.upper() == "GRU":
+            self.rnn = nn.GRU(
+                input_size=chan_d_model, hidden_size=rnn_hidden, batch_first=True
+            )
+        elif rnn_type.upper() == "ATTENTION":
+            self.proj = nn.Linear(chan_d_model, rnn_hidden)
+            self.pos_embed = nn.Parameter(torch.zeros(1, W_prime, rnn_hidden))
+            encoder_layer = nn.TransformerEncoderLayer(
+                d_model=rnn_hidden,
+                nhead=max(1, rnn_hidden // 16),
+                dim_feedforward=rnn_hidden * 2,
+                dropout=dropout,
+                batch_first=True,
+                norm_first=True,
+            )
+            self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1)
+
+        logger.info(
+            f"SmallerAllV3: n_eeg_channels={in_channels}, C_feat={C_feat}, "
+            f"H_prime={H_prime}, W_prime={W_prime}, chan_d_model={chan_d_model}, "
+            f"nhead={nhead}, rnn_hidden={rnn_hidden}"
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass: per-channel CNN → time-aware cross-channel attention → LSTM.
+
+        :param torch.Tensor x: Input tensor of shape (B, n_ch, H, W).
+        :return: Class logits of shape (B, num_classes).
+        :rtype: torch.Tensor
+        """
+        B, n_ch, H, W = x.shape
+
+        # 1. Per-channel CNN (weight-shared across channels)
+        x_flat = x.reshape(B * n_ch, 1, H, W)
+        cnn_out = self._forward_conv_layers(x_flat)  # (B*n_ch, C_feat, H', W')
+        _, C_feat, H_prime, W_prime = cnn_out.shape
+        x_ch = cnn_out.reshape(B, n_ch, C_feat, H_prime, W_prime)
+
+        # 2. Time-aware cross-channel attention
+        # Fold W' into the batch so attention sees each time step independently:
+        # (B, n_ch, C_feat, H', W') → (B, W', n_ch, C_feat, H') → (B*W', n_ch, C_feat*H')
+        x_t = x_ch.permute(0, 4, 1, 2, 3).contiguous()
+        tokens = x_t.reshape(B * W_prime, n_ch, C_feat * H_prime)
+        tokens = self.chan_proj(tokens)  # (B*W', n_ch, chan_d_model)
+        tokens = self.chan_transformer(tokens)  # (B*W', n_ch, chan_d_model)
+
+        # Soft channel weights per time step
+        weights = torch.softmax(self.chan_gate(tokens), dim=1)  # (B*W', n_ch, 1)
+        merged = (tokens * weights).sum(dim=1)  # (B*W', chan_d_model)
+        seq = merged.reshape(B, W_prime, -1)  # (B, W', chan_d_model)
+
+        # 3. Temporal aggregation
+        if self.rnn_type == "ATTENTION":
+            seq = self.proj(seq) + self.pos_embed
+            attn_out = self.transformer(seq)
+            last_hidden = attn_out.mean(dim=1)
+        else:
+            rnn_out, _ = self.rnn(seq)
+            last_hidden = rnn_out[:, -1, :]  # (B, rnn_hidden)
+
+        # 4. Classifier
+        x = self.dropout(last_hidden)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.out(x)
+
+
 # Model registry: maps model names to (model_class, default_rnn_hidden)
 MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int]] = {
     "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
@@ -602,4 +764,5 @@ MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int]] = {
     "SmallerAllAttn": (SmallerAllAttn, 128),
     "SmallerAllV2": (SmallerAllV2, 64),
     "SmallerAllV2Attn": (SmallerAllV2Attn, 128),
+    "SmallerAllV3": (SmallerAllV3, 330),
 }
