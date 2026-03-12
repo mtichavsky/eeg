@@ -6,6 +6,7 @@ to ensure identical preprocessing, inference, and aggregation logic.
 """
 
 import logging
+import mne
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,9 +17,12 @@ import torch.nn as nn
 
 from thesis.dataset import (
     CANONICAL_CHANNEL_ORDER,
+    MDD_CHANNEL_ORDER,
+    SAD_CHANNEL_ORDER,
     CANEDataset,
     IDUNDataset,
     MDDDataset,
+    SADDataset,
     SpectrogramDataset,
     load_and_preprocess_edf_file,
 )
@@ -26,9 +30,40 @@ from thesis.labels import get_display_names
 
 logger = logging.getLogger(__name__)
 
-# Default MDD channel mapping / order — most general for arbitrary EDF files
-# TODO: this will have to be done better
-_DEFAULT_CHANNEL_MAPPING: dict[str, str] = MDDDataset.CHANNEL_MAPPING
+# Known EDF channel configurations: (channel_mapping, channel_order)
+# Tried in order; first whose keys are all present in the EDF wins.
+_KNOWN_EDF_CONFIGS: list[tuple[dict[str, str], list[str]]] = [
+    (MDDDataset.CHANNEL_MAPPING, MDD_CHANNEL_ORDER),
+    (SADDataset.CHANNEL_MAPPING, SAD_CHANNEL_ORDER),
+]
+
+
+def _detect_edf_channel_config(file_path: Path) -> tuple[dict[str, str], list[str]]:
+    """
+    Detect the appropriate channel mapping and order for an EDF file.
+
+    Tries each known configuration and returns the first whose mapping keys are all
+    present in the file's channel list. Falls back to an identity mapping with
+    ``CANONICAL_CHANNEL_ORDER`` if nothing matches.
+
+    :param Path file_path: Path to the EDF file.
+    :return: Tuple of (channel_mapping, channel_order).
+    :rtype: tuple[dict[str, str], list[str]]
+    """
+
+    raw = mne.io.read_raw_edf(file_path, preload=False, verbose=False)
+    edf_channels = set(raw.ch_names)
+
+    for mapping, channel_order in _KNOWN_EDF_CONFIGS:
+        if set(mapping.keys()).issubset(edf_channels):
+            return mapping, channel_order
+
+    logger.warning(
+        "No known channel mapping matched %s (channels: %s). Using identity mapping.",
+        file_path.name,
+        sorted(edf_channels),
+    )
+    return {ch: ch for ch in edf_channels}, CANONICAL_CHANNEL_ORDER
 
 # STFT parameters tuned to produce (129, 41) spectrograms for each supported sampling rate.
 # nperseg=256 gives 129 frequency bins for all rates.
@@ -147,12 +182,13 @@ def preprocess_file(
     """
     if file_format == ".edf":
         fs = sampling_rate if sampling_rate is not None else detect_sampling_rate(file_path, ".edf")
+        channel_mapping, channel_order = _detect_edf_channel_config(file_path)
         return load_and_preprocess_edf_file(
             file_path,
             channel=channel,
             fs=fs,
-            channel_mapping=_DEFAULT_CHANNEL_MAPPING,
-            channel_order=CANONICAL_CHANNEL_ORDER,
+            channel_mapping=channel_mapping,
+            channel_order=channel_order,
         )
     elif file_format == ".csv":
         fmt = _detect_csv_format(file_path)
