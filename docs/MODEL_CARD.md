@@ -61,6 +61,7 @@ TODO double check normals count for MDD
 | `SmallerAllAttn`   | 8 (Conv3d)                                      | Self-attention (Transformer) | 128                   | 289,794    |
 | `SmallerAllV2`     | 8 (per-channel shared CNN + cross-channel attn) | LSTM                         | 64                    | 345,667    |
 | `SmallerAllV2Attn` | 8 (per-channel shared CNN + cross-channel attn) | Self-attention (Transformer) | 128                   | 354,115    |
+| `SmallerAllV3`     | 8 (per-channel shared CNN + **time-aware** cross-channel attn) | LSTM              | 330                   | 889,907    |
 
 ## Architecture Summary
 
@@ -96,6 +97,22 @@ LSTM path. `chan_d_model=64` by default.
 
 ### `SmallerAllV2Attn`
 `SmallerAllV2` with temporal self-attention replacing LSTM.
+
+### `SmallerAllV3`
+Per-channel weight-shared CNN + **time-aware** cross-channel self-attention + LSTM.
+
+Key difference from `SmallerAllV2`: channel attention is computed **per time frame** (W' axis preserved
+through attention), not collapsed globally. This allows the model to down-weight a channel only during
+contaminated frames (e.g., blink artifacts in frontal channels) while still using it in clean frames.
+
+Architecture stages:
+1. **Per-channel CNN** (shared weights): each of 8 channels processed by the same Conv2d stack
+2. **Time-aware cross-channel attention**: reshape to `(B*W', 8, feat)` → TransformerEncoder attends
+   across 8 channel tokens separately per time frame → soft gate → weighted sum → `(B, W', 128)`
+3. **LSTM(128→330)**: temporal sequence modelling
+4. **Classifier** (→64→32→num_classes): DepCap-style head
+
+`chan_d_model=128`, `rnn_hidden=330` by default.
 
 ---
 
