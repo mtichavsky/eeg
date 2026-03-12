@@ -325,30 +325,60 @@ def compute_per_dataset_metrics(
     subject_dataset_map: dict[str, str],
 ) -> dict[str, dict[str, float | int]]:
     """
-    Compute chunk-level accuracy grouped by source dataset.
+    Compute chunk-level accuracy, sensitivity, and specificity grouped by source dataset.
+
+    Sensitivity and specificity are computed for binary classification only (labels 0 and 1),
+    where 0 is healthy and 1 is pathological.
 
     :param np.ndarray y_true: True labels for each chunk.
     :param np.ndarray y_pred: Predicted labels for each chunk.
     :param list[str] subjects: Subject ID for each chunk.
     :param dict[str, str] subject_dataset_map: Mapping from subject ID to dataset label.
-    :return: Per-dataset metrics, e.g. {"mdd": {"accuracy": 0.85, "correct": 425, "total": 500}}.
+    :return: Per-dataset metrics, e.g. {"mdd": {"accuracy": 0.85, "sensitivity": 0.80,
+        "specificity": 0.90, "tp": 400, "tn": 450, "fp": 50, "fn": 100, "correct": 850,
+        "total": 1000}}.
     :rtype: dict[str, dict[str, float | int]]
     """
     dataset_correct: dict[str, int] = {}
     dataset_total: dict[str, int] = {}
+    dataset_tp: dict[str, int] = {}
+    dataset_tn: dict[str, int] = {}
+    dataset_fp: dict[str, int] = {}
+    dataset_fn: dict[str, int] = {}
 
     for true, pred, subj in zip(y_true, y_pred, subjects):
         ds = subject_dataset_map.get(subj, "unknown")
         dataset_total[ds] = dataset_total.get(ds, 0) + 1
         if true == pred:
             dataset_correct[ds] = dataset_correct.get(ds, 0) + 1
+        # Binary confusion matrix components (label 1 = positive/pathological)
+        if int(true) == 1 and int(pred) == 1:
+            dataset_tp[ds] = dataset_tp.get(ds, 0) + 1
+        elif int(true) == 0 and int(pred) == 0:
+            dataset_tn[ds] = dataset_tn.get(ds, 0) + 1
+        elif int(true) == 0 and int(pred) == 1:
+            dataset_fp[ds] = dataset_fp.get(ds, 0) + 1
+        elif int(true) == 1 and int(pred) == 0:
+            dataset_fn[ds] = dataset_fn.get(ds, 0) + 1
 
     result: dict[str, dict[str, float | int]] = {}
     for ds in sorted(dataset_total.keys()):
         total = dataset_total[ds]
         correct = dataset_correct.get(ds, 0)
+        tp = dataset_tp.get(ds, 0)
+        tn = dataset_tn.get(ds, 0)
+        fp = dataset_fp.get(ds, 0)
+        fn = dataset_fn.get(ds, 0)
+        sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
         result[ds] = {
             "accuracy": correct / total if total > 0 else 0.0,
+            "sensitivity": sensitivity,
+            "specificity": specificity,
+            "tp": tp,
+            "tn": tn,
+            "fp": fp,
+            "fn": fn,
             "correct": correct,
             "total": total,
         }
@@ -370,36 +400,60 @@ def write_per_dataset_table(
     if not fold_per_dataset_metrics:
         return
 
-    # Aggregate correct and total counts across folds for each dataset
+    # Aggregate counts across folds for each dataset
     agg_correct: dict[str, int] = {}
     agg_total: dict[str, int] = {}
+    agg_tp: dict[str, int] = {}
+    agg_tn: dict[str, int] = {}
+    agg_fp: dict[str, int] = {}
+    agg_fn: dict[str, int] = {}
 
     for fold_metrics in fold_per_dataset_metrics:
         for ds, metrics in fold_metrics.items():
             agg_correct[ds] = agg_correct.get(ds, 0) + int(metrics["correct"])
             agg_total[ds] = agg_total.get(ds, 0) + int(metrics["total"])
+            agg_tp[ds] = agg_tp.get(ds, 0) + int(metrics.get("tp", 0))
+            agg_tn[ds] = agg_tn.get(ds, 0) + int(metrics.get("tn", 0))
+            agg_fp[ds] = agg_fp.get(ds, 0) + int(metrics.get("fp", 0))
+            agg_fn[ds] = agg_fn.get(ds, 0) + int(metrics.get("fn", 0))
 
     datasets = sorted(agg_total.keys())
     if not datasets:
         return
 
-    writer("\nPer-Dataset Chunk Accuracy (aggregated across folds):\n")
-    writer(f"  {'Dataset':<12} {'Accuracy':>10}  {'Chunk Count':>12}\n")
-    writer(f"  {'─' * 12}  {'─' * 10}  {'─' * 12}\n")
+    writer("\nPer-Dataset Chunk Metrics (aggregated across folds):\n")
+    writer(f"  {'Dataset':<12} {'Accuracy':>10}  {'Sensitivity':>12}  {'Specificity':>12}  {'Chunks':>8}\n")
+    writer(f"  {'─' * 12}  {'─' * 10}  {'─' * 12}  {'─' * 12}  {'─' * 8}\n")
 
     grand_correct = 0
     grand_total = 0
+    grand_tp = 0
+    grand_tn = 0
+    grand_fp = 0
+    grand_fn = 0
     for ds in datasets:
         total = agg_total[ds]
         correct = agg_correct[ds]
+        tp = agg_tp.get(ds, 0)
+        tn = agg_tn.get(ds, 0)
+        fp = agg_fp.get(ds, 0)
+        fn = agg_fn.get(ds, 0)
         acc = correct / total if total > 0 else 0.0
-        writer(f"  {ds.upper():<12} {acc * 100:>9.2f}%  {total:>12}\n")
+        sens = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+        writer(f"  {ds.upper():<12} {acc * 100:>9.2f}%  {sens * 100:>11.2f}%  {spec * 100:>11.2f}%  {total:>8}\n")
         grand_correct += correct
         grand_total += total
+        grand_tp += tp
+        grand_tn += tn
+        grand_fp += fp
+        grand_fn += fn
 
-    writer(f"  {'─' * 12}  {'─' * 10}  {'─' * 12}\n")
+    writer(f"  {'─' * 12}  {'─' * 10}  {'─' * 12}  {'─' * 12}  {'─' * 8}\n")
     grand_acc = grand_correct / grand_total if grand_total > 0 else 0.0
-    writer(f"  {'Total':<12} {grand_acc * 100:>9.2f}%  {grand_total:>12}\n")
+    grand_sens = grand_tp / (grand_tp + grand_fn) if (grand_tp + grand_fn) > 0 else 0.0
+    grand_spec = grand_tn / (grand_tn + grand_fp) if (grand_tn + grand_fp) > 0 else 0.0
+    writer(f"  {'Total':<12} {grand_acc * 100:>9.2f}%  {grand_sens * 100:>11.2f}%  {grand_spec * 100:>11.2f}%  {grand_total:>8}\n")
 
 
 def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> None:
