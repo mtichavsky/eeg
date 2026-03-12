@@ -141,24 +141,7 @@ The inference script outputs:
 
 ## Model Architecture
 
-**Available Model Architectures:**
-
-1. **CNN_LSTM_DepCap** (default, single-channel):
-   - Input: STFT spectrograms (129 × 41) from 10-second EEG segments
-   - Conv2D layers: 64 filters (10×10), 32 filters (5×5) with MaxPooling
-   - Spatial Dropout (`nn.Dropout2d`): Applied after each pooling layer
-   - LSTM/GRU layer: hidden size = 100
-   - Dense classifier: 64 → 32 → num_classes
-
-2. **Smaller** (reduced model, ~50% fewer parameters):
-   - Lighter architecture for faster experimentation
-   - Same structure as CNN_LSTM_DepCap but with fewer filters
-
-3. **SmallerAll** (multi-channel, uses `--channel all`):
-   - Input: 8-channel spectrograms (8 × 129 × 41)
-   - Conv3D layers: Process all 8 EEG channels simultaneously
-   - Learns spatial correlations between electrode positions
-   - Automatically selected when using `--channel all`
+More info about model is present in [docs/MODEL_CARD.md](docs/MODEL_CARD.md). See `--help` for all available options.
 
 **Channel Options:**
 - **Single channel** (e.g., `--channel Fp1`): Use a specific EEG electrode
@@ -331,6 +314,7 @@ All configuration can be overridden via environment variables (`-e KEY=value`):
 | `RATE_LIMIT_SECONDS` | `10`          | Rate-limit window duration in seconds                              |
 
 ### Verify the Deployment
+
 poetry run uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
 
 
@@ -379,6 +363,8 @@ To use baked-in models, simply omit the `-v` volume mount when running.
 
 
 ## FIT Server Setup
+
+File server: `davs://sc-nas.fit.vutbr.cz:5006/`
 
 ```bash
 # Load required modules
