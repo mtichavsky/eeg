@@ -1,3 +1,8 @@
+# Model Card
+
+All models are defined in `thesis/model.py`. Parameter counts are computed with the default
+input shape **(129, 41)** (STFT output: 129 frequency bins × 41 time frames).
+
 # Dataset Overview
 
 > **CANE and IDUN are paired recordings from the same subjects** — cap EEG (CANE) and
@@ -42,6 +47,55 @@
 | **Chunks EO (10 s)** | **1 794**          |                        |             |         |
 
 TODO double check normals count for MDD
+
+---
+
+## Parameter Counts
+
+| Model              | Input channels                                  | Temporal aggregation         | RNN hidden / d\_model | Parameters |
+|--------------------|-------------------------------------------------|------------------------------|-----------------------|------------|
+| `CNN_LSTM_DepCap`  | 1                                               | LSTM                         | 100                   | 798,306    |
+| `Smaller`          | 1                                               | LSTM                         | 64                    | 256,770    |
+| `SmallerAttn`      | 1                                               | Self-attention (Transformer) | 128                   | 265,218    |
+| `SmallerAll`       | 8 (Conv3d)                                      | LSTM                         | 64                    | 283,266    |
+| `SmallerAllAttn`   | 8 (Conv3d)                                      | Self-attention (Transformer) | 128                   | 289,794    |
+| `SmallerAllV2`     | 8 (per-channel shared CNN + cross-channel attn) | LSTM                         | 64                    | 345,667    |
+| `SmallerAllV2Attn` | 8 (per-channel shared CNN + cross-channel attn) | Self-attention (Transformer) | 128                   | 354,115    |
+
+## Architecture Summary
+
+### `CNN_LSTM_DepCap`
+Baseline architecture inspired by the reference paper.
+- Conv2d(1→64, 10×10, stride=2) + MaxPool + Dropout2d
+- Conv2d(64→32, 5×5) + MaxPool + Dropout2d
+- LSTM (hidden=100)
+- Dense 64 → 32 → *num\_classes*
+
+### `Smaller`
+Reduced version of `CNN_LSTM_DepCap` (~68% fewer parameters).
+- Conv2d(1→32, 10×10, stride=2) + MaxPool + Dropout2d
+- Conv2d(32→16, 5×5) + MaxPool + Dropout2d
+- LSTM / GRU / Transformer (configurable)
+- Dense 32 → 16 → *num\_classes*
+
+### `SmallerAttn`
+`Smaller` with temporal self-attention (TransformerEncoder) instead of LSTM.
+
+### `SmallerAll`
+Multi-channel (8-channel) variant of `Smaller` using a 3D convolution to process all EEG
+channels simultaneously. Conv3d kernel spans the full channel depth before collapsing to 2D.
+
+### `SmallerAllAttn`
+`SmallerAll` with temporal self-attention instead of LSTM.
+
+### `SmallerAllV2`
+Per-channel weight-shared CNN + cross-channel self-attention + LSTM.
+Each EEG channel is processed independently through the `Smaller` CNN (shared weights).
+A TransformerEncoder then computes soft channel-importance weights before merging into the
+LSTM path. `chan_d_model=64` by default.
+
+### `SmallerAllV2Attn`
+`SmallerAllV2` with temporal self-attention replacing LSTM.
 
 ---
 
