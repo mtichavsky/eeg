@@ -1,8 +1,12 @@
 # Multi-Channel Model Architecture Evolution
 
-This document traces the design decisions behind the three generations of
-multi-channel EEG models: `SmallerAll`, `SmallerAllV2`/`SmallerAllV2Attn`,
-and `SmallerAllV3`.
+This document traces the design decisions behind the multi-channel EEG models:
+`SmallerAll`, `SmallerAllV2`/`SmallerAllV2Attn`, and `SmallerAllV3`.
+
+`SmallerAllV3` went through two distinct designs. The first (attention-based)
+was a natural extension of V2 but turned out to share its fundamental flaw.
+The second (concat-based, current) takes a different direction entirely and is
+the version in the codebase today.
 
 ---
 
@@ -90,7 +94,12 @@ tile gets the same global weight as one that's consistently informative.
 
 ---
 
-## Generation 3 — `SmallerAllV3`
+## Generation 3a — `SmallerAllV3` (initial design, superseded)
+
+> **Status: superseded.** Experiment `all3-021-all-binary-smallerAllV3-focal`
+> used this design. It achieved 78.84% ± 6.39% chunk accuracy — statistically
+> identical to V2Attn but with higher variance and 3 folds best-at-epoch-1/2,
+> indicating overfitting. The design was abandoned; see Generation 3b below.
 
 **Core idea:** preserve the time axis *through* the cross-channel attention
 step so the model can compute **per-time-frame channel importance**.
@@ -108,47 +117,88 @@ Time-aware cross-channel attention:
   Linear → (B×W', 8, chan_d_model=128)
   TransformerEncoder (d_model=128, nhead=8)
   Gate + softmax → (B×W', 8, 1)     ← different weights per time frame
-  Weighted sum → (B×W', 128)
-  reshape → (B, W', 128)            ← time axis restored!
+  Weighted sum → (B×W', 128)        ← STILL COLLAPSES 8 CHANNELS TO 1
+  reshape → (B, W', 128)
 
-→ LSTM(input=128, hidden=330)       ← temporal aggregation
-→ classifier (→64→32→num_classes)   ← DepCap-style wider head
+→ LSTM(input=128, hidden=330)
+→ classifier (→64→32→num_classes)
 ```
 
-**What improves over V2:**
-- Channel weights are computed **per time step**: the model can learn that
-  Fp1/Fp2 should be down-weighted during blink frames and up-weighted during
-  clean frames, automatically, without explicit artifact detection.
-- Frontal alpha asymmetry (Fp1 vs Fp2), a key depression biomarker, is a
-  *time-varying* phenomenon — the model now has the inductive bias to detect it.
-- The `B×W'` fold is a batching efficiency trick, not semantic mixing: the
-  Transformer attends only within each `(b, t)` row across 8 channel tokens.
-  Rows at different time steps are independent. After the weighted sum the
-  temporal structure is fully restored.
+**Why it was abandoned — the weighted-sum still collapses channels:**
+V3a fixed V2's static-weight problem (attention now per time frame) but kept
+the weighted *sum* to merge channels. Softmax over 8 channels with a single
+gate means the model effectively selects the "best" channel at each time step
+and discards the rest. If the gate learns to put 0.7 weight on Fp1 and 0.04
+on each other channel, the LSTM is back to seeing one channel. This is why
+every attention-based model in this line matched single-channel in-ear
+performance (~78–79%): they all converged to channel selection, not channel
+combination. Additionally, LSTM(hidden=330) was oversized for the dataset,
+contributing to the epoch-1-best overfitting pattern.
 
-**Trade-off:** larger model (~890K params). The bulk of the increase comes from
-the wider LSTM hidden size (330 vs 64) and wider classifier head, not from the
-attention mechanism itself.
+**Parameters:** ~890K (before LSTM shrink).
+
+---
+
+## Generation 3b — `SmallerAllV3` (current design)
+
+**Core idea:** abandon attention-based channel mixing entirely. Instead,
+concatenate all 8 channels' CNN features at each time step so the LSTM
+*always* sees every channel simultaneously and can learn any cross-channel
+combination.
+
+```
+(B, 8, H, W)
+→ reshape → (B×8, 1, H, W)
+→ Shared CNN (identical to V2/V3a)
+→ (B×8, 16, H', W')
+→ reshape → (B, 8, 16, H', W')
+
+Concat all channels per time step:
+  permute → (B, W', 8, 16, H')
+  reshape → (B, W', 8×16×H')        ← ALL CHANNELS VISIBLE AT EVERY STEP
+  Linear(8×16×H' → chan_d_model=128) + ReLU
+
+→ LSTM(input=128, hidden=100)        ← all 8 channels feed in together
+→ classifier (→64→32→num_classes)
+```
+
+**Why this is fundamentally different:**
+The LSTM input at time step `t` is a single vector containing CNN features
+from *all 8 channels* at that moment. No channel is discarded or down-weighted
+before the recurrent layer. The LSTM can learn patterns like "Fp1 shows alpha
+suppression *and* T7 shows theta increase → depressed" — genuine multi-channel
+interaction that was impossible in all previous versions.
+
+The architecture diagram (`SmallerAllV3_architecture.drawio`) reflects the 3a
+design; it has not been updated to 3b.
+
+**Parameters:** ~1M (chan_proj dominates at ~885K due to 8× wider input).
+Reducing `chan_d_model` from 128 to 64 cuts this to ~556K total.
 
 ---
 
 ## Summary Table
 
-| Version | Channel mixing | Time-aware? | Params | Key limitation |
-|---------|---------------|-------------|--------|----------------|
-| `SmallerAll` | Conv3d depth kernel (rigid) | No | ~148–290K | One fixed spatial filter; no ongoing cross-channel reasoning |
-| `SmallerAllV2` | Per-channel CNN + global cross-channel attn | No | ~345K | Channel weights are static (W' mean-pooled before attention) |
-| `SmallerAllV3` | Per-channel CNN + per-frame cross-channel attn | **Yes** | ~890K | Larger model; higher memory/compute |
+| Version | Channel mixing | Channels visible to LSTM | Params | Status |
+|---------|---------------|--------------------------|--------|--------|
+| `SmallerAll` | Conv3d depth kernel (rigid) | 1 (merged at conv) | ~148–290K | superseded |
+| `SmallerAllV2` | Per-channel CNN + global attn (static weights) | 1 (weighted sum) | ~345K | superseded |
+| `SmallerAllV2Attn` | Same as V2 + temporal attention | 1 (weighted sum) | ~354K | superseded |
+| `SmallerAllV3` (3a) | Per-channel CNN + per-frame attn (soft select) | 1 (weighted sum) | ~890K | superseded |
+| `SmallerAllV3` (3b) | Per-channel CNN + full concat + projection | **8** | ~1M | **current** |
 
 ---
 
-## Design Principles (all three share)
+## Design Principles
 
 1. **Separate spectral extraction from spatial mixing.** The CNN answers "what
-   spectral pattern is present?"; the channel mixing stage answers "which
-   electrode is most relevant right now?".
+   spectral pattern is present?"; the channel mixing stage answers "how do all
+   electrodes combine to produce the decision?".
 2. **Weight sharing across channels.** Depression/anxiety biomarkers are
    spectral phenomena; the detector should be electrode-agnostic.
 3. **LSTM for temporal consistency.** Transient spectral events are clinically
    less meaningful than sustained patterns. The LSTM captures whether a pattern
    persists across the 10-second window.
+4. **Don't discard channels before the recurrent layer.** Any aggregation that
+   collapses N channels to 1 before the LSTM is functionally a channel selector,
+   not a multi-channel model. The LSTM input must contain all channels.

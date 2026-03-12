@@ -1,147 +1,120 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0" version="29.6.1">
   <diagram name="SmallerAllV3 Architecture" id="smallerallv3-arch">
-    <mxGraphModel dx="807" dy="447" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="1800" math="0" shadow="0">
+    <mxGraphModel dx="807" dy="447" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1700" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <!-- Title -->
         <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" value="SmallerAllV3: Multi-Channel EEG Classification&lt;br&gt;(Per-Channel CNN + Full-Channel Concat + LSTM)" vertex="1">
-          <mxGeometry x="100" y="20" width="700" height="55" as="geometry" />
+          <mxGeometry height="55" width="700" x="64" y="20" as="geometry" />
         </mxCell>
-
-        <!-- Input -->
-        <mxCell id="input" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" value="&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Input&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;8-Channel Spectrograms&lt;br&gt;(B, 8, H, W)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="340" y="90" width="220" height="70" as="geometry" />
+        <mxCell id="input" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Input&lt;/b&gt;&lt;br&gt;8-Channel Spectrograms&lt;br&gt;(B, 8, H, W)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="220" x="304" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="arr1" parent="1" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" source="input" target="reshape1">
+        <mxCell id="arr1" edge="1" parent="1" source="input" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="reshape1" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Reshape 1 -->
         <mxCell id="reshape1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Reshape for Per-Channel Processing&lt;/b&gt;&lt;br&gt;(B, 8, H, W) → (B×8, 1, H, W)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="204" y="185" width="420" height="55" as="geometry" />
+          <mxGeometry height="55" width="420" x="204" y="185" as="geometry" />
         </mxCell>
-        <mxCell id="arr2" parent="1" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" source="reshape1" target="cnn_container">
+        <mxCell id="arr2" edge="1" parent="1" source="reshape1" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="cnn_container" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- CNN Container (children use relative coords) -->
-        <mxCell id="cnn_container" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;dashed=1;verticalAlign=top;" value="" vertex="1">
-          <mxGeometry x="164" y="260" width="500" height="425" as="geometry" />
+        <mxCell id="cnn_container" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;dashed=1;" value="" vertex="1">
+          <mxGeometry height="425" width="500" x="164" y="260" as="geometry" />
         </mxCell>
-        <mxCell id="cnn_label" parent="cnn_container" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontStyle=1;" value="Shared CNN Block (applied independently to each of 8 channels)" vertex="1">
-          <mxGeometry x="10" y="5" width="480" height="30" as="geometry" />
+        <mxCell id="cnn_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" value="&lt;b style=&quot;font-size: 16px;&quot;&gt;Shared CNN Block (applied independently to each of 8 channels)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="470" x="174" y="265" as="geometry" />
         </mxCell>
-        <mxCell id="conv1" parent="cnn_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Conv2d&lt;/b&gt;&lt;br&gt;1 → 32 channels, kernel: 10×10, stride: 2&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="45" width="270" height="55" as="geometry" />
+        <mxCell id="conv1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Conv2d&lt;/b&gt;&lt;br&gt;1 → 32 channels&lt;br&gt;kernel: 10×10, stride: 2, padding: 0&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="270" x="279" y="300" as="geometry" />
         </mxCell>
-        <mxCell id="relu1" parent="cnn_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;ReLU&lt;/b&gt;&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="105" width="270" height="25" as="geometry" />
+        <mxCell id="relu1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;ReLU&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="270" x="279" y="370" as="geometry" />
         </mxCell>
-        <mxCell id="pool1" parent="cnn_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;MaxPool2d&lt;/b&gt; kernel: 2×2, stride: 1&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="135" width="270" height="35" as="geometry" />
+        <mxCell id="pool1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;MaxPool2d&lt;/b&gt;&lt;br&gt;kernel: 2×2, stride: 1&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="270" x="279" y="400" as="geometry" />
         </mxCell>
-        <mxCell id="drop1" parent="cnn_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout2d&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="175" width="270" height="30" as="geometry" />
+        <mxCell id="drop1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout2d&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="450" as="geometry" />
         </mxCell>
-        <mxCell id="conv2" parent="cnn_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Conv2d&lt;/b&gt;&lt;br&gt;32 → 16 channels, kernel: 5×5, stride: 1&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="220" width="270" height="55" as="geometry" />
+        <mxCell id="conv2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Conv2d&lt;/b&gt;&lt;br&gt;32 → 16 channels&lt;br&gt;kernel: 5×5, stride: 1, padding: 0&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="270" x="279" y="490" as="geometry" />
         </mxCell>
-        <mxCell id="relu2" parent="cnn_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;ReLU&lt;/b&gt;&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="280" width="270" height="25" as="geometry" />
+        <mxCell id="relu2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;ReLU&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="270" x="279" y="560" as="geometry" />
         </mxCell>
-        <mxCell id="pool2" parent="cnn_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;MaxPool2d&lt;/b&gt; kernel: 2×2, stride: 1&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="310" width="270" height="35" as="geometry" />
+        <mxCell id="pool2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;MaxPool2d&lt;/b&gt;&lt;br&gt;kernel: 2×2, stride: 1&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="270" x="279" y="590" as="geometry" />
         </mxCell>
-        <mxCell id="drop2" parent="cnn_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout2d&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="350" width="270" height="30" as="geometry" />
+        <mxCell id="drop2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout2d&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="640" as="geometry" />
         </mxCell>
-        <mxCell id="cnn_out_label" parent="cnn_container" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;i&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;output: (B×8, 16, H&apos;, W&apos;)&lt;/font&gt;&lt;/i&gt;" vertex="1">
-          <mxGeometry x="10" y="385" width="180" height="25" as="geometry" />
+        <mxCell id="cnn_out_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;&lt;i&gt;(B×8, 16, H&#39;, W&#39;)&lt;/i&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="120" x="164" y="640" as="geometry" />
         </mxCell>
-
-        <mxCell id="arr3" parent="1" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" source="cnn_container" target="reshape2">
+        <mxCell id="arr3" edge="1" parent="1" source="cnn_container" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="reshape2" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Reshape 2 -->
-        <mxCell id="reshape2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Reshape Back to Channel Dimension&lt;/b&gt;&lt;br&gt;(B×8, 16, H&apos;, W&apos;) → (B, 8, 16, H&apos;, W&apos;)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="204" y="710" width="420" height="55" as="geometry" />
+        <mxCell id="reshape2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Reshape Back to Channel Dimension&lt;/b&gt;&lt;br&gt;(B×8, 16, H&#39;, W&#39;) → (B, 8, 16, H&#39;, W&#39;)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="55" width="420" x="204" y="705" as="geometry" />
         </mxCell>
-        <mxCell id="arr4" parent="1" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" source="reshape2" target="chan_mix_container">
+        <mxCell id="arr4" edge="1" parent="1" source="reshape2" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="chan_mix_container" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Channel Mix Container (children use relative coords) -->
         <mxCell id="chan_mix_container" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;strokeWidth=3;dashed=1;" value="" vertex="1">
-          <mxGeometry x="164" y="790" width="500" height="215" as="geometry" />
+          <mxGeometry height="205" width="500" x="164" y="780" as="geometry" />
         </mxCell>
-        <mxCell id="chan_mix_label" parent="chan_mix_container" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontStyle=1;" value="Full-Channel Concat + Projection" vertex="1">
-          <mxGeometry x="10" y="5" width="380" height="30" as="geometry" />
+        <mxCell id="chan_mix_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" value="&lt;b style=&quot;font-size: 16px;&quot;&gt;Full-Channel Concat + Projection&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="400" x="174" y="785" as="geometry" />
         </mxCell>
-        <mxCell id="chan_concat" parent="chan_mix_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Permute + Concat All Channels&lt;/b&gt;&lt;br&gt;(B, 8, 16, H&apos;, W&apos;) → (B, W&apos;, 8×16×H&apos;)&lt;br&gt;&lt;i&gt;All 8 channels concatenated at each time step&lt;/i&gt;&lt;/font&gt;" vertex="1">
-          <mxGeometry x="65" y="45" width="370" height="70" as="geometry" />
+        <mxCell id="key_note" parent="1" style="shape=callout;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=12;align=left;position2=0.29;" value="&lt;b&gt;Key difference vs V2/V3a:&lt;/b&gt; all 8 channels&lt;br&gt;are concatenated — none discarded. The LSTM&lt;br&gt;sees every channel at every time step." vertex="1">
+          <mxGeometry height="90" width="230" x="604" y="770" as="geometry" />
         </mxCell>
-        <mxCell id="chan_proj" parent="chan_mix_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (chan_proj) + ReLU&lt;/b&gt;&lt;br&gt;(B, W&apos;, 6912) → (B, W&apos;, chan_d_model=128)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="65" y="130" width="370" height="55" as="geometry" />
+        <mxCell id="chan_concat" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Permute + Concat All Channels&lt;/b&gt;&lt;br&gt;(B, 8, 16, H&#39;, W&#39;) → (B, W&#39;, 8×16×H&#39;)&lt;br&gt;&lt;i&gt;All 8 channels concatenated at each time step&lt;/i&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="370" x="229" y="820" as="geometry" />
         </mxCell>
-
-        <!-- Callout note beside chan_mix_container -->
-        <mxCell id="key_note" parent="1" style="shape=callout;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=12;align=left;" value="&lt;b&gt;Key difference vs V2/V3a:&lt;/b&gt;&lt;br&gt;All 8 channels are concatenated — none discarded. The LSTM sees every channel at every time step." vertex="1">
-          <mxGeometry x="610" y="800" width="210" height="90" as="geometry" />
+        <mxCell id="chan_proj" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (chan_proj) + ReLU&lt;/b&gt;&lt;br&gt;(B, W&#39;, 8×16×H&#39;=6912) → (B, W&#39;, chan_d_model=128)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="370" x="229" y="900" as="geometry" />
         </mxCell>
-
-        <!-- Tensor shape label -->
-        <mxCell id="arr5_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;i&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;(B, seq_len=W&apos;=10, 128)&lt;/font&gt;&lt;/i&gt;" vertex="1">
-          <mxGeometry x="430" y="1020" width="180" height="25" as="geometry" />
-        </mxCell>
-        <mxCell id="arr5" parent="1" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" source="chan_mix_container" target="lstm_block">
+        <mxCell id="arr5" edge="1" parent="1" source="chan_mix_container" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="lstm_block" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- LSTM -->
+        <mxCell id="arr5_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;&lt;i&gt;(B, seq_len=W&#39;, 128)&lt;/i&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="160" x="424" y="1003" as="geometry" />
+        </mxCell>
         <mxCell id="lstm_block" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;LSTM&lt;/b&gt;&lt;br&gt;input_size=128, hidden_size=100, batch_first=True&lt;br&gt;Take last hidden state → (B, 100)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="224" y="1050" width="380" height="70" as="geometry" />
+          <mxGeometry height="70" width="380" x="224" y="1035" as="geometry" />
         </mxCell>
-        <mxCell id="arr6" parent="1" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" source="lstm_block" target="classifier_container">
+        <mxCell id="arr6" edge="1" parent="1" source="lstm_block" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="classifier_container" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Classifier Container (children use relative coords) -->
         <mxCell id="classifier_container" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6ffcc;strokeColor=#82b366;strokeWidth=3;dashed=1;" value="" vertex="1">
-          <mxGeometry x="164" y="1150" width="500" height="195" as="geometry" />
+          <mxGeometry height="195" width="500" x="164" y="1130" as="geometry" />
         </mxCell>
-        <mxCell id="classifier_label" parent="classifier_container" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontStyle=1;" value="Classifier Head" vertex="1">
-          <mxGeometry x="10" y="5" width="200" height="30" as="geometry" />
+        <mxCell id="classifier_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" value="&lt;b style=&quot;font-size: 16px;&quot;&gt;Classifier Head&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="140" x="174" y="1135" as="geometry" />
         </mxCell>
-        <mxCell id="dropout" parent="classifier_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="40" width="270" height="30" as="geometry" />
+        <mxCell id="dropout" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="1165" as="geometry" />
         </mxCell>
-        <mxCell id="fc1" parent="classifier_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (fc1)&lt;/b&gt;: 100 → 64 + ReLU&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="75" width="270" height="30" as="geometry" />
+        <mxCell id="fc1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (fc1)&lt;/b&gt;: 100 → 64 + ReLU&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="1200" as="geometry" />
         </mxCell>
-        <mxCell id="fc2" parent="classifier_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (fc2)&lt;/b&gt;: 64 → 32 + ReLU&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="110" width="270" height="30" as="geometry" />
+        <mxCell id="fc2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (fc2)&lt;/b&gt;: 64 → 32 + ReLU&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="1235" as="geometry" />
         </mxCell>
-        <mxCell id="out_fc" parent="classifier_container" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (out)&lt;/b&gt;: 32 → num_classes&lt;/font&gt;" vertex="1">
-          <mxGeometry x="115" y="145" width="270" height="30" as="geometry" />
+        <mxCell id="out_fc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (out)&lt;/b&gt;: 32 → num_classes&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="1270" as="geometry" />
         </mxCell>
-
-        <mxCell id="arr7" parent="1" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" source="classifier_container" target="output">
+        <mxCell id="arr7" edge="1" parent="1" source="classifier_container" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="output" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Output -->
         <mxCell id="output" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Output&lt;/b&gt;&lt;br&gt;Logits (B, num_classes)&lt;/font&gt;" vertex="1">
-          <mxGeometry x="314" y="1370" width="200" height="60" as="geometry" />
+          <mxGeometry height="60" width="200" x="314" y="1345" as="geometry" />
         </mxCell>
-
-        <!-- Param note -->
-        <mxCell id="param_note" parent="1" style="text;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;" value="&lt;b&gt;~1,001,522 parameters&lt;/b&gt; (input_shape=129×41, in_channels=8, chan_d_model=128, rnn_hidden=100)" vertex="1">
-          <mxGeometry x="164" y="1450" width="500" height="35" as="geometry" />
+        <mxCell id="param_note" parent="1" style="text;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;" value="&lt;b&gt;~1,001,522 parameters&lt;/b&gt; (default: input_shape=129×41, in_channels=8, chan_d_model=128, rnn_hidden=100)" vertex="1">
+          <mxGeometry height="35" width="500" x="164" y="1420" as="geometry" />
         </mxCell>
-
       </root>
     </mxGraphModel>
   </diagram>
