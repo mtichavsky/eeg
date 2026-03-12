@@ -68,6 +68,7 @@ def _prepare_dataset_generic(
     rng: np.random.RandomState,
     fs: float,
     augmentation: Callable | None = None,
+    spec_augmentation: Callable | None = None,
     test_mode: bool = False,
     label_mapping: Optional[dict[int, int]] = None,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
@@ -83,6 +84,7 @@ def _prepare_dataset_generic(
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param float fs: Sampling frequency for STFT.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param Callable | None spec_augmentation: Optional augmentation to apply to spectrograms.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict
            (e.g., {0: 0, 1: 2} for MDD in 4-class).
@@ -102,7 +104,11 @@ def _prepare_dataset_generic(
 
         # Create spectrogram dataset
         spec_dataset = SpectrogramDataset(
-            dataset, fs=fs, augmentation=augmentation, channel=channel
+            dataset,
+            fs=fs,
+            augmentation=augmentation,
+            spec_augmentation=spec_augmentation,
+            channel=channel,
         )
         flat_dataset = FlattenedSpectrogramDataset(spec_dataset, label_mapping=label_mapping)
 
@@ -131,6 +137,7 @@ def prepare_mdd_dataset(
     channel: str,
     rng: np.random.RandomState,
     augmentation: Callable | None = None,
+    spec_augmentation: Callable | None = None,
     test_mode: bool = False,
     num_classes: int = 2,
     label_mapping: Optional[dict[int, int]] = None,
@@ -145,6 +152,7 @@ def prepare_mdd_dataset(
     :param str channel: Channel to use (e.g., "Fp1" or "all").
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param Callable | None spec_augmentation: Optional augmentation to apply to spectrograms.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param int num_classes: Number of classes (2 or 4).
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
@@ -166,6 +174,7 @@ def prepare_mdd_dataset(
         rng=rng,
         fs=MDDDataset.FS,
         augmentation=augmentation,
+        spec_augmentation=spec_augmentation,
         test_mode=test_mode,
         label_mapping=effective_label_mapping,
     )
@@ -178,6 +187,7 @@ def prepare_cane_dataset(
     label_mapping: Optional[dict[int, int]] = None,
     skip_artifact_removal: bool = False,
     augmentation: Callable | None = None,
+    spec_augmentation: Callable | None = None,
     test_mode: bool = False,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
     """
@@ -190,6 +200,7 @@ def prepare_cane_dataset(
            (e.g., {0:0, 1:1, 2:1, 3:1}).
     :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param Callable | None spec_augmentation: Optional augmentation to apply to spectrograms.
     :param bool test_mode: If True, load only one file per class for debugging.
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
@@ -211,6 +222,7 @@ def prepare_cane_dataset(
             nperseg=CANEDataset.STFT_NPERSEG,
             noverlap=CANEDataset.STFT_NOVERLAP,
             augmentation=augmentation,
+            spec_augmentation=spec_augmentation,
             channel=channel,
         )
 
@@ -242,6 +254,7 @@ def prepare_sad_dataset(
     channel: str,
     rng: np.random.RandomState,
     augmentation: Callable | None = None,
+    spec_augmentation: Callable | None = None,
     test_mode: bool = False,
     num_classes: int = 2,
     label_mapping: Optional[dict[int, int]] = None,
@@ -253,6 +266,7 @@ def prepare_sad_dataset(
     :param str channel: Channel to use (e.g., "Fp1" or "all").
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param Callable | None spec_augmentation: Optional augmentation to apply to spectrograms.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param int num_classes: Number of classes (2 or 4).
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
@@ -267,6 +281,7 @@ def prepare_sad_dataset(
         rng=rng,
         fs=SADDataset.FS,
         augmentation=augmentation,
+        spec_augmentation=spec_augmentation,
         test_mode=test_mode,
         label_mapping=label_mapping,
     )
@@ -278,6 +293,7 @@ def prepare_idun_dataset(
     rng: np.random.RandomState,
     label_mapping: Optional[dict[int, int]] = None,
     augmentation: Callable | None = None,
+    spec_augmentation: Callable | None = None,
     test_mode: bool = False,
     quality_threshold: float = 30.0,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, "SubjectClasses"]:
@@ -292,6 +308,7 @@ def prepare_idun_dataset(
     :param np.random.RandomState rng: Random number generator for shuffling.
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
+    :param Callable | None spec_augmentation: Optional augmentation to apply to spectrograms.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param float quality_threshold: Reject IDUN chunks with quality at or below this value.
     :return: Tuple of (flat_dataset, SubjectClasses).
@@ -313,6 +330,7 @@ def prepare_idun_dataset(
             nperseg=256,
             noverlap=192,
             augmentation=augmentation,
+            spec_augmentation=spec_augmentation,
             channel=channel,
         )
 

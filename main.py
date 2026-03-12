@@ -16,7 +16,7 @@ from plot_training_curves import (
     TrainingCurvesError,
     generate_training_curves,
 )
-from thesis.augmentation import EEGAugmentation
+from thesis.augmentation import EEGAugmentation, SpecAugment
 from thesis.cli import get_arg_parser
 from thesis.data_preparation import (
     EXPECTED_SPECTROGRAM_SHAPE,
@@ -487,6 +487,7 @@ def train_cross_validation(
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
     augmentation: Callable | None = None,
+    spec_augmentation: Callable | None = None,
     test_mode: bool = False,
     log_file: Path | None = None,
     focal_loss: bool = False,
@@ -519,6 +520,7 @@ def train_cross_validation(
     :param bool freeze_lstm: If True, freeze LSTM layer during training.
         Can be used alone or with freeze_cnn.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG during training.
+    :param Callable | None spec_augmentation: Optional augmentation to apply to spectrograms.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param Path | None log_file: Path to the log file for JSON metrics output.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
@@ -571,6 +573,7 @@ def train_cross_validation(
             channel,
             rng,
             augmentation=augmentation,
+            spec_augmentation=spec_augmentation,
             test_mode=test_mode,
             num_classes=num_classes,
             label_mapping=label_mapping,
@@ -593,6 +596,7 @@ def train_cross_validation(
                 rng,
                 label_mapping=label_mapping,
                 augmentation=augmentation,
+                spec_augmentation=spec_augmentation,
                 test_mode=test_mode,
             )
         else:
@@ -603,6 +607,7 @@ def train_cross_validation(
                 label_mapping=label_mapping,
                 skip_artifact_removal=skip_artifact_removal,
                 augmentation=augmentation,
+                spec_augmentation=spec_augmentation,
                 test_mode=test_mode,
             )
         normal, anxiety, depression, anxiety_depression = (
@@ -622,6 +627,7 @@ def train_cross_validation(
             channel,
             rng,
             augmentation=augmentation,
+            spec_augmentation=spec_augmentation,
             test_mode=test_mode,
             num_classes=num_classes,
             label_mapping=label_mapping,
@@ -643,6 +649,7 @@ def train_cross_validation(
             channel,
             rng,
             augmentation=augmentation,
+            spec_augmentation=spec_augmentation,
             test_mode=test_mode,
             num_classes=num_classes,
             label_mapping=label_mapping,
@@ -666,6 +673,7 @@ def train_cross_validation(
                 rng,
                 label_mapping=label_mapping,
                 augmentation=augmentation,
+                spec_augmentation=spec_augmentation,
                 test_mode=test_mode,
             )
         else:
@@ -676,6 +684,7 @@ def train_cross_validation(
                 label_mapping=label_mapping,
                 skip_artifact_removal=skip_artifact_removal,
                 augmentation=augmentation,
+                spec_augmentation=spec_augmentation,
                 test_mode=test_mode,
             )
         cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
@@ -691,6 +700,7 @@ def train_cross_validation(
             channel,
             rng,
             augmentation=augmentation,
+            spec_augmentation=spec_augmentation,
             test_mode=test_mode,
             num_classes=num_classes,
             label_mapping=label_mapping,
@@ -882,6 +892,12 @@ def train(args: argparse.Namespace) -> None:
     else:
         augmentation = None
         logger.info("  Data Augmentation: disabled")
+    if args.spec_augment is not None:
+        spec_augmentation: SpecAugment | None = SpecAugment(p_aug=args.spec_augment)
+        logger.info(f"  SpecAugment: enabled (p={args.spec_augment})")
+    else:
+        spec_augmentation = None
+        logger.info("  SpecAugment: disabled")
     logger.info(f"  Pretrained Checkpoint: {args.pretrained_checkpoint}")
     logger.info(f"  Freeze CNN: {args.freeze_cnn}")
     logger.info(f"  Freeze LSTM: {args.freeze_lstm}")
@@ -918,6 +934,7 @@ def train(args: argparse.Namespace) -> None:
         freeze_cnn=args.freeze_cnn,
         freeze_lstm=args.freeze_lstm,
         augmentation=augmentation,
+        spec_augmentation=spec_augmentation,
         test_mode=args.test_mode,
         log_file=log_path,
         focal_loss=args.focal_loss,
@@ -940,6 +957,10 @@ def train(args: argparse.Namespace) -> None:
             f.write(f"Data Augmentation: enabled (p={args.augment_data})\n")
         else:
             f.write("Data Augmentation: disabled\n")
+        if args.spec_augment is not None:
+            f.write(f"SpecAugment: enabled (p={args.spec_augment})\n")
+        else:
+            f.write("SpecAugment: disabled\n")
         f.write(f"Pretrained Checkpoint: {args.pretrained_checkpoint}\n")
         f.write(f"Freeze CNN: {args.freeze_cnn}\n")
         f.write(f"Freeze LSTM: {args.freeze_lstm}\n\n")

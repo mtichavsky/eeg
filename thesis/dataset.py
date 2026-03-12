@@ -1360,6 +1360,7 @@ class SpectrogramDataset(Dataset):
         window: str = "hamming",
         cache_size: int = 100,
         augmentation: Optional[Callable] = None,
+        spec_augmentation: Optional[Callable] = None,
         channel: str = "all",
     ):
         """
@@ -1374,6 +1375,8 @@ class SpectrogramDataset(Dataset):
         :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
                before spectrogram conversion. When enabled, caching is disabled to ensure
                fresh augmentations on each access.
+        :param Optional[Callable] spec_augmentation: Optional augmentation to apply to
+               spectrogram tensors after STFT conversion. When enabled, caching is disabled.
         :param str channel: Channel mode. When "in-ear", applies 50%% sign flip augmentation
                per chunk to handle polarity ambiguity (always enabled regardless of augmentation).
         """
@@ -1383,10 +1386,11 @@ class SpectrogramDataset(Dataset):
         self.noverlap = noverlap
         self.window = window
         self.augmentation = augmentation
+        self.spec_augmentation = spec_augmentation
         self.is_inear: bool = channel == "in-ear"
 
-        # Disable caching only when augmentation is enabled (requires fresh randomness).
-        if augmentation is None:
+        # Disable caching when any augmentation is enabled (requires fresh randomness).
+        if augmentation is None and spec_augmentation is None:
             self._get_item_cached = lru_cache(maxsize=cache_size)(self._get_item)
         else:
             self._get_item_cached = self._get_item
@@ -1496,6 +1500,8 @@ class SpectrogramDataset(Dataset):
             self.augmentation,
             self.is_inear,
         )
+        if self.spec_augmentation is not None:
+            spectograms = [self.spec_augmentation(s) for s in spectograms]
         return spectograms, item["label"], item["subject"]
 
     def __getitem__(self, idx: int) -> tuple[list[torch.Tensor], int, str]:

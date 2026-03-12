@@ -163,9 +163,17 @@ def get_arg_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         metavar="PROB",
-        help="Enable data augmentation with given probability (0.0-1.0). "
+        help="Enable raw EEG augmentation with given probability (0.0-1.0). "
         "Example: --augment-data 0.5 applies each augmentation with 50%% chance. "
-        "Augmentations: FTSurrogate, MagWarp, TimeReverse, Scaling.",
+        "Augmentations: GaussianNoise, MagWarp.",
+    )
+    train_parser.add_argument(
+        "--spec-augment",
+        type=float,
+        default=None,
+        metavar="P",
+        help="Enable SpecAugment on spectrograms with given probability (e.g. 0.5). "
+        "Randomly masks contiguous time and frequency strips after STFT conversion.",
     )
 
     # Transfer learning arguments
