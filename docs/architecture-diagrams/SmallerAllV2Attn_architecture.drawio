@@ -1,0 +1,174 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0" version="29.2.9">
+  <diagram name="SmallerAllV2Attn Architecture" id="smallerallv2attn-arch">
+    <mxGraphModel dx="1064" dy="560" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" value="SmallerAllV2Attn: Multi-Channel EEG Classification&lt;br&gt;(Per-Channel CNN + Cross-Channel Attention + Temporal Attention)" vertex="1">
+          <mxGeometry height="55" width="700" x="64" y="20" as="geometry" />
+        </mxCell>
+
+        <!-- Input -->
+        <mxCell id="input" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Input&lt;/b&gt;&lt;br&gt;8-Channel Spectrograms&lt;br&gt;(B, 8, H, W)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="220" x="304" y="90" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow 1: input → reshape1 -->
+        <mxCell id="arr1" edge="1" parent="1" source="input" target="reshape1" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Reshape to per-channel -->
+        <mxCell id="reshape1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Reshape for Per-Channel Processing&lt;/b&gt;&lt;br&gt;(B, 8, H, W) → (B×8, 1, H, W)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="55" width="420" x="204" y="185" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow 2: reshape1 → cnn_container -->
+        <mxCell id="arr2" edge="1" parent="1" source="reshape1" target="cnn_container" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Shared CNN Block container -->
+        <mxCell id="cnn_container" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;dashed=1;" value="" vertex="1">
+          <mxGeometry height="425" width="500" x="164" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="cnn_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" value="&lt;b style=&quot;font-size: 16px;&quot;&gt;Shared CNN Block (applied independently to each of 8 channels)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="470" x="174" y="265" as="geometry" />
+        </mxCell>
+
+        <!-- CNN: Block 1 -->
+        <mxCell id="conv1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Conv2d&lt;/b&gt;&lt;br&gt;1 → 32 channels&lt;br&gt;kernel: 10×10, stride: 2, padding: 0&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="270" x="279" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="relu1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;ReLU&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="270" x="279" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="pool1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;MaxPool2d&lt;/b&gt;&lt;br&gt;kernel: 2×2, stride: 1&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="270" x="279" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="drop1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout2d&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="450" as="geometry" />
+        </mxCell>
+
+        <!-- CNN: Block 2 -->
+        <mxCell id="conv2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Conv2d&lt;/b&gt;&lt;br&gt;32 → 16 channels&lt;br&gt;kernel: 5×5, stride: 1, padding: 0&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="270" x="279" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="relu2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;ReLU&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="270" x="279" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="pool2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;MaxPool2d&lt;/b&gt;&lt;br&gt;kernel: 2×2, stride: 1&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="270" x="279" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="drop2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout2d&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="640" as="geometry" />
+        </mxCell>
+        <!-- CNN output annotation -->
+        <mxCell id="cnn_out_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;&lt;i&gt;(B×8, 16, H', W')&lt;/i&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="120" x="164" y="640" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow 3: cnn_container → reshape2 -->
+        <mxCell id="arr3" edge="1" parent="1" source="cnn_container" target="reshape2" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Reshape back to 8 channels -->
+        <mxCell id="reshape2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Reshape Back to Channel Dimension&lt;/b&gt;&lt;br&gt;(B×8, 16, H', W') → (B, 8, 16, H', W')&lt;/font&gt;" vertex="1">
+          <mxGeometry height="55" width="420" x="204" y="705" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow 4: reshape2 → chan_attn_container -->
+        <mxCell id="arr4" edge="1" parent="1" source="reshape2" target="chan_attn_container" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Cross-channel attention container -->
+        <mxCell id="chan_attn_container" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;strokeWidth=3;dashed=1;" value="" vertex="1">
+          <mxGeometry height="310" width="500" x="164" y="780" as="geometry" />
+        </mxCell>
+        <mxCell id="chan_attn_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" value="&lt;b style=&quot;font-size: 16px;&quot;&gt;Cross-Channel Self-Attention&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="300" x="174" y="785" as="geometry" />
+        </mxCell>
+        <mxCell id="chan_mean_pool" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Mean Pool over W'&lt;/b&gt;&lt;br&gt;(B, 8, 16, H', W') → (B, 8, 16, H')&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="350" x="239" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="chan_flatten_proj" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Flatten + Linear Projection&lt;/b&gt;&lt;br&gt;(B, 8, 16×H') → (B, 8, chan_d_model=64)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="350" x="239" y="870" as="geometry" />
+        </mxCell>
+        <mxCell id="chan_transformer" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;TransformerEncoder&lt;/b&gt;&lt;br&gt;d_model=64, nhead=4, 1 layer (pre-norm)&lt;br&gt;(B, 8, 64)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="350" x="239" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="chan_gate" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Gate Linear + Softmax&lt;/b&gt;&lt;br&gt;Channel importance weights: (B, 8, 1) — softmax over 8 channels&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="350" x="239" y="985" as="geometry" />
+        </mxCell>
+        <mxCell id="chan_weighted_sum" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Weighted Sum&lt;/b&gt; (soft channel merging)&lt;br&gt;(B, 8, 16, H', W') × weights → (B, 16, H', W')&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="350" x="239" y="1035" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow 5: chan_attn_container → reshape3 -->
+        <mxCell id="arr5" edge="1" parent="1" source="chan_attn_container" target="reshape3" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Permute + reshape -->
+        <mxCell id="reshape3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Permute + Reshape&lt;/b&gt;&lt;br&gt;(B, 16, H', W') → (B, W', H'×16)&lt;br&gt;&lt;i&gt;W' as sequence length, H'×16 as features per time step&lt;/i&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="420" x="204" y="1110" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow 6: reshape3 → temp_attn -->
+        <mxCell id="arr6" edge="1" parent="1" source="reshape3" target="temp_attn" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arr6_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;&lt;i&gt;(B, seq_len=W', features=H'×16)&lt;/i&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="180" x="424" y="1185" as="geometry" />
+        </mxCell>
+
+        <!-- Temporal self-attention -->
+        <mxCell id="temp_attn" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Temporal Self-Attention&lt;/b&gt;&lt;br&gt;Linear Proj + Positional Embedding → (B, W', d_model=128)&lt;br&gt;TransformerEncoder: 1 layer, d_model=128, nhead=8 (pre-norm)&lt;br&gt;Mean Pool over sequence → (B, 128)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="380" x="224" y="1210" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow 7: temp_attn → classifier_container -->
+        <mxCell id="arr7" edge="1" parent="1" source="temp_attn" target="classifier_container" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Classifier head container -->
+        <mxCell id="classifier_container" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6ffcc;strokeColor=#82b366;strokeWidth=3;dashed=1;" value="" vertex="1">
+          <mxGeometry height="185" width="500" x="164" y="1325" as="geometry" />
+        </mxCell>
+        <mxCell id="classifier_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" value="&lt;b style=&quot;font-size: 16px;&quot;&gt;Classifier Head&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="140" x="174" y="1330" as="geometry" />
+        </mxCell>
+        <mxCell id="dropout" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontColor=#333333;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Dropout&lt;/b&gt; (p=dropout)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="1360" as="geometry" />
+        </mxCell>
+        <mxCell id="fc1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (fc1)&lt;/b&gt;: 128 → 32 + ReLU&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="1395" as="geometry" />
+        </mxCell>
+        <mxCell id="fc2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (fc2)&lt;/b&gt;: 32 → 16 + ReLU&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="1430" as="geometry" />
+        </mxCell>
+        <mxCell id="out_fc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Linear (out)&lt;/b&gt;: 16 → num_classes&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="270" x="279" y="1465" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow 8: classifier_container → output -->
+        <mxCell id="arr8" edge="1" parent="1" source="classifier_container" target="output" style="endArrow=classic;html=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Output -->
+        <mxCell id="output" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;b&gt;Output&lt;/b&gt;&lt;br&gt;Logits (B, num_classes)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="200" x="314" y="1530" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
