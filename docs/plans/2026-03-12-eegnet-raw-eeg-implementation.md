@@ -95,13 +95,67 @@ else:
   - Log warning if `--dataset cane` (500 Hz → 5000 samples, incompatible with MDD-trained EEGNet)
 - Training/validation loop unchanged — same `collate_spectrograms`, same loss, same metrics
 
+## Resampling Strategy (required for `--dataset all`)
+
+Different datasets have different sampling rates:
+| Dataset  | Native Hz | Samples/10s |
+|----------|-----------|-------------|
+| MDD      | 250       | 2500        |
+| CANE     | 500       | 5000        |
+| AX_MALIK | 256       | 2560        |
+| IDUN     | 250       | 2500        |
+
+**Target rate: 250 Hz** (lowest native rate; MDD and IDUN require no change).
+
+Resampling is applied in `RawChunkDataset.__getitem__()` using `scipy.signal.resample()`:
+
+```python
+import scipy.signal
+
+TARGET_SFREQ = 250
+TARGET_N_SAMPLES = 2500  # 10 s × 250 Hz
+
+class RawChunkDataset:
+    def __init__(self, dataset, channel, fs):
+        self.dataset = dataset
+        self.fs = fs  # native sampling rate of underlying dataset
+        ...
+
+    def __getitem__(self, i):
+        chunks, label, subject = self.dataset[i]
+        if self.fs != TARGET_SFREQ:
+            chunks = [
+                torch.tensor(
+                    scipy.signal.resample(chunk.numpy(), TARGET_N_SAMPLES, axis=-1),
+                    dtype=torch.float32,
+                )
+                for chunk in chunks
+            ]
+        return chunks, label, subject
+```
+
+`n_samples` passed to `create_model()` is always `TARGET_N_SAMPLES = 2500` when raw EEG models are used with `--dataset all`. For single-dataset runs with MDD or IDUN, this is already 2500 so no resampling occurs.
+
+### Step 4 update: `main.py`
+
+- When `model_name in RAW_EEG_MODELS` and `--dataset all`:
+  - Pass each dataset's `fs` to `RawChunkDataset`; it resamples on-the-fly
+  - Set `n_samples = TARGET_N_SAMPLES` (2500) for `create_model()`
+  - Log info: `"Resampling <dataset> from <fs> Hz to 250 Hz for EEGNet compatibility"`
+- Remove the previous "raise a clear error" constraint — multi-dataset training is now fully supported.
+
 ## Constraints
-- CANE (500 Hz, 5000 samples per chunk) will mismatche with MDD (250 Hz, 2500). For `--dataset all` raise a clear error when model is in `RAW_EEG_MODELS`.
 - `in_channels=8` with `--channel all` works correctly — depthwise kernel `(C=8, 1)` handles it.
 - Depthwise max-norm constraint (‖w‖ ≤ 1) is optional for initial implementation.
+- Resampling is CPU-only via `scipy.signal.resample` (Fourier-based); this adds minor per-chunk overhead but runs once per batch load (not per epoch if caching is used).
 
 ## Verification
 ```bash
+# Single dataset (no resampling)
 poetry run python main.py train --model EEGNet --dataset mdd --condition ec \
   --channel all --test-mode --n-folds 2 --checkpoint-dir experiments/eegnet_test
+
+# All datasets (resampling active for CANE and AX_MALIK)
+poetry run python main.py train --model EEGNet --dataset all --condition ec \
+  --channel all --test-mode --n-folds 2 --checkpoint-dir experiments/eegnet_all_test
 ```
