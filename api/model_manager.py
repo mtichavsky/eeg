@@ -26,8 +26,8 @@ class ModelManager:
     Manages loading and selection of EEG classification models.
 
     Models available:
-    - in_ear_2class: In-ear single-channel, binary classification
-    - in_ear_4class: In-ear single-channel, 4-class classification
+    - inear_2class: In-ear single-channel, binary classification
+    - inear_4class: In-ear single-channel, 4-class classification
     - 8channel_2class: 8-channel (all), binary classification
     - 8channel_4class: 8-channel (all), 4-class classification
     """
@@ -35,25 +35,25 @@ class ModelManager:
     # Model selection table
     MODEL_CONFIG = {
         ("in-ear", "2class"): {
-            "model_name": "CNN_LSTM_DepCap",
+            "model_name": "Smaller",
             "num_classes": 2,
             "in_channels": 1,
-            "key": "in_ear_2class",
+            "key": "inear_2class",
         },
         ("in-ear", "4class"): {
             "model_name": "Smaller",
             "num_classes": 4,
             "in_channels": 1,
-            "key": "in_ear_4class",
+            "key": "inear_4class",
         },
         ("8channel", "2class"): {
-            "model_name": "SmallerAll",
+            "model_name": "SmallerAllV2Attn",
             "num_classes": 2,
             "in_channels": 8,
             "key": "8channel_2class",
         },
         ("8channel", "4class"): {
-            "model_name": "SmallerAll",
+            "model_name": "SmallerAllV2Attn",
             "num_classes": 4,
             "in_channels": 8,
             "key": "8channel_4class",
