@@ -58,7 +58,8 @@ def _process_json_record(record: dict, data: Dict[int, Dict[str, Any]]) -> None:
     _ensure_fold(data, fold)
 
     if record["phase"] == "train":
-        data[fold]["train"].append((epoch, loss))
+        acc = record["chunk"]["acc"]
+        data[fold]["train"].append((epoch, loss, acc))
     elif record["phase"] == "eval":
         acc = record["chunk"]["acc"]
         data[fold]["eval"].append((epoch, loss, acc))
@@ -153,6 +154,7 @@ def plot_axes(
     eval_losses,
     eval_acc,
     best_epoch=None,
+    train_acc=None,
     fontsize_label=12,
     fontsize_legend=11,
     linewidth=2,
@@ -168,6 +170,7 @@ def plot_axes(
     :param eval_losses: List of evaluation loss values
     :param eval_acc: List of evaluation accuracy values
     :param best_epoch: Best epoch from early stopping (optional)
+    :param train_acc: List of training accuracy values (optional)
     :param int fontsize_label: Font size for axis labels
     :param int fontsize_legend: Font size for legend
     :param float linewidth: Line width for plots
@@ -193,6 +196,16 @@ def plot_axes(
     # Create secondary y-axis for accuracy
     ax2 = ax1.twinx()
     ax2.set_ylabel("Accuracy", fontsize=fontsize_label)
+    if train_acc is not None:
+        ax2.plot(
+            train_epochs,
+            train_acc,
+            label="Train Accuracy",
+            linewidth=linewidth,
+            alpha=0.8,
+            color="steelblue",
+            linestyle="--",
+        )
     ax2.plot(
         eval_epochs,
         eval_acc,
@@ -242,8 +255,14 @@ def plot_fold_losses(
     :return: None
     :rtype: None
     """
-    # Extract epochs and losses
-    train_epochs, train_losses = zip(*train_data) if train_data else ([], [])
+    # Extract epochs, losses, and optionally train accuracy
+    if train_data and len(train_data[0]) == 3:
+        train_epochs, train_losses, train_acc_vals = zip(*train_data)
+    elif train_data:
+        train_epochs, train_losses = zip(*train_data)
+        train_acc_vals = None
+    else:
+        train_epochs, train_losses, train_acc_vals = [], [], None
     eval_epochs, eval_losses, eval_acc = zip(*eval_data) if eval_data else ([], [], [])
 
     # Create figure with primary axis
@@ -258,6 +277,7 @@ def plot_fold_losses(
         eval_losses,
         eval_acc,
         best_epoch=best_epoch,
+        train_acc=train_acc_vals,
     )
 
     # Title
@@ -303,8 +323,14 @@ def plot_all_folds_combined(data: Dict[int, Dict[str, Any]], output_dir: Path) -
         eval_data = fold_data["eval"]
         best_epoch = fold_data.get("best_epoch")
 
-        # Extract epochs, losses, and accuracy
-        train_epochs, train_losses = zip(*train_data) if train_data else ([], [])
+        # Extract epochs, losses, and optionally train accuracy
+        if train_data and len(train_data[0]) == 3:
+            train_epochs, train_losses, train_acc_vals = zip(*train_data)
+        elif train_data:
+            train_epochs, train_losses = zip(*train_data)
+            train_acc_vals = None
+        else:
+            train_epochs, train_losses, train_acc_vals = [], [], None
         eval_epochs, eval_losses, eval_acc = zip(*eval_data) if eval_data else ([], [], [])
 
         # Plot using shared function with smaller fonts for subplot grid
@@ -316,6 +342,7 @@ def plot_all_folds_combined(data: Dict[int, Dict[str, Any]], output_dir: Path) -
             eval_losses,
             eval_acc,
             best_epoch=best_epoch,
+            train_acc=train_acc_vals,
             fontsize_label=10,
             fontsize_legend=8,
             linewidth=1.5,

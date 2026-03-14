@@ -423,7 +423,10 @@ def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> 
     """
     chunk_metrics = cv_results.get("fold_chunk_metrics", [])
     subject_metrics = cv_results.get("fold_subject_metrics", [])
+    fold_train_acc = cv_results.get("fold_train_acc", [])
 
+    if fold_train_acc:
+        writer(_format_metric_line("TRAIN Accuracy Mean (at best val epoch)", fold_train_acc))
     _write_metrics_block(writer, chunk_metrics, "CHUNK")
     _write_metrics_block(writer, subject_metrics, "SUBJECT")
 
