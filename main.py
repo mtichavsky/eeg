@@ -299,6 +299,7 @@ def train_one_fold(
     best_chunk_acc = 0.0
     corr_combined_acc = 0.0
     best_epoch = 0
+    best_train_acc: float = 0.0
 
     best_chunk_metrics: dict[str, float] = {}
     best_subject_metrics: dict[str, float] = {}
@@ -370,6 +371,7 @@ def train_one_fold(
                 best_chunk_acc = chunk_metrics["accuracy"]
                 corr_combined_acc = chunk_metrics["accuracy"] * subject_metrics["accuracy"]
                 best_epoch = epoch
+                best_train_acc = train_metrics["accuracy"]
 
                 # Capture metrics including accuracy
                 best_chunk_metrics = extract_classification_metrics(chunk_metrics, num_classes)
@@ -423,6 +425,7 @@ def train_one_fold(
         "eval_combined_acc": corr_combined_acc,
         "best_epoch": best_epoch,
         "final_epoch": epoch,
+        "train_acc_at_best": best_train_acc,
         "history": fold_history,
         "chunk_metrics": best_chunk_metrics,
         "subject_metrics": best_subject_metrics,
@@ -543,6 +546,7 @@ def train_cross_validation(
         "fold_eval_combined_acc": [],
         "fold_best_epoch": [],
         "fold_final_epoch": [],
+        "fold_train_acc": [],
         "fold_chunk_metrics": [],
         "fold_subject_metrics": [],
         "fold_chunk_confusion_matrices": [],
@@ -828,6 +832,7 @@ def train_cross_validation(
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
         cv_results["fold_best_epoch"].append(fold_result["best_epoch"])
         cv_results["fold_final_epoch"].append(fold_result["final_epoch"])
+        cv_results["fold_train_acc"].append(fold_result["train_acc_at_best"])
         cv_results["fold_chunk_metrics"].append(fold_result["chunk_metrics"])
         cv_results["fold_subject_metrics"].append(fold_result["subject_metrics"])
         cv_results["fold_chunk_confusion_matrices"].append(fold_result["chunk_confusion_matrix"])
@@ -948,9 +953,11 @@ def train(args: argparse.Namespace) -> None:
             chunk_acc = results["fold_chunk_metrics"][i]["accuracy"]
             subject_acc = results["fold_subject_metrics"][i]["accuracy"]
             combined_acc = results["fold_eval_combined_acc"][i]
+            train_acc = results["fold_train_acc"][i] if results.get("fold_train_acc") else None
+            train_str = f", train={train_acc:.4f}" if train_acc is not None else ""
             f.write(
                 f"  Fold {i + 1}: chunk={chunk_acc:.4f}, subject={subject_acc:.4f}, "
-                f"combined={combined_acc:.4f} (epoch {results['fold_best_epoch'][i]}, "
+                f"combined={combined_acc:.4f}{train_str} (epoch {results['fold_best_epoch'][i]}, "
                 f"stopped at epoch {results['fold_final_epoch'][i]})\n"
             )
         write_results(f.write, results)
