@@ -31,8 +31,9 @@ make typecheck  # Run type checking with mypy
 ## Datasets
 
 The project supports three EEG datasets that can be used independently or combined. For training,
-they have to be available at `../MDD/`, `../CANE/`, `../IDUN_IN_EAR/` and `../SAD/` locations
-(can be overwritten in code). For more info, see [docs/DATASETS.md](docs/DATASETS.md)
+they have to be available at `../MDD/`, `../CANE/`, `../IDUN_IN_EAR/` and `../SAD/` locations.
+The parent dir can be overwritten by setting `EEG_DATA_DIR` env var. For more info,
+see [docs/DATASETS.md](docs/DATASETS.md)
 and [docs/MODEL_CARD.md](docs/MODEL_CARD.md) files.
 
 Details on how are these files preprocessed are available at [docs/PREPROCESSING.md](docs/PREPROCESSING.md).
@@ -185,7 +186,6 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 
 ## Important Notes
 
-- Dataset paths are hardcoded in `thesis/dataset.py` as `MDD_DIR`, `CANE_DIR`, `AX_MALIK_DIR`, and `IDUN_DIR`
 - **IDUN replacement**: When using `--channel in-ear` with `--dataset cane` or `--dataset all`, CANE is automatically replaced with IDUN real in-ear data. Logs may report "CANE" due to internal fold labeling, but IDUN data is actually used.
 - Channel selection: Use `--channel all` (default) for 8 channels or specify single channel (Fp1, T7, etc.)
 - Multi-channel mode uses SmallerAll model with Conv3D for spatial feature learning
