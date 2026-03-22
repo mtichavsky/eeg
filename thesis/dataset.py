@@ -7,6 +7,8 @@ from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, Callable, Literal, Optional
 
+DEFAULT_CACHE_SIZE: int = 100
+
 import mne
 import numpy as np
 import pandas as pd
@@ -21,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore")
 
-_DEFAULT_BASE_DIR = "/home/milan/Documents/diplomka/"
-BASE_DIR = Path(os.environ.get("EEG_DATA_DIR", _DEFAULT_BASE_DIR))
+BASE_DIR = Path(os.environ.get("EEG_DATA_DIR", "/home/milan/Documents/diplomka/"))
 CANE_DIR = BASE_DIR / "CANE"
 MDD_DIR = BASE_DIR / "MDD"
 SAD_DIR = BASE_DIR / "SAD"
@@ -159,7 +160,7 @@ class MDDDataset(Dataset):
         condition: Optional[Literal["EC", "EO", "TASK"]] = None,
         subjects: Optional[list[str]] = None,
         labels: Optional[list[str]] = None,
-        cache_size: Optional[int] = 100,
+        cache_size: Optional[int] = DEFAULT_CACHE_SIZE,
         transform: Optional[Callable] = None,
         channel: str = "all",
         test_mode: bool = False,
@@ -207,11 +208,11 @@ class MDDDataset(Dataset):
         )
 
         if cache_size:
-            self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
+            self._load_and_preprocess_edf_raw_file_cached = lru_cache(maxsize=cache_size)(
                 preprocess_func
             )
         else:
-            self._load_and_preprocess_mdd_raw_file_cached = preprocess_func
+            self._load_and_preprocess_edf_raw_file_cached = preprocess_func
 
     def _discover_files(
         self,
@@ -284,7 +285,7 @@ class MDDDataset(Dataset):
         """
         file_info = self.files[idx]
 
-        chunks = self._load_and_preprocess_mdd_raw_file_cached(
+        chunks = self._load_and_preprocess_edf_raw_file_cached(
             file_info["path"], self.channel, self.FS
         )
 
@@ -377,7 +378,7 @@ class CANEDataset(Dataset):
         condition: Optional[Literal["ec", "eo"]] = None,
         subjects: Optional[list[str]] = None,
         labels: Optional[list[str]] = None,
-        cache_size: Optional[int] = 100,
+        cache_size: Optional[int] = DEFAULT_CACHE_SIZE,
         transform: Optional[Callable] = None,
         channel: Optional[str] = "Fp1",
         artifact_method: str = "interpolation",
@@ -859,7 +860,7 @@ class SADDataset(MDDDataset):
         data_dir: Path = SAD_DIR,
         condition: Optional[Literal["EC", "EO"]] = None,
         subjects: Optional[list[str]] = None,
-        cache_size: Optional[int] = 100,
+        cache_size: Optional[int] = DEFAULT_CACHE_SIZE,
         transform: Optional[Callable] = None,
         channel: str = "all",
         test_mode: bool = False,
@@ -904,11 +905,11 @@ class SADDataset(MDDDataset):
 
         # Set up caching (same pattern as MDDDataset)
         if cache_size:
-            self._load_and_preprocess_mdd_raw_file_cached = lru_cache(maxsize=cache_size)(
+            self._load_and_preprocess_edf_raw_file_cached = lru_cache(maxsize=cache_size)(
                 preprocess_func
             )
         else:
-            self._load_and_preprocess_mdd_raw_file_cached = preprocess_func
+            self._load_and_preprocess_edf_raw_file_cached = preprocess_func
 
     def _discover_files(
         self,
@@ -1025,7 +1026,7 @@ class IDUNDataset(Dataset):
         condition: Optional[Literal["ec", "eo"]] = None,
         subjects: Optional[list[str]] = None,
         labels: Optional[list[str]] = None,
-        cache_size: Optional[int] = 100,
+        cache_size: Optional[int] = DEFAULT_CACHE_SIZE,
         transform: Optional[Callable] = None,
         quality_threshold: float = 0.0,
         test_mode: bool = False,
@@ -1358,14 +1359,14 @@ class SpectrogramDataset(Dataset):
         nperseg: int = 256,
         noverlap: int = 192,
         window: str = "hamming",
-        cache_size: int = 100,
+        cache_size: int = DEFAULT_CACHE_SIZE,
         augmentation: Optional[Callable] = None,
         channel: str = "all",
     ):
         """
         Initialize the SpectrogramDataset.
 
-        :param MDDDataset dataset: Underlying MDDDataset providing raw EEG data.
+        :param dataset: Underlying dataset providing raw EEG data.
         :param float fs: Sampling frequency for STFT (default: 250 Hz).
         :param int nperseg: Length of each segment for STFT (default: 256).
         :param int noverlap: Number of points to overlap between segments (default: 192).
