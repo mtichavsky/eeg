@@ -1,5 +1,4 @@
 # My stuff
-*.pth
 experiments/**/fold_*_loss_curves.png
 .idea/
 spectrogram_*.png
