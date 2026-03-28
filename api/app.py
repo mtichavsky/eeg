@@ -163,10 +163,10 @@ async def predict(
     request: Request,
     eeg_recording: UploadFile = File(...),
     electrode_setup: Literal["in-ear", "8channel"] = Form(...),
-    classification_task: Literal["2class", "4class"] = Form(...),
+    classification_task: Literal["binary", "4class"] = Form(...),
     fs: int | None = Form(None),
     request_id: UUID = Form(...),
-    user_id: UUID = Form(...),
+    user_id: str = Form(...),
 ) -> PredictResponse:
     """
     Predict depression/anxiety from EEG recording.
@@ -186,7 +186,7 @@ async def predict(
     :raises HTTPException: On validation, preprocessing, or inference errors.
     """
     # Bind request context to logs
-    structlog.contextvars.bind_contextvars(request_id=str(request_id), user_id=str(user_id))
+    structlog.contextvars.bind_contextvars(request_id=str(request_id), user_id=user_id)
 
     logger.info(
         "Prediction request received",

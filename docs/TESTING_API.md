@@ -11,9 +11,9 @@ poetry run uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
 Commands to test:
 
 ```bash
-python main.py run models/model_inear_2class.pth ../IDUN_IN_EAR/comorbid/0018/eeg_0018EC.csv --model Smaller --channel in-ear --class 2
+python main.py run models/model_inear_binary.pth ../IDUN_IN_EAR/comorbid/0018/eeg_0018EC.csv --model Smaller --channel in-ear --class 2
 python main.py run models/model_inear_4class.pth ../MDD/MDD\ S1\ EO.edf --model Smaller --channel in-ear --class 4
-python main.py run models/model_8channel_2class.pth ../SAD/anxious/ec/C1.edf --model SmallerAllV2Attn --channel all --class 2
+python main.py run models/model_8channel_binary.pth ../SAD/anxious/ec/C1.edf --model SmallerAllV2Attn --channel all --class 2
 python main.py run models/model_8channel_4class.pth ../CANE/normals/ec/0015_EC.csv --model SmallerAllV2Attn --channel all --class 4
 ```
 
@@ -36,7 +36,7 @@ API:
 curl -X POST http://localhost:8000/predict \
   -F "eeg_recording=@../IDUN_IN_EAR/comorbid/0018/eeg_0018EC.csv" \
   -F "electrode_setup=in-ear" \
-  -F "classification_task=2class" \
+  -F "classification_task=binary" \
   -F "request_id=$(uuidgen)" \
   -F "user_id=$(uuidgen)"
 
@@ -52,7 +52,7 @@ curl -X POST http://localhost:8000/predict \
 curl -X POST http://localhost:8000/predict \
   -F "eeg_recording=@../SAD/anxious/ec/C1.edf" \
   -F "electrode_setup=8channel" \
-  -F "classification_task=2class" \
+  -F "classification_task=binary" \
   -F "request_id=$(uuidgen)" \
   -F "user_id=$(uuidgen)"
 
