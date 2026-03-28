@@ -31,9 +31,9 @@ class APIConfig(BaseSettings):
 
     # Model paths
     model_dir: Path = Path("models")
-    model_in_ear_2class: str = "model_inear_2class.pth"
+    model_in_ear_binary: str = "model_inear_binary.pth"
     model_in_ear_4class: str = "model_inear_4class.pth"
-    model_8channel_2class: str = "model_8channel_2class.pth"
+    model_8channel_binary: str = "model_8channel_binary.pth"
     model_8channel_4class: str = "model_8channel_4class.pth"
 
     # Device configuration

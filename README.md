@@ -219,18 +219,18 @@ naming convention:
 
 | File                        | Electrode Setup | Classification                               | Architecture    |
 |-----------------------------|-----------------|----------------------------------------------|-----------------|
-| `model_inear_2class.pth`    | in-ear          | Binary (healthy vs pathological)             | CNN_LSTM_DepCap |
+| `model_inear_binary.pth`    | in-ear          | Binary (healthy vs pathological)             | CNN_LSTM_DepCap |
 | `model_inear_4class.pth`    | in-ear          | 4-class (normal/anxiety/depression/comorbid) | CNN_LSTM_DepCap |
-| `model_8channel_2class.pth` | All 8 channels  | Binary                                       | SmallerAll      |
+| `model_8channel_binary.pth` | All 8 channels  | Binary                                       | SmallerAll      |
 | `model_8channel_4class.pth` | All 8 channels  | 4-class                                      | SmallerAll      |
 
 Copy the best fold checkpoint from your experiment directory:
 
 ```bash
 mkdir -p models/
-cp experiments/mdd_007_fp1_ec/fold_1_best.pth    models/model_single_2class.pth
-cp experiments/all_012_fp1_ec/fold_1_best.pth     models/model_single_4class.pth
-cp experiments/mdd_007_all_ec/fold_1_best.pth     models/model_8channel_2class.pth
+cp experiments/mdd_007_fp1_ec/fold_1_best.pth    models/model_inear_binary.pth
+cp experiments/all_012_fp1_ec/fold_1_best.pth     models/model_inear_4class.pth
+cp experiments/mdd_007_all_ec/fold_1_best.pth     models/model_8channel_binary.pth
 cp experiments/all_012_all_ec/fold_1_best.pth     models/model_8channel_4class.pth
 ```
 
@@ -355,7 +355,7 @@ in `models/` before building:
 
 ```bash
 # Copy models, then build — they will be included in the image
-cp experiments/...  models/model_single_2class.pth
+cp experiments/...  models/model_inear_binary.pth
 podman build --format docker -t eeg-api -f api.Containerfile .
 ```
 

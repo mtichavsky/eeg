@@ -34,11 +34,11 @@ class ModelManager:
 
     # Model selection table
     MODEL_CONFIG = {
-        ("in-ear", "2class"): {
+        ("in-ear", "binary"): {
             "model_name": "Smaller",
             "num_classes": 2,
             "in_channels": 1,
-            "key": "inear_2class",
+            "key": "inear_binary",
         },
         ("in-ear", "4class"): {
             "model_name": "Smaller",
@@ -46,11 +46,11 @@ class ModelManager:
             "in_channels": 1,
             "key": "inear_4class",
         },
-        ("8channel", "2class"): {
+        ("8channel", "binary"): {
             "model_name": "SmallerAllV2Attn",
             "num_classes": 2,
             "in_channels": 8,
-            "key": "8channel_2class",
+            "key": "8channel_binary",
         },
         ("8channel", "4class"): {
             "model_name": "SmallerAllV2Attn",
@@ -163,7 +163,7 @@ class ModelManager:
     def select_model(
         self,
         electrode_setup: Literal["in-ear", "8channel"],
-        classification_task: Literal["2class", "4class"],
+        classification_task: Literal["binary", "4class"],
     ) -> nn.Module:
         """
         Select and return the appropriate model based on parameters.
@@ -171,7 +171,7 @@ class ModelManager:
         In on_demand mode, loads the model on first request if not yet loaded.
 
         :param Literal["in-ear", "8channel"] electrode_setup: Electrode configuration.
-        :param Literal["2class", "4class"] classification_task: Classification task.
+        :param Literal["binary", "4class"] classification_task: Classification task.
         :return: Loaded PyTorch model in eval mode.
         :rtype: nn.Module
         :raises ValueError: If model is not available.
@@ -217,13 +217,13 @@ class ModelManager:
     def get_num_classes(
         self,
         electrode_setup: Literal["in-ear", "8channel"],
-        classification_task: Literal["2class", "4class"],
+        classification_task: Literal["binary", "4class"],
     ) -> int:
         """
         Get number of classes for given configuration.
 
         :param Literal["in-ear", "8channel"] electrode_setup: Electrode configuration.
-        :param Literal["2class", "4class"] classification_task: Classification task.
+        :param Literal["binary", "4class"] classification_task: Classification task.
         :return: Number of output classes (2 or 4).
         :rtype: int
         """
