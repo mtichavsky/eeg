@@ -10,6 +10,7 @@ from torch.utils.data import ConcatDataset, Subset
 
 from thesis.dataset import (
     CANEDataset,
+    FlattenedRawEEGDataset,
     FlattenedSpectrogramDataset,
     IDUNDataset,
     MDDDataset,
@@ -70,7 +71,9 @@ def _prepare_dataset_generic(
     augmentation: Callable | None = None,
     test_mode: bool = False,
     label_mapping: Optional[dict[int, int]] = None,
-) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
+    use_raw_eeg: bool = False,
+    target_samples: int = 2500,
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Generic dataset preparation for datasets following the MDD pattern.
 
@@ -81,15 +84,19 @@ def _prepare_dataset_generic(
     :param list[str] conditions: EEG conditions to load.
     :param str channel: Channel to use (e.g., "Fp1" or "all").
     :param np.random.RandomState rng: Random number generator for shuffling.
-    :param float fs: Sampling frequency for STFT.
+    :param float fs: Sampling frequency for STFT. Ignored when use_raw_eeg=True.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict
            (e.g., {0: 0, 1: 2} for MDD in 4-class).
+    :param bool use_raw_eeg: If True, skip STFT and return FlattenedRawEEGDataset
+           for use with raw-EEG models such as Deformer.
+    :param int target_samples: Target number of time samples when use_raw_eeg=True
+           (default 2500 = 10 s @ 250 Hz).
     :return: Tuple of (flat_dataset, SubjectClasses).
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
-    all_flat_datasets = []
+    all_flat_datasets: list = []
     all_subjects = []
 
     for condition in conditions:
@@ -100,18 +107,23 @@ def _prepare_dataset_generic(
             test_mode=test_mode,
         )
 
-        # Create spectrogram dataset
-        spec_dataset = SpectrogramDataset(
-            dataset, fs=fs, augmentation=augmentation, channel=channel
-        )
-        flat_dataset = FlattenedSpectrogramDataset(spec_dataset, label_mapping=label_mapping)
+        if use_raw_eeg:
+            flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
+                FlattenedRawEEGDataset(dataset, target_samples=target_samples, label_mapping=label_mapping)
+            )
+        else:
+            # Create spectrogram dataset
+            spec_dataset = SpectrogramDataset(
+                dataset, fs=fs, augmentation=augmentation, channel=channel
+            )
+            flat_dataset = FlattenedSpectrogramDataset(spec_dataset, label_mapping=label_mapping)
 
-        # Validate shape
-        spec_shape = flat_dataset[0][0].shape[1:]
-        assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-            f"Expected (129, 41), got {spec_shape}. "
-            f"The neural net was designed using this assumption."
-        )
+            # Validate shape
+            spec_shape = flat_dataset[0][0].shape[1:]
+            assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+                f"Expected (129, 41), got {spec_shape}. "
+                f"The neural net was designed using this assumption."
+            )
 
         all_flat_datasets.append(flat_dataset)
         all_subjects.extend(dataset.get_sorted_subjects())
@@ -134,7 +146,9 @@ def prepare_mdd_dataset(
     test_mode: bool = False,
     num_classes: int = 2,
     label_mapping: Optional[dict[int, int]] = None,
-) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
+    use_raw_eeg: bool = False,
+    target_samples: int = 2500,
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare MDD dataset for classification.
 
@@ -149,9 +163,12 @@ def prepare_mdd_dataset(
     :param int num_classes: Number of classes (2 or 4).
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
            If None, automatically applies CanonicalLabel → BinaryLabel mapping for 2-class mode.
+    :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset instead of spectrogram
+           dataset. For use with raw-EEG models such as Deformer.
+    :param int target_samples: Target number of time samples when use_raw_eeg=True (default 2500).
     :return: Tuple of (flat_dataset, SubjectClasses).
              Note: anxiety and anxiety_depression are empty for MDD dataset.
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
     # In binary mode, apply CanonicalLabel → BinaryLabel mapping
     effective_label_mapping = label_mapping
@@ -168,6 +185,8 @@ def prepare_mdd_dataset(
         augmentation=augmentation,
         test_mode=test_mode,
         label_mapping=effective_label_mapping,
+        use_raw_eeg=use_raw_eeg,
+        target_samples=target_samples,
     )
 
 
@@ -179,7 +198,9 @@ def prepare_cane_dataset(
     skip_artifact_removal: bool = False,
     augmentation: Callable | None = None,
     test_mode: bool = False,
-) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
+    use_raw_eeg: bool = False,
+    target_samples: int = 2500,
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare CANE dataset with spectrograms and split subjects by class.
 
@@ -191,10 +212,13 @@ def prepare_cane_dataset(
     :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
+    :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
+           CANE is 500 Hz so chunks will be resampled 2:1 to target_samples.
+    :param int target_samples: Target number of time samples when use_raw_eeg=True (default 2500).
     :return: Tuple of (flat_dataset, SubjectClasses).
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
-    all_flat_datasets = []
+    all_flat_datasets: list = []
     all_subjects = []
 
     for condition in conditions:
@@ -205,24 +229,30 @@ def prepare_cane_dataset(
             skip_artifact_removal=skip_artifact_removal,
             test_mode=test_mode,
         )
-        cane_spec_dataset = SpectrogramDataset(
-            cane_dataset,
-            fs=CANEDataset.FS,
-            nperseg=CANEDataset.STFT_NPERSEG,
-            noverlap=CANEDataset.STFT_NOVERLAP,
-            augmentation=augmentation,
-            channel=channel,
-        )
 
-        cane_flat_dataset = FlattenedSpectrogramDataset(
-            cane_spec_dataset, label_mapping=label_mapping
-        )
-
-        spec_shape = cane_flat_dataset[0][0].shape[1:]
-        assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-            f"Expected (129, 41), got {spec_shape}. "
-            f"The neural net was designed using this assumption."
-        )
+        if use_raw_eeg:
+            cane_flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
+                FlattenedRawEEGDataset(
+                    cane_dataset, target_samples=target_samples, label_mapping=label_mapping
+                )
+            )
+        else:
+            cane_spec_dataset = SpectrogramDataset(
+                cane_dataset,
+                fs=CANEDataset.FS,
+                nperseg=CANEDataset.STFT_NPERSEG,
+                noverlap=CANEDataset.STFT_NOVERLAP,
+                augmentation=augmentation,
+                channel=channel,
+            )
+            cane_flat_dataset = FlattenedSpectrogramDataset(
+                cane_spec_dataset, label_mapping=label_mapping
+            )
+            spec_shape = cane_flat_dataset[0][0].shape[1:]
+            assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+                f"Expected (129, 41), got {spec_shape}. "
+                f"The neural net was designed using this assumption."
+            )
 
         all_flat_datasets.append(cane_flat_dataset)
         all_subjects.extend(cane_dataset.get_sorted_subjects())
@@ -245,7 +275,9 @@ def prepare_sad_dataset(
     test_mode: bool = False,
     num_classes: int = 2,
     label_mapping: Optional[dict[int, int]] = None,
-) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]:
+    use_raw_eeg: bool = False,
+    target_samples: int = 2500,
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare SAD dataset with spectrograms and split subjects by class.
 
@@ -256,8 +288,10 @@ def prepare_sad_dataset(
     :param bool test_mode: If True, load only one file per class for debugging.
     :param int num_classes: Number of classes (2 or 4).
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
+    :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
+    :param int target_samples: Target number of time samples when use_raw_eeg=True (default 2500).
     :return: Tuple of (flat_dataset, SubjectClasses).
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
     return _prepare_dataset_generic(
         dataset_class=SADDataset,
@@ -269,6 +303,8 @@ def prepare_sad_dataset(
         augmentation=augmentation,
         test_mode=test_mode,
         label_mapping=label_mapping,
+        use_raw_eeg=use_raw_eeg,
+        target_samples=target_samples,
     )
 
 
@@ -280,7 +316,9 @@ def prepare_idun_dataset(
     augmentation: Callable | None = None,
     test_mode: bool = False,
     quality_threshold: float = 30.0,
-) -> tuple[ConcatDataset | FlattenedSpectrogramDataset, "SubjectClasses"]:
+    use_raw_eeg: bool = False,
+    target_samples: int = 2500,
+) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, "SubjectClasses"]:
     """
     Prepare IDUN real in-ear dataset with spectrograms and split subjects by class.
 
@@ -294,10 +332,12 @@ def prepare_idun_dataset(
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param float quality_threshold: Reject IDUN chunks with quality at or below this value.
+    :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
+    :param int target_samples: Target number of time samples when use_raw_eeg=True (default 2500).
     :return: Tuple of (flat_dataset, SubjectClasses).
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
-    all_flat_datasets = []
+    all_flat_datasets: list = []
     all_subjects = []
 
     for condition in conditions:
@@ -307,24 +347,29 @@ def prepare_idun_dataset(
             test_mode=test_mode,
         )
 
-        idun_spec_dataset = SpectrogramDataset(
-            idun_dataset,
-            fs=IDUNDataset.FS,
-            nperseg=256,
-            noverlap=192,
-            augmentation=augmentation,
-            channel=channel,
-        )
-
-        idun_flat_dataset = FlattenedSpectrogramDataset(
-            idun_spec_dataset, label_mapping=label_mapping
-        )
-
-        spec_shape = idun_flat_dataset[0][0].shape[1:]
-        assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-            f"Expected (129, 41), got {spec_shape}. "
-            f"The neural net was designed using this assumption."
-        )
+        if use_raw_eeg:
+            idun_flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
+                FlattenedRawEEGDataset(
+                    idun_dataset, target_samples=target_samples, label_mapping=label_mapping
+                )
+            )
+        else:
+            idun_spec_dataset = SpectrogramDataset(
+                idun_dataset,
+                fs=IDUNDataset.FS,
+                nperseg=256,
+                noverlap=192,
+                augmentation=augmentation,
+                channel=channel,
+            )
+            idun_flat_dataset = FlattenedSpectrogramDataset(
+                idun_spec_dataset, label_mapping=label_mapping
+            )
+            spec_shape = idun_flat_dataset[0][0].shape[1:]
+            assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
+                f"Expected (129, 41), got {spec_shape}. "
+                f"The neural net was designed using this assumption."
+            )
 
         all_flat_datasets.append(idun_flat_dataset)
         all_subjects.extend(idun_dataset.get_sorted_subjects())
@@ -482,19 +527,22 @@ def create_balanced_folds(
 
 
 def get_indices_from_dataset(
-    concat_dataset: ConcatDataset | FlattenedSpectrogramDataset, subject_list: list[str]
+    concat_dataset: ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
+    subject_list: list[str],
 ) -> list[int]:
     """
-    Get indices for subjects from a ConcatDataset or FlattenedSpectrogramDataset.
+    Get indices for subjects from a flat or concatenated dataset.
 
-    :param ConcatDataset | FlattenedSpectrogramDataset concat_dataset: Dataset containing
-        EEG data, either concatenated or flattened.
+    Handles FlattenedSpectrogramDataset, FlattenedRawEEGDataset, and ConcatDataset
+    (which may contain any of the above).
+
+    :param concat_dataset: Dataset containing EEG data, either flat or concatenated.
     :param list[str] subject_list: List of subject IDs.
     :return: List of indices in the dataset.
     :rtype: list[int]
     """
-    # Handle FlattenedSpectrogramDataset directly
-    if isinstance(concat_dataset, FlattenedSpectrogramDataset):
+    # Handle leaf flat datasets directly
+    if isinstance(concat_dataset, (FlattenedSpectrogramDataset, FlattenedRawEEGDataset)):
         return concat_dataset.get_indices_for_subjects(subject_list)
 
     # Handle ConcatDataset by iterating through subdatasets

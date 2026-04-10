@@ -188,6 +188,49 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Freeze LSTM layer during training. Can be used alone or with --freeze-cnn.",
     )
 
+    # Deformer hyperparameters (ignored for non-Deformer models)
+    deformer_group = train_parser.add_argument_group(
+        "Deformer hyperparameters",
+        description="Only used when --model Deformer is selected.",
+    )
+    deformer_group.add_argument(
+        "--deformer-depth",
+        type=int,
+        default=4,
+        help="Number of transformer layers in Deformer (default: 4, as per paper).",
+    )
+    deformer_group.add_argument(
+        "--deformer-heads",
+        type=int,
+        default=16,
+        help="Number of attention heads in Deformer (default: 16, as per paper).",
+    )
+    deformer_group.add_argument(
+        "--deformer-num-kernel",
+        type=int,
+        default=64,
+        help="Number of CNN kernels in Deformer shallow encoder (default: 64, as per paper).",
+    )
+    deformer_group.add_argument(
+        "--deformer-mlp-dim",
+        type=int,
+        default=16,
+        help="FeedForward hidden dimension in Deformer (default: 16, as per paper).",
+    )
+    deformer_group.add_argument(
+        "--deformer-dim-head",
+        type=int,
+        default=16,
+        help="Dimension per attention head in Deformer (default: 16, as per paper).",
+    )
+    deformer_group.add_argument(
+        "--deformer-temporal-kernel",
+        type=int,
+        default=25,
+        help="Temporal kernel size for Deformer CNN encoder (must be odd). "
+        "Paper formula: Odd(0.1 × sampling_rate). Default: 25 for 250 Hz.",
+    )
+
     # Run subcommand
     run_parser = subparsers.add_parser(
         "run", help="Run inference on a single EEG file (.edf or .csv)"

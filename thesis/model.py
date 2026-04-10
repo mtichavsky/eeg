@@ -4,6 +4,7 @@ from typing import Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from thesis.deformer import Deformer
 
 logger = logging.getLogger(__name__)
 
@@ -742,8 +743,14 @@ class SmallerAllV3(Smaller):
         return self.out(x)
 
 
-# Model registry: maps model names to (model_class, default_rnn_hidden)
-MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int]] = {
+
+# Models that consume raw EEG time-series (batch, channels, time) instead of spectrograms.
+# These bypass the STFT pipeline and use FlattenedRawEEGDataset.
+RAW_EEG_MODELS: frozenset[str] = frozenset({"Deformer"})
+
+# Model registry: maps model names to (model_class, default_rnn_hidden).
+# rnn_hidden is None for raw-EEG models that don't use an RNN.
+MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int | None]] = {
     "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
     "Smaller": (Smaller, 64),
     "SmallerAll": (SmallerAll, 64),
@@ -752,4 +759,5 @@ MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int]] = {
     "SmallerAllV2": (SmallerAllV2, 64),
     "SmallerAllV2Attn": (SmallerAllV2Attn, 128),
     "SmallerAllV3": (SmallerAllV3, 100),
+    "Deformer": (Deformer, None),
 }

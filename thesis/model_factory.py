@@ -6,13 +6,46 @@ to instantiate, optionally load pretrained weights, and freeze layers.
 """
 
 import logging
+from dataclasses import asdict, dataclass
 
 import torch
 import torch.nn as nn
 
-from thesis.model import MODEL_REGISTRY
+from thesis.model import MODEL_REGISTRY, RAW_EEG_MODELS
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DeformerConfig:
+    """
+    Hyperparameters for the Deformer architecture (EEG-Deformer, J-BHI 2024).
+
+    All values default to the paper's settings for 250 Hz EEG.
+    ``num_time`` and ``temporal_kernel`` depend on the sampling rate and segment length;
+    the defaults match 10-second chunks at 250 Hz with kernel = Odd(0.1 × fs).
+    """
+
+    num_time: int = 2500
+    """Number of time samples per chunk (10 s × 250 Hz = 2500)."""
+
+    temporal_kernel: int = 25
+    """Temporal CNN kernel size. Must be odd. Paper formula: Odd(0.1 × fs)."""
+
+    num_kernel: int = 64
+    """Number of filters in the shallow CNN encoder."""
+
+    depth: int = 4
+    """Number of hierarchical transformer layers."""
+
+    heads: int = 16
+    """Number of multi-head attention heads."""
+
+    mlp_dim: int = 16
+    """Hidden dimension of the FeedForward block inside each transformer layer."""
+
+    dim_head: int = 16
+    """Dimension per attention head."""
 
 
 def create_model(
@@ -25,12 +58,13 @@ def create_model(
     pretrained_checkpoint: str | None = None,
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
+    deformer_config: DeformerConfig | None = None,
 ) -> nn.Module:
     """
     Create and initialize a model, optionally loading pretrained weights.
 
-    :param str model_name: Model architecture ("CNN_LSTM_DepCap" or "Smaller").
-    :param tuple spec_shape: Input spectrogram shape (height, width).
+    :param str model_name: Model architecture name from MODEL_REGISTRY.
+    :param tuple spec_shape: Input spectrogram shape (height, width). Ignored for raw EEG models.
     :param float dropout: Dropout rate.
     :param int num_classes: Number of output classes.
     :param torch.device device: Device to place model on.
@@ -38,22 +72,35 @@ def create_model(
     :param str | None pretrained_checkpoint: Path to pretrained checkpoint for transfer learning.
     :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
     :param bool freeze_lstm: If True, freeze LSTM layer during training.
+    :param DeformerConfig | None deformer_config: Hyperparameters for Deformer. Required when
+        model_name is in RAW_EEG_MODELS; ignored otherwise. Defaults are applied if None is
+        passed for a raw-EEG model.
     :return: Initialized model.
     :rtype: nn.Module
     """
-    # Get model class and default parameters from registry
     if model_name not in MODEL_REGISTRY:
         raise ValueError(f"Unknown model: {model_name}. Available: {list(MODEL_REGISTRY.keys())}")
 
     model_class, rnn_hidden = MODEL_REGISTRY[model_name]
 
-    model = model_class(
-        input_shape=spec_shape,
-        in_channels=in_channels,
-        rnn_hidden=rnn_hidden,
-        dropout=dropout,
-        num_classes=num_classes,
-    ).to(device)
+    if model_name in RAW_EEG_MODELS:
+        # Raw EEG models (e.g. Deformer) take (batch, channels, time) directly
+        cfg = deformer_config if deformer_config is not None else DeformerConfig()
+        model = model_class(
+            num_chan=in_channels,
+            num_classes=num_classes,
+            dropout=dropout,
+            **asdict(cfg),
+        ).to(device)
+    else:
+        # Spectrogram models take (batch, channels, freq_bins, time_frames)
+        model = model_class(
+            input_shape=spec_shape,
+            in_channels=in_channels,
+            rnn_hidden=rnn_hidden,
+            dropout=dropout,
+            num_classes=num_classes,
+        ).to(device)
 
     # Transfer learning: load pretrained weights if provided
     if pretrained_checkpoint:

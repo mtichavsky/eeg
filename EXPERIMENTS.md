@@ -25,6 +25,10 @@ CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --chan
 CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.3  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-020-all-binary-smallerAllV2Attn-focal-d3
 CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-4class-smallerAllV2Attn-weighted-sampler
 
+CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model AllTransformerV4 --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 2 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-022-all-2class-V3All-weighted-sampler
+
+CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model Deformer --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 2 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-023-all-2class-Deformer-weighted-sampler
+
 Higher dropout doesn't make sense.
 
 ### all3-020-all-binary-smallerAllV2Attn-weighted-sampler
