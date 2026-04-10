@@ -46,8 +46,8 @@ class APIConfig(BaseSettings):
     # File upload limits
     max_file_size_mb: int = 100
 
-    # Rate limiting - 10 requests per 10 seconds
-    rate_limit_times: int = 10
+    # Rate limiting - 50 requests per 10 seconds
+    rate_limit_times: int = 50
     rate_limit_seconds: int = 10
 
     # Logging
