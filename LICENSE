@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 Milan Tichavský
+Copyright (c) 2026 Milan Tichavský
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,19 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+-------------------------------------------------------------------------------
+THIRD-PARTY EXCEPTIONS
+
+The following file is NOT covered by the MIT License above. It is a verbatim
+copy of third-party source code and is governed by its own license, which is
+reproduced in full at the top of the file:
+
+  thesis/deformer.py  —  CBCR License 1.0 (non-commercial use only)
+                          Copyright 2022 Centre for Brain Computing Research
+                          Source: https://github.com/yi-ding-cs/EEG-Deformer
+                          Paper:  DOI 10.1109/JBHI.2024.3504604
+
+It is your responsibility to asses if any other files are impacted by vendoring
+this file or any other third-party code contribution, though this is the only
+third-party code contribution I'm aware I made during writing this project.

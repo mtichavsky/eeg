@@ -32,6 +32,7 @@ from thesis.data_preparation import (
 from thesis.dataset import (
     collate_spectrograms,
 )
+from thesis.model import RAW_EEG_MODELS
 from thesis.early_stopping import EarlyStopping
 from thesis.inference import preprocess_and_infer
 from thesis.json_logging import log_metrics_json
@@ -43,7 +44,7 @@ from thesis.metrics import (
     extract_classification_metrics,
     write_results,
 )
-from thesis.model_factory import create_model
+from thesis.model_factory import DeformerConfig, create_model
 
 RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -494,6 +495,7 @@ def train_cross_validation(
     log_file: Path | None = None,
     focal_loss: bool = False,
     focal_gamma: float = 2.0,
+    deformer_config: DeformerConfig | None = None,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -563,6 +565,11 @@ def train_cross_validation(
     if label_mapping:
         logger.info(f"Label mapping: {label_mapping} (collapsing to binary)")
 
+    # Detect whether model needs raw EEG (Deformer) or spectrograms (CNN-LSTM family)
+    use_raw_eeg = model_name in RAW_EEG_MODELS
+    if use_raw_eeg:
+        logger.info(f"Model {model_name} uses raw EEG pipeline (no STFT)")
+
     mdd_flat_dataset, cane_flat_dataset, sad_flat_dataset, flat_dataset = (
         None,
         None,
@@ -578,6 +585,7 @@ def train_cross_validation(
             test_mode=test_mode,
             num_classes=num_classes,
             label_mapping=label_mapping,
+            use_raw_eeg=use_raw_eeg,
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -598,6 +606,7 @@ def train_cross_validation(
                 label_mapping=label_mapping,
                 augmentation=augmentation,
                 test_mode=test_mode,
+                use_raw_eeg=use_raw_eeg,
             )
         else:
             flat_dataset, subject_classes = prepare_cane_dataset(
@@ -608,6 +617,7 @@ def train_cross_validation(
                 skip_artifact_removal=skip_artifact_removal,
                 augmentation=augmentation,
                 test_mode=test_mode,
+                use_raw_eeg=use_raw_eeg,
             )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -629,6 +639,7 @@ def train_cross_validation(
             test_mode=test_mode,
             num_classes=num_classes,
             label_mapping=label_mapping,
+            use_raw_eeg=use_raw_eeg,
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -650,6 +661,7 @@ def train_cross_validation(
             test_mode=test_mode,
             num_classes=num_classes,
             label_mapping=label_mapping,
+            use_raw_eeg=use_raw_eeg,
         )
         mdd_normal, mdd_anxiety, mdd_depression, mdd_anxiety_depression = (
             mdd_subject_classes.normal,
@@ -671,6 +683,7 @@ def train_cross_validation(
                 label_mapping=label_mapping,
                 augmentation=augmentation,
                 test_mode=test_mode,
+                use_raw_eeg=use_raw_eeg,
             )
         else:
             cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
@@ -681,6 +694,7 @@ def train_cross_validation(
                 skip_artifact_removal=skip_artifact_removal,
                 augmentation=augmentation,
                 test_mode=test_mode,
+                use_raw_eeg=use_raw_eeg,
             )
         cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
             cane_subject_classes.normal,
@@ -698,6 +712,7 @@ def train_cross_validation(
             test_mode=test_mode,
             num_classes=num_classes,
             label_mapping=label_mapping,
+            use_raw_eeg=use_raw_eeg,
         )
         sad_normal, sad_anxiety, sad_depression, sad_anxiety_depression = (
             sad_subject_classes.normal,
@@ -767,6 +782,9 @@ def train_cross_validation(
         # pin_memory speeds up CPU→GPU transfers, enabling Direct Memory Access
         pin_memory = device.type == "cuda"
         num_workers = 4
+        # Raw EEG models return uniform-shape tensors so default collate works;
+        # spectrogram models use collate_spectrograms for shape validation.
+        fold_collate_fn = None if use_raw_eeg else collate_spectrograms
         train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
@@ -776,7 +794,7 @@ def train_cross_validation(
             sampler=sampler,
             num_workers=num_workers,
             pin_memory=pin_memory,
-            collate_fn=collate_spectrograms,
+            collate_fn=fold_collate_fn,
         )
         val_loader = DataLoader(
             val_dataset,
@@ -784,7 +802,7 @@ def train_cross_validation(
             shuffle=False,
             num_workers=num_workers,
             pin_memory=pin_memory,
-            collate_fn=collate_spectrograms,
+            collate_fn=fold_collate_fn,
         )
 
         model = create_model(
@@ -797,6 +815,7 @@ def train_cross_validation(
             pretrained_checkpoint=pretrained_checkpoint,
             freeze_cnn=freeze_cnn,
             freeze_lstm=freeze_lstm,
+            deformer_config=deformer_config,
         )
 
         if focal_loss:
@@ -927,6 +946,14 @@ def train(args: argparse.Namespace) -> None:
         log_file=log_path,
         focal_loss=args.focal_loss,
         focal_gamma=args.focal_gamma,
+        deformer_config=DeformerConfig(
+            temporal_kernel=args.deformer_temporal_kernel,
+            num_kernel=args.deformer_num_kernel,
+            depth=args.deformer_depth,
+            heads=args.deformer_heads,
+            mlp_dim=args.deformer_mlp_dim,
+            dim_head=args.deformer_dim_head,
+        ),
     )
 
     # Save final results to file
