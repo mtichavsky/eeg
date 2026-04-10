@@ -52,16 +52,17 @@ TODO double check normals count for MDD
 
 ## Parameter Counts
 
-| Model              | Input channels                                  | Temporal aggregation         | RNN hidden / d\_model | Parameters |
-|--------------------|-------------------------------------------------|------------------------------|-----------------------|------------|
-| `CNN_LSTM_DepCap`  | 1                                               | LSTM                         | 100                   | 798,306    |
-| `Smaller`          | 1                                               | LSTM                         | 64                    | 256,770    |
-| `SmallerAttn`      | 1                                               | Self-attention (Transformer) | 128                   | 265,218    |
-| `SmallerAll`       | 8 (Conv3d)                                      | LSTM                         | 64                    | 283,266    |
-| `SmallerAllAttn`   | 8 (Conv3d)                                      | Self-attention (Transformer) | 128                   | 289,794    |
-| `SmallerAllV2`     | 8 (per-channel shared CNN + cross-channel attn) | LSTM                         | 64                    | 345,667    |
-| `SmallerAllV2Attn` | 8 (per-channel shared CNN + cross-channel attn) | Self-attention (Transformer) | 128                   | 354,115    |
-| `SmallerAllV3`     | 8 (per-channel shared CNN + full concat projection) | LSTM              | 100 (default)         | 1,001,522  |
+| Model              | Input channels                                      | Temporal aggregation            | RNN hidden / d\_model | Parameters |
+|--------------------|-----------------------------------------------------|---------------------------------|-----------------------|------------|
+| `CNN_LSTM_DepCap`  | 1                                                   | LSTM                            | 100                   | 798,306    |
+| `Smaller`          | 1                                                   | LSTM                            | 64                    | 256,770    |
+| `SmallerAttn`      | 1                                                   | Self-attention (Transformer)    | 128                   | 265,218    |
+| `SmallerAll`       | 8 (Conv3d)                                          | LSTM                            | 64                    | 283,266    |
+| `SmallerAllAttn`   | 8 (Conv3d)                                          | Self-attention (Transformer)    | 128                   | 289,794    |
+| `SmallerAllV2`     | 8 (per-channel shared CNN + cross-channel attn)     | LSTM                            | 64                    | 345,667    |
+| `SmallerAllV2Attn` | 8 (per-channel shared CNN + cross-channel attn)     | Self-attention (Transformer)    | 128                   | 354,115    |
+| `SmallerAllV3`     | 8 (per-channel shared CNN + full concat projection) | LSTM                            | 100 (default)         | 1,001,522  |
+| `Deformer`         | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4) | heads=16, dim_head=16 | 1,776,814  |
 
 ## Architecture Summary
 
@@ -113,6 +114,21 @@ Architecture stages:
 
 `chan_d_model=128`, `rnn_hidden=100` by default. Note: the 3a design (per-frame attention, rnn_hidden=330,
 ~1.53M params) was used in experiment 021; the current 4b concat design was introduced for experiment 022.
+
+### `Deformer`
+EEG-Deformer (Ding et al., J-BHI 2024). Dense convolutional transformer operating directly on raw EEG
+(no STFT). Takes `(batch, 8, 2500)` as input.
+
+Architecture stages:
+1. **Shallow CNN encoder**: Conv2d(1→64, 1×25) + depthwise Conv2d(64→64, 8×1) + BN + ELU + MaxPool → `(B, 64, 1, 1250)`
+2. **Patch embedding**: rearrange to `(B, 64, 1250)` + learned positional embedding
+3. **Dense Transformer** (depth=4): each layer produces a coarse-grained path (multi-head attention, 16 heads × 16 dim) and a fine-grained path (Conv1d + BN + ELU + MaxPool); both are fused and the fine-grained log-power summary is concatenated into a dense feature vector
+4. **MLP head**: Linear(out_size → num_classes)
+
+Sub-module parameter breakdown: CNN encoder 34,624 · Transformer 1,651,692 · MLP head 10,498.
+
+Defined in `thesis/deformer.py` (verbatim from the original repo, CBCR License 1.0).
+Configured via `DeformerConfig` in `thesis/model_factory.py`.
 
 ---
 

@@ -13,7 +13,7 @@ import mne
 import numpy as np
 import pandas as pd
 import torch
-from scipy.signal import butter, detrend, filtfilt, iirnotch, stft
+from scipy.signal import butter, detrend, filtfilt, iirnotch, resample, stft
 from scipy.stats import zscore
 from torch.utils.data import Dataset
 
@@ -1630,3 +1630,115 @@ def collate_spectrograms(
     labels_tensor = torch.tensor(labels)
 
     return spectrograms_tensor, labels_tensor, subjects
+
+
+class FlattenedRawEEGDataset(Dataset):
+    """
+    Flat view of raw EEG chunks for time-series models such as Deformer.
+
+    Wraps an underlying EEG dataset (MDDDataset, CANEDataset, IDUNDataset, SADDataset)
+    directly — without the STFT step — and flattens its file-level items into individual
+    chunks. Applies per-chunk z-score normalization per channel and resamples to a common
+    target sample count when the source rate differs.
+
+    Resampling strategy (target_samples=2500, i.e. 10 s @ 250 Hz):
+      - 2500 samples (MDD, IDUN): used as-is.
+      - 5000 samples (CANE, 500 Hz): downsampled 2:1 via scipy.signal.resample.
+      - 2560 samples (AX_MALIK, 256 Hz): truncated to 2500 (last 60 samples dropped).
+      - Any other length > target_samples * 1.5: resampled.
+      - Any other length > target_samples: truncated.
+    """
+
+    def __init__(
+        self,
+        dataset: MDDDataset | CANEDataset | IDUNDataset,
+        target_samples: int = 2500,
+        label_mapping: Optional[dict[int, int]] = None,
+    ) -> None:
+        """
+        Initialize the dataset and build the flat chunk index.
+
+        :param dataset: Underlying EEG dataset providing raw chunks via __getitem__.
+        :param int target_samples: Target number of time samples per chunk (default 2500).
+        :param Optional[dict[int, int]] label_mapping: Optional label remapping dict,
+               e.g. {0: 0, 1: 1, 2: 1, 3: 1} for binary collapse.
+        """
+        self.dataset = dataset
+        self.target_samples = target_samples
+        self.label_mapping = label_mapping
+
+        # Build flat index: (file_idx, chunk_idx), and map file_idx → subject
+        self.index: list[tuple[int, int]] = []
+        self.file_subjects: dict[int, str] = {}
+
+        logger.info("Building chunk index for FlattenedRawEEGDataset...")
+        for file_idx in range(len(dataset)):
+            item = dataset[file_idx]
+            eeg: torch.Tensor = item["eeg"]  # (num_chunks, num_channels, samples)
+            subject: str = item["subject"]
+            self.file_subjects[file_idx] = subject
+            for chunk_idx in range(eeg.shape[0]):
+                self.index.append((file_idx, chunk_idx))
+        logger.info(f"Built index with {len(self.index)} total chunks")
+
+    def __len__(self) -> int:
+        return len(self.index)
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int, str]:
+        """
+        Return a single normalized raw EEG chunk.
+
+        :param int idx: Flat chunk index.
+        :return: Tuple of (raw_chunk, label, subject) where raw_chunk has shape
+                 (num_channels, target_samples).
+        :rtype: tuple[torch.Tensor, int, str]
+        """
+        file_idx, chunk_idx = self.index[idx]
+        item = self.dataset[file_idx]
+        eeg: torch.Tensor = item["eeg"]   # (num_chunks, num_channels, samples)
+        label: int = item["label"]
+        subject: str = item["subject"]
+
+        chunk = eeg[chunk_idx]  # (num_channels, samples)
+
+        # Resample / truncate to target_samples if needed
+        n_samples = chunk.shape[-1]
+        if n_samples != self.target_samples:
+            if n_samples > self.target_samples * 1.5:
+                # Large ratio difference (e.g. CANE 5000 → 2500): resample
+                chunk_np = resample(chunk.numpy(), self.target_samples, axis=-1)
+                chunk = torch.from_numpy(chunk_np).float()
+            elif n_samples > self.target_samples:
+                # Small excess (e.g. AX_MALIK 2560 → 2500): truncate
+                chunk = chunk[..., : self.target_samples]
+            else:
+                # chunk shorter than target — pad with zeros (edge case)
+                pad = torch.zeros(
+                    chunk.shape[0], self.target_samples - n_samples, dtype=chunk.dtype
+                )
+                chunk = torch.cat([chunk, pad], dim=-1)
+
+        # Per-channel z-score normalization
+        mean = chunk.mean(dim=-1, keepdim=True)
+        std = chunk.std(dim=-1, keepdim=True).clamp(min=1e-8)
+        chunk = (chunk - mean) / std
+
+        if self.label_mapping is not None:
+            label = self.label_mapping.get(label, label)
+
+        return chunk, label, subject
+
+    def get_indices_for_subjects(self, subject_list: list[str]) -> list[int]:
+        """
+        Return flat chunk indices belonging to the given subjects.
+
+        :param list[str] subject_list: Subject IDs to select (e.g. ["H S1 EC", "MDD S3 EC"]).
+        :return: List of flat chunk indices for those subjects.
+        :rtype: list[int]
+        """
+        subject_set = set(subject_list)
+        return [
+            chunk_idx
+            for chunk_idx, (file_idx, _) in enumerate(self.index)
+            if self.file_subjects.get(file_idx) in subject_set
+        ]

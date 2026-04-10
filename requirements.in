@@ -12,6 +12,7 @@ pandas
 mne
 mne-icalabel
 librosa
+einops # Deformer
 
 # Inference API
 fastapi>=0.109.0

@@ -17,6 +17,7 @@ matplotlib = "*"
 mne = "*"
 mne-icalabel = "*"
 librosa = "*"
+einops = "*"
 pip-tools = "^7.5.3"
 
 [tool.poetry.group.api]
