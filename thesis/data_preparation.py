@@ -8,6 +8,10 @@ import numpy as np
 import torch
 from torch.utils.data import ConcatDataset, Subset
 
+# Deformer always expects 250 Hz input; all datasets are resampled/truncated to this rate.
+# Use this constant for target_samples = int(chunk_duration * MODEL_FS).
+MODEL_FS: int = 250
+
 from thesis.dataset import (
     CHUNK_DURATION_SEC,
     CANEDataset,
@@ -113,7 +117,7 @@ def _prepare_dataset_generic(
         )
 
         if use_raw_eeg:
-            target_samples = int(chunk_duration * 250)
+            target_samples = int(chunk_duration * MODEL_FS)
             flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(dataset, target_samples=target_samples, label_mapping=label_mapping)
             )
@@ -241,7 +245,7 @@ def prepare_cane_dataset(
         )
 
         if use_raw_eeg:
-            target_samples = int(chunk_duration * 250)
+            target_samples = int(chunk_duration * MODEL_FS)
             cane_flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(
                     cane_dataset, target_samples=target_samples, label_mapping=label_mapping
@@ -362,7 +366,7 @@ def prepare_idun_dataset(
         )
 
         if use_raw_eeg:
-            target_samples = int(chunk_duration * 250)
+            target_samples = int(chunk_duration * MODEL_FS)
             idun_flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(
                     idun_dataset, target_samples=target_samples, label_mapping=label_mapping
