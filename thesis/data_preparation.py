@@ -9,6 +9,7 @@ import torch
 from torch.utils.data import ConcatDataset, Subset
 
 from thesis.dataset import (
+    CHUNK_DURATION_SEC,
     CANEDataset,
     FlattenedRawEEGDataset,
     FlattenedSpectrogramDataset,
@@ -72,7 +73,7 @@ def _prepare_dataset_generic(
     test_mode: bool = False,
     label_mapping: Optional[dict[int, int]] = None,
     use_raw_eeg: bool = False,
-    target_samples: int = 2500,
+    chunk_duration: float = CHUNK_DURATION_SEC,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Generic dataset preparation for datasets following the MDD pattern.
@@ -91,8 +92,9 @@ def _prepare_dataset_generic(
            (e.g., {0: 0, 1: 2} for MDD in 4-class).
     :param bool use_raw_eeg: If True, skip STFT and return FlattenedRawEEGDataset
            for use with raw-EEG models such as Deformer.
-    :param int target_samples: Target number of time samples when use_raw_eeg=True
-           (default 2500 = 10 s @ 250 Hz).
+    :param float chunk_duration: EEG chunk duration in seconds. Applied only on the raw EEG
+           path (use_raw_eeg=True); the spectrogram path always uses CHUNK_DURATION_SEC to
+           preserve the expected (129, 41) STFT shape.
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
@@ -100,14 +102,18 @@ def _prepare_dataset_generic(
     all_subjects = []
 
     for condition in conditions:
+        # For spectrogram models, always use default 10-s chunks to preserve (129, 41) shape.
+        effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         # Instantiate dataset
         dataset = dataset_class(
             condition=condition,
             channel=channel,
             test_mode=test_mode,
+            chunk_duration=effective_chunk_duration,
         )
 
         if use_raw_eeg:
+            target_samples = int(chunk_duration * 250)
             flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(dataset, target_samples=target_samples, label_mapping=label_mapping)
             )
@@ -147,7 +153,7 @@ def prepare_mdd_dataset(
     num_classes: int = 2,
     label_mapping: Optional[dict[int, int]] = None,
     use_raw_eeg: bool = False,
-    target_samples: int = 2500,
+    chunk_duration: float = CHUNK_DURATION_SEC,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare MDD dataset for classification.
@@ -165,7 +171,7 @@ def prepare_mdd_dataset(
            If None, automatically applies CanonicalLabel → BinaryLabel mapping for 2-class mode.
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset instead of spectrogram
            dataset. For use with raw-EEG models such as Deformer.
-    :param int target_samples: Target number of time samples when use_raw_eeg=True (default 2500).
+    :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
     :return: Tuple of (flat_dataset, SubjectClasses).
              Note: anxiety and anxiety_depression are empty for MDD dataset.
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
@@ -186,7 +192,7 @@ def prepare_mdd_dataset(
         test_mode=test_mode,
         label_mapping=effective_label_mapping,
         use_raw_eeg=use_raw_eeg,
-        target_samples=target_samples,
+        chunk_duration=chunk_duration,
     )
 
 
@@ -199,7 +205,7 @@ def prepare_cane_dataset(
     augmentation: Callable | None = None,
     test_mode: bool = False,
     use_raw_eeg: bool = False,
-    target_samples: int = 2500,
+    chunk_duration: float = CHUNK_DURATION_SEC,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare CANE dataset with spectrograms and split subjects by class.
@@ -213,8 +219,9 @@ def prepare_cane_dataset(
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG.
     :param bool test_mode: If True, load only one file per class for debugging.
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
-           CANE is 500 Hz so chunks will be resampled 2:1 to target_samples.
-    :param int target_samples: Target number of time samples when use_raw_eeg=True (default 2500).
+           CANE is 500 Hz so native chunks are 2× the target_samples; FlattenedRawEEGDataset
+           downsamples 2:1 automatically.
+    :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
@@ -222,15 +229,19 @@ def prepare_cane_dataset(
     all_subjects = []
 
     for condition in conditions:
+        # For spectrogram models, always use default 10-s chunks to preserve (129, 41) shape.
+        effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         cane_dataset = CANEDataset(
             condition=condition,
             channel=channel,
             skip_extreme_artifacts=True,
             skip_artifact_removal=skip_artifact_removal,
             test_mode=test_mode,
+            chunk_duration=effective_chunk_duration,
         )
 
         if use_raw_eeg:
+            target_samples = int(chunk_duration * 250)
             cane_flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(
                     cane_dataset, target_samples=target_samples, label_mapping=label_mapping
@@ -276,7 +287,7 @@ def prepare_sad_dataset(
     num_classes: int = 2,
     label_mapping: Optional[dict[int, int]] = None,
     use_raw_eeg: bool = False,
-    target_samples: int = 2500,
+    chunk_duration: float = CHUNK_DURATION_SEC,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare SAD dataset with spectrograms and split subjects by class.
@@ -289,7 +300,7 @@ def prepare_sad_dataset(
     :param int num_classes: Number of classes (2 or 4).
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
-    :param int target_samples: Target number of time samples when use_raw_eeg=True (default 2500).
+    :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
@@ -304,7 +315,7 @@ def prepare_sad_dataset(
         test_mode=test_mode,
         label_mapping=label_mapping,
         use_raw_eeg=use_raw_eeg,
-        target_samples=target_samples,
+        chunk_duration=chunk_duration,
     )
 
 
@@ -317,7 +328,7 @@ def prepare_idun_dataset(
     test_mode: bool = False,
     quality_threshold: float = 30.0,
     use_raw_eeg: bool = False,
-    target_samples: int = 2500,
+    chunk_duration: float = CHUNK_DURATION_SEC,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, "SubjectClasses"]:
     """
     Prepare IDUN real in-ear dataset with spectrograms and split subjects by class.
@@ -333,7 +344,7 @@ def prepare_idun_dataset(
     :param bool test_mode: If True, load only one file per class for debugging.
     :param float quality_threshold: Reject IDUN chunks with quality at or below this value.
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
-    :param int target_samples: Target number of time samples when use_raw_eeg=True (default 2500).
+    :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
     """
@@ -341,13 +352,17 @@ def prepare_idun_dataset(
     all_subjects = []
 
     for condition in conditions:
+        # For spectrogram models, always use default 10-s chunks to preserve (129, 41) shape.
+        effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         idun_dataset = IDUNDataset(
             condition=condition,
             quality_threshold=quality_threshold,
             test_mode=test_mode,
+            chunk_duration=effective_chunk_duration,
         )
 
         if use_raw_eeg:
+            target_samples = int(chunk_duration * 250)
             idun_flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(
                     idun_dataset, target_samples=target_samples, label_mapping=label_mapping
