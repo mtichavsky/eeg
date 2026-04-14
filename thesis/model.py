@@ -746,7 +746,7 @@ class SmallerAllV3(Smaller):
 
 # Models that consume raw EEG time-series (batch, channels, time) instead of spectrograms.
 # These bypass the STFT pipeline and use FlattenedRawEEGDataset.
-RAW_EEG_MODELS: frozenset[str] = frozenset({"Deformer"})
+RAW_EEG_MODELS: frozenset[str] = frozenset({"Deformer", "DeformerS"})
 
 # Model registry: maps model names to (model_class, default_rnn_hidden).
 # rnn_hidden is None for raw-EEG models that don't use an RNN.
@@ -760,4 +760,5 @@ MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int | None]] = {
     "SmallerAllV2Attn": (SmallerAllV2Attn, 128),
     "SmallerAllV3": (SmallerAllV3, 100),
     "Deformer": (Deformer, None),
+    "DeformerS": (Deformer, None),
 }

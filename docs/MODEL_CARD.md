@@ -63,6 +63,7 @@ TODO double check normals count for MDD
 | `SmallerAllV2Attn` | 8 (per-channel shared CNN + cross-channel attn)     | Self-attention (Transformer)    | 128                   | 354,115    |
 | `SmallerAllV3`     | 8 (per-channel shared CNN + full concat projection) | LSTM                            | 100 (default)         | 1,001,522  |
 | `Deformer`         | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4) | heads=16, dim_head=16 | 1,776,814  |
+| `DeformerS`        | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3) | heads=4,  dim_head=16 |   587,526  |
 
 ## Architecture Summary
 
@@ -129,6 +130,15 @@ Sub-module parameter breakdown: CNN encoder 34,624 · Transformer 1,651,692 · M
 
 Defined in `thesis/deformer.py` (verbatim from the original repo, CBCR License 1.0).
 Configured via `DeformerConfig` in `thesis/model_factory.py`.
+
+### `DeformerS`
+Same architecture as `Deformer`, ~1/3 the size (587,526 params). Uses `DeformerSConfig` by default:
+`num_kernel=48, depth=3, heads=4, dim_head=16, mlp_dim=16, temporal_kernel=25`.
+
+Key differences from `Deformer`:
+- **num_kernel 64→48**: narrower CNN encoder and fewer transformer tokens
+- **depth 4→3**: one fewer hierarchical level; final sequence is 156 samples (~0.6 s) instead of 78 (~0.3 s)
+- **heads 16→4**: inner attention dim 256→64, the largest single saving (~67% reduction in attention params)
 
 ---
 

@@ -48,6 +48,50 @@ class DeformerConfig:
     """Dimension per attention head."""
 
 
+@dataclass
+class DeformerSConfig:
+    """
+    Hyperparameters for the smaller Deformer variant (``DeformerS``).
+
+    Reduces the original Deformer (~1.78 M params) to ~588 k (~1/3) by:
+    - ``num_kernel`` 64 → 48  (narrower CNN encoder and transformer token width)
+    - ``depth``      4  → 3   (one fewer hierarchical level; final sequence is 156 samples
+                               instead of 78, i.e. ~0.6 s vs ~0.3 s temporal resolution)
+    - ``heads``      16 → 4   (inner attention dim 256 → 64; biggest single saving)
+
+    All other fields match ``DeformerConfig``.
+    """
+
+    num_time: int = 2500
+    """Number of time samples per chunk (10 s × 250 Hz = 2500)."""
+
+    temporal_kernel: int = 25
+    """Temporal CNN kernel size. Must be odd. Paper formula: Odd(0.1 × fs)."""
+
+    num_kernel: int = 48
+    """Number of filters in the shallow CNN encoder (reduced from 64)."""
+
+    depth: int = 3
+    """Number of hierarchical transformer layers (reduced from 4)."""
+
+    heads: int = 4
+    """Number of multi-head attention heads (reduced from 16)."""
+
+    mlp_dim: int = 16
+    """Hidden dimension of the FeedForward block inside each transformer layer."""
+
+    dim_head: int = 16
+    """Dimension per attention head."""
+
+
+# Maps each raw-EEG model name to its default config class.
+# Add an entry here whenever a new Deformer variant is registered in MODEL_REGISTRY.
+_DEFORMER_DEFAULT_CONFIGS: dict[str, type[DeformerConfig]] = {
+    "Deformer": DeformerConfig,
+    "DeformerS": DeformerSConfig,
+}
+
+
 def create_model(
     model_name: str,
     spec_shape: tuple[int, int],
@@ -85,7 +129,7 @@ def create_model(
 
     if model_name in RAW_EEG_MODELS:
         # Raw EEG models (e.g. Deformer) take (batch, channels, time) directly
-        cfg = deformer_config if deformer_config is not None else DeformerConfig()
+        cfg = deformer_config if deformer_config is not None else _DEFORMER_DEFAULT_CONFIGS[model_name]()
         model = model_class(
             num_chan=in_channels,
             num_classes=num_classes,
