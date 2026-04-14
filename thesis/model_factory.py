@@ -86,7 +86,7 @@ class DeformerSConfig:
 
 # Maps each raw-EEG model name to its default config class.
 # Add an entry here whenever a new Deformer variant is registered in MODEL_REGISTRY.
-_DEFORMER_DEFAULT_CONFIGS: dict[str, type[DeformerConfig]] = {
+_DEFORMER_DEFAULT_CONFIGS: dict[str, type[DeformerConfig] | type[DeformerSConfig]] = {
     "Deformer": DeformerConfig,
     "DeformerS": DeformerSConfig,
 }
