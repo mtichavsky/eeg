@@ -54,6 +54,8 @@ def load_and_preprocess_edf_file(
     fs: float,
     channel_mapping: dict[str, str],
     channel_order: list[str],
+    *,
+    chunk_samples: int,
 ) -> torch.Tensor:
     """
     Load an EDF file from disk, preprocess it, and return chunks.
@@ -68,11 +70,10 @@ def load_and_preprocess_edf_file(
            (e.g., {"EEG Fp1-LE": "Fp1"}).
     :param list[str] channel_order: Canonical channel order for "all" channel mode
            (e.g., ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]).
+    :param int chunk_samples: Number of samples per chunk (e.g. 2500 = 10 s × 250 Hz).
     :return: Tensor of preprocessed EEG chunks with shape (num_chunks, channels, samples).
     :rtype: torch.Tensor
     """
-    # Calculate chunk samples from passed fs
-    chunk_samples = int(CHUNK_DURATION_SEC * fs)
 
     raw = mne.io.read_raw_edf(file_path, preload=True, verbose=False)
     raw = raw.filter(l_freq=1, h_freq=70, method="iir", verbose=False)
@@ -164,6 +165,7 @@ class MDDDataset(Dataset):
         transform: Optional[Callable] = None,
         channel: str = "all",
         test_mode: bool = False,
+        chunk_duration: float = CHUNK_DURATION_SEC,
     ):
         """
         Initialize the MDD EEG dataset.
@@ -181,11 +183,14 @@ class MDDDataset(Dataset):
         :param Optional[str] channel: Channel to use: specific channel name (e.g., "Fp1") or
                "all" for all 8 channels (excludes A2-A1 reference).
         :param bool test_mode: If True, load only one file per class for debugging.
+        :param float chunk_duration: EEG chunk duration in seconds (default: CHUNK_DURATION_SEC).
+               Affects the number of samples per chunk (chunk_samples = chunk_duration × FS).
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
         self.test_mode = test_mode
+        self.chunk_samples = int(chunk_duration * self.FS)
         self.files = self._discover_files(
             condition.upper() if condition is not None else None, subjects, labels
         )
@@ -205,6 +210,7 @@ class MDDDataset(Dataset):
             load_and_preprocess_edf_file,
             channel_mapping=self.CHANNEL_MAPPING,
             channel_order=MDD_CHANNEL_ORDER,
+            chunk_samples=self.chunk_samples,
         )
 
         if cache_size:
@@ -387,6 +393,7 @@ class CANEDataset(Dataset):
         skip_extreme_artifacts: bool = False,
         skip_artifact_removal: bool = False,
         test_mode: bool = False,
+        chunk_duration: float = CHUNK_DURATION_SEC,
     ):
         """
         Initialize the CANE EEG dataset.
@@ -411,6 +418,8 @@ class CANEDataset(Dataset):
         :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping
                (let the neural network learn to handle artifacts).
         :param bool test_mode: If True, load only one file per class for debugging.
+        :param float chunk_duration: EEG chunk duration in seconds (default: CHUNK_DURATION_SEC).
+               Affects the number of samples per chunk at the native CANE sampling rate.
         """
         self.data_dir = Path(data_dir)
         self.condition = str(condition).lower()
@@ -422,6 +431,7 @@ class CANEDataset(Dataset):
         self.skip_extreme_artifacts = skip_extreme_artifacts
         self.skip_artifact_removal = skip_artifact_removal
         self.test_mode = test_mode
+        self.chunk_samples = int(chunk_duration * self.FS)
 
         # Set channel_names for verification
         if channel == "all":
@@ -630,6 +640,7 @@ class CANEDataset(Dataset):
         apply_car: bool = True,
         skip_extreme_artifacts: bool = False,
         skip_artifact_removal: bool = False,
+        chunk_samples: Optional[int] = None,
     ) -> torch.Tensor:
         """
         Load a CSV file from disk, preprocess it, and return chunks.
@@ -646,11 +657,15 @@ class CANEDataset(Dataset):
         :param bool apply_car: Whether to apply Common Average Reference.
         :param bool skip_extreme_artifacts: If True, completely removes chunks with >10% artifacts.
         :param bool skip_artifact_removal: If True, skip artifact interpolation and clipping.
+        :param Optional[int] chunk_samples: Number of samples per chunk at native CANE sampling
+               rate. Defaults to ``int(CHUNK_DURATION_SEC * CANEDataset.FS)`` (5000 for 10 s).
         :return: Tensor of preprocessed EEG chunks with shape
                  (num_chunks, num_channels, chunk_samples) where num_channels is 1 for single
                  channel or 8 for all channels.
         :rtype: torch.Tensor
         """
+        if chunk_samples is None:
+            chunk_samples = int(CHUNK_DURATION_SEC * CANEDataset.FS)
         df = pd.read_csv(file_path)
         try:
             CANEDataset.verify_sampling_rate(df)
@@ -714,9 +729,8 @@ class CANEDataset(Dataset):
         n_samples = multi_channel_signal.shape[1]
 
         chunks_list: list[torch.Tensor] = []
-        chunk_samples = int(CHUNK_DURATION_SEC * CANEDataset.FS)
         logger.info(f"Using sampling rate: {CANEDataset.FS} Hz")
-        logger.info(f"Chunk size: {chunk_samples} samples ({CHUNK_DURATION_SEC}s)")
+        logger.info(f"Chunk size: {chunk_samples} samples")
 
         for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
             chunk = multi_channel_signal[:, i : i + chunk_samples]  # (num_channels, chunk_samples)
@@ -778,6 +792,7 @@ class CANEDataset(Dataset):
             self.apply_car,
             self.skip_extreme_artifacts,
             self.skip_artifact_removal,
+            self.chunk_samples,
         )
 
         if self.transform:
@@ -864,6 +879,7 @@ class SADDataset(MDDDataset):
         transform: Optional[Callable] = None,
         channel: str = "all",
         test_mode: bool = False,
+        chunk_duration: float = CHUNK_DURATION_SEC,
     ):
         """
         Initialize the SAD EEG dataset.
@@ -875,11 +891,13 @@ class SADDataset(MDDDataset):
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
         :param str channel: Channel to use: specific channel name or "all" for all 8 channels.
         :param bool test_mode: If True, load only C1.edf files (one per class) for debugging.
+        :param float chunk_duration: EEG chunk duration in seconds (default: CHUNK_DURATION_SEC).
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
         self.test_mode = test_mode
+        self.chunk_samples = int(chunk_duration * self.FS)
         self.files = self._discover_files(
             condition.upper() if condition is not None else None,
             subjects,
@@ -901,6 +919,7 @@ class SADDataset(MDDDataset):
             load_and_preprocess_edf_file,
             channel_mapping=self.CHANNEL_MAPPING,
             channel_order=SAD_CHANNEL_ORDER,
+            chunk_samples=self.chunk_samples,
         )
 
         # Set up caching (same pattern as MDDDataset)
@@ -1030,6 +1049,7 @@ class IDUNDataset(Dataset):
         transform: Optional[Callable] = None,
         quality_threshold: float = 0.0,
         test_mode: bool = False,
+        chunk_duration: float = CHUNK_DURATION_SEC,
     ):
         """
         Initialize the IDUN in-ear EEG dataset.
@@ -1044,12 +1064,14 @@ class IDUNDataset(Dataset):
         :param float quality_threshold: Reject chunks where quality drops below this value.
                Default 0.0 rejects only chunks with quality=0 (unmeasured).
         :param bool test_mode: If True, load only one file per class for debugging.
+        :param float chunk_duration: EEG chunk duration in seconds (default: CHUNK_DURATION_SEC).
         """
         self.data_dir = Path(data_dir)
         self.condition = condition
         self.transform = transform
         self.quality_threshold = quality_threshold
         self.test_mode = test_mode
+        self.chunk_samples = int(chunk_duration * self.FS)
         self.channel_names: list[str] = ["in-ear"]
 
         self.files = self._discover_files(condition, subjects, labels)
@@ -1171,18 +1193,20 @@ class IDUNDataset(Dataset):
         file_path: Path,
         quality_path: Optional[Path] = None,
         quality_threshold: float = 30.0,  # https://sdk-docs.idunguardian.com/data-analysis.html
+        chunk_samples: int = 2500,
     ) -> torch.Tensor:
         """
         Load an IDUN CSV file, preprocess it, and return chunks.
 
         Preprocessing pipeline: z-score raw → detrend → bandpass 1-70 Hz → notch 50 Hz
-        → chunk into 10s segments → per-chunk z-score → quality-based rejection.
+        → chunk into N-sample segments → per-chunk z-score → quality-based rejection.
 
         :param Path file_path: Path to the EEG CSV file.
         :param Optional[Path] quality_path: Path to the corresponding quality CSV file.
         :param float quality_threshold: Reject chunks where quality is at or below this value.
                Default 0.0 rejects only unmeasured (quality=0) chunks.
-        :return: Tensor of preprocessed EEG chunks with shape (num_chunks, 1, 2500).
+        :param int chunk_samples: Number of samples per chunk (default: 2500 = 10 s × 250 Hz).
+        :return: Tensor of preprocessed EEG chunks with shape (num_chunks, 1, chunk_samples).
         :rtype: torch.Tensor
         """
         df = pd.read_csv(file_path)
@@ -1230,9 +1254,8 @@ class IDUNDataset(Dataset):
         b_notch, a_notch = iirnotch(50.0, Q=30, fs=IDUNDataset.FS)
         signal = filtfilt(b_notch, a_notch, signal)
 
-        # Step 5: Chunk into 10s segments
+        # Step 5: Chunk into segments
         n_samples = len(signal)
-        chunk_samples = IDUNDataset.CHUNK_SAMPLES
         chunks_list: list[torch.Tensor] = []
         skipped_quality = 0
 
@@ -1301,6 +1324,7 @@ class IDUNDataset(Dataset):
             file_info["path"],
             file_info.get("quality_path"),
             self.quality_threshold,
+            self.chunk_samples,
         )
 
         if self.transform:
