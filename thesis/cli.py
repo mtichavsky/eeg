@@ -191,43 +191,59 @@ def get_arg_parser() -> argparse.ArgumentParser:
     # Deformer hyperparameters (ignored for non-Deformer models)
     deformer_group = train_parser.add_argument_group(
         "Deformer hyperparameters",
-        description="Only used when --model Deformer is selected.",
+        description="Only used when --model Deformer or --model DeformerS is selected. "
+        "Defaults are model-specific: Deformer uses paper defaults (depth=4, heads=16, "
+        "num_kernel=64); DeformerS uses reduced defaults (depth=3, heads=4, num_kernel=48). "
+        "Passing any flag overrides the model's default for that parameter only.",
+    )
+    deformer_group.add_argument(
+        "--chunk-duration",
+        type=float,
+        default=10.0,
+        metavar="SECS",
+        help="EEG chunk duration in seconds (default: 10.0). "
+        "Applies only to raw EEG models (Deformer/DeformerS); "
+        "spectrogram models always use 10 s. "
+        "Use 5.0 to halve model size and double training chunks.",
     )
     deformer_group.add_argument(
         "--deformer-depth",
         type=int,
-        default=4,
-        help="Number of transformer layers in Deformer (default: 4, as per paper).",
+        default=None,
+        help="Number of transformer layers. Default: model-specific "
+        "(Deformer=4, DeformerS=3).",
     )
     deformer_group.add_argument(
         "--deformer-heads",
         type=int,
-        default=16,
-        help="Number of attention heads in Deformer (default: 16, as per paper).",
+        default=None,
+        help="Number of attention heads. Default: model-specific "
+        "(Deformer=16, DeformerS=4).",
     )
     deformer_group.add_argument(
         "--deformer-num-kernel",
         type=int,
-        default=64,
-        help="Number of CNN kernels in Deformer shallow encoder (default: 64, as per paper).",
+        default=None,
+        help="Number of CNN kernels in shallow encoder. Default: model-specific "
+        "(Deformer=64, DeformerS=48).",
     )
     deformer_group.add_argument(
         "--deformer-mlp-dim",
         type=int,
-        default=16,
-        help="FeedForward hidden dimension in Deformer (default: 16, as per paper).",
+        default=None,
+        help="FeedForward hidden dimension. Default: 16 (same for all variants).",
     )
     deformer_group.add_argument(
         "--deformer-dim-head",
         type=int,
-        default=16,
-        help="Dimension per attention head in Deformer (default: 16, as per paper).",
+        default=None,
+        help="Dimension per attention head. Default: 16 (same for all variants).",
     )
     deformer_group.add_argument(
         "--deformer-temporal-kernel",
         type=int,
-        default=25,
-        help="Temporal kernel size for Deformer CNN encoder (must be odd). "
+        default=None,
+        help="Temporal kernel size for CNN encoder (must be odd). "
         "Paper formula: Odd(0.1 × sampling_rate). Default: 25 for 250 Hz.",
     )
 

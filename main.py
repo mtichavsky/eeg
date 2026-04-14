@@ -3,6 +3,7 @@ import logging
 import random
 import string
 from collections.abc import Callable
+from dataclasses import replace as dataclasses_replace
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -44,7 +45,7 @@ from thesis.metrics import (
     extract_classification_metrics,
     write_results,
 )
-from thesis.model_factory import DeformerConfig, create_model
+from thesis.model_factory import DeformerConfig, _DEFORMER_DEFAULT_CONFIGS, create_model
 
 RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -496,6 +497,7 @@ def train_cross_validation(
     focal_loss: bool = False,
     focal_gamma: float = 2.0,
     deformer_config: DeformerConfig | None = None,
+    chunk_duration: float = 10.0,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -586,6 +588,7 @@ def train_cross_validation(
             num_classes=num_classes,
             label_mapping=label_mapping,
             use_raw_eeg=use_raw_eeg,
+            chunk_duration=chunk_duration,
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -607,6 +610,7 @@ def train_cross_validation(
                 augmentation=augmentation,
                 test_mode=test_mode,
                 use_raw_eeg=use_raw_eeg,
+                chunk_duration=chunk_duration,
             )
         else:
             flat_dataset, subject_classes = prepare_cane_dataset(
@@ -618,6 +622,7 @@ def train_cross_validation(
                 augmentation=augmentation,
                 test_mode=test_mode,
                 use_raw_eeg=use_raw_eeg,
+                chunk_duration=chunk_duration,
             )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -640,6 +645,7 @@ def train_cross_validation(
             num_classes=num_classes,
             label_mapping=label_mapping,
             use_raw_eeg=use_raw_eeg,
+            chunk_duration=chunk_duration,
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -662,6 +668,7 @@ def train_cross_validation(
             num_classes=num_classes,
             label_mapping=label_mapping,
             use_raw_eeg=use_raw_eeg,
+            chunk_duration=chunk_duration,
         )
         mdd_normal, mdd_anxiety, mdd_depression, mdd_anxiety_depression = (
             mdd_subject_classes.normal,
@@ -684,6 +691,7 @@ def train_cross_validation(
                 augmentation=augmentation,
                 test_mode=test_mode,
                 use_raw_eeg=use_raw_eeg,
+                chunk_duration=chunk_duration,
             )
         else:
             cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
@@ -695,6 +703,7 @@ def train_cross_validation(
                 augmentation=augmentation,
                 test_mode=test_mode,
                 use_raw_eeg=use_raw_eeg,
+                chunk_duration=chunk_duration,
             )
         cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
             cane_subject_classes.normal,
@@ -713,6 +722,7 @@ def train_cross_validation(
             num_classes=num_classes,
             label_mapping=label_mapping,
             use_raw_eeg=use_raw_eeg,
+            chunk_duration=chunk_duration,
         )
         sad_normal, sad_anxiety, sad_depression, sad_anxiety_depression = (
             sad_subject_classes.normal,
@@ -919,6 +929,25 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
     logger.info(f"  Log File: {log_path}")
 
+    # Build Deformer config: start from the model-appropriate defaults, then apply
+    # any CLI overrides (None means "keep model default").
+    _base_cfg = _DEFORMER_DEFAULT_CONFIGS.get(args.model, DeformerConfig)()
+    _overrides: dict = {"num_time": int(args.chunk_duration * 250)}
+    if args.deformer_depth is not None:
+        _overrides["depth"] = args.deformer_depth
+    if args.deformer_heads is not None:
+        _overrides["heads"] = args.deformer_heads
+    if args.deformer_num_kernel is not None:
+        _overrides["num_kernel"] = args.deformer_num_kernel
+    if args.deformer_mlp_dim is not None:
+        _overrides["mlp_dim"] = args.deformer_mlp_dim
+    if args.deformer_dim_head is not None:
+        _overrides["dim_head"] = args.deformer_dim_head
+    if args.deformer_temporal_kernel is not None:
+        _overrides["temporal_kernel"] = args.deformer_temporal_kernel
+    deformer_config = dataclasses_replace(_base_cfg, **_overrides)
+    logger.info(f"Deformer config: {deformer_config}")
+
     # Run cross-validation training
     results = train_cross_validation(
         dataset_type=args.dataset,
@@ -946,14 +975,8 @@ def train(args: argparse.Namespace) -> None:
         log_file=log_path,
         focal_loss=args.focal_loss,
         focal_gamma=args.focal_gamma,
-        deformer_config=DeformerConfig(
-            temporal_kernel=args.deformer_temporal_kernel,
-            num_kernel=args.deformer_num_kernel,
-            depth=args.deformer_depth,
-            heads=args.deformer_heads,
-            mlp_dim=args.deformer_mlp_dim,
-            dim_head=args.deformer_dim_head,
-        ),
+        deformer_config=deformer_config,
+        chunk_duration=args.chunk_duration,
     )
 
     # Save final results to file
