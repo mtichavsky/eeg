@@ -504,6 +504,7 @@ def train_cross_validation(
     log_file: Path | None = None,
     focal_loss: bool = False,
     focal_gamma: float = 2.0,
+    cosine_lr: bool = True,
     deformer_config: DeformerConfig | None = None,
     chunk_duration: float = 10.0,
 ) -> dict:
@@ -535,6 +536,8 @@ def train_cross_validation(
         Can be used alone or with freeze_cnn.
     :param Callable | None augmentation: Optional augmentation to apply to raw EEG during training.
     :param bool test_mode: If True, load only one file per class for debugging.
+    :param bool cosine_lr: If True (default), use cosine annealing LR schedule (T_max=num_epochs,
+        eta_min=1e-6). Set to False for constant LR.
     :param Path | None log_file: Path to the log file for JSON metrics output.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
@@ -846,11 +849,8 @@ def train_cross_validation(
             lr=learning_rate,
             weight_decay=weight_decay,
         )
-        # Cosine annealing schedule for raw-EEG models (Deformer/DeformerS).
-        # Spectrogram models use a constant LR because they converge well without a schedule
-        # and adding one would require tuning an additional hyperparameter.
         fold_scheduler: torch.optim.lr_scheduler.LRScheduler | None
-        if model_name in RAW_EEG_MODELS:
+        if cosine_lr:
             fold_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 optimizer, T_max=num_epochs, eta_min=1e-6
             )
@@ -940,6 +940,7 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Freeze LSTM: {args.freeze_lstm}")
     logger.info(f"  Class mode: {args.class_mode}")
     logger.info(f"  Test mode: {args.test_mode}")
+    logger.info(f"  Cosine LR: {args.cosine_lr}")
     logger.info(
         f"  Focal Loss: {args.focal_loss}"
         + (f" (gamma={args.focal_gamma})" if args.focal_loss else "")
@@ -994,6 +995,7 @@ def train(args: argparse.Namespace) -> None:
         log_file=log_path,
         focal_loss=args.focal_loss,
         focal_gamma=args.focal_gamma,
+        cosine_lr=args.cosine_lr,
         deformer_config=deformer_config,
         chunk_duration=args.chunk_duration,
     )
@@ -1009,6 +1011,7 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"Learning Rate: {args.lr}\n")
         f.write(f"Dropout: {args.dropout}\n")
         f.write(f"Weight Decay (L2 regularization): {args.weight_decay}\n")
+        f.write(f"Cosine LR: {args.cosine_lr}\n")
         f.write(f"Skip Artifact Removal: {args.skip_artifact_removal}\n")
         if args.augment_data is not None:
             f.write(f"Data Augmentation: enabled (p={args.augment_data})\n")

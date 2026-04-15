@@ -125,6 +125,13 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Weight decay (L2 regularization)",
     )
     train_parser.add_argument(
+        "--no-cosine-lr",
+        dest="cosine_lr",
+        action="store_false",
+        help="Disable cosine annealing LR schedule (use constant LR instead). "
+        "Cosine annealing is enabled by default for all models.",
+    )
+    train_parser.add_argument(
         "--focal-loss",
         action="store_true",
         help="Use Focal Loss instead of cross-entropy. Class weights computed per fold "
