@@ -152,6 +152,23 @@ poetry run python main.py train --skip-ica \
   --dataset all \
   --condition ec \
   --checkpoint-dir=experiments/all_001_all_ec
+
+# Raw-EEG Deformer model (no spectrograms)
+poetry run python main.py train --skip-ica \
+  --channel all \
+  --model Deformer \
+  --chunk-duration 10.0 \
+  --dataset mdd \
+  --condition ec \
+  --checkpoint-dir=experiments/mdd_020_all_ec
+
+# Disable cosine annealing for ablation (constant LR)
+poetry run python main.py train --skip-ica \
+  --channel all \
+  --no-cosine-lr \
+  --dataset mdd \
+  --condition ec \
+  --checkpoint-dir=experiments/mdd_021_all_ec
 ```
 
 ### Transfer Learning
@@ -255,13 +272,28 @@ Run with: `poetry run jupyter notebook`
    - `SmallerAll`: Multi-channel variant using Conv3d to process all 8 EEG channels simultaneously
      - Conv3D kernel spans all channels for spatial feature learning
      - Enables learning cross-channel correlations
+   - `SmallerAllV2`: Multi-channel model with per-channel weight-shared CNN + cross-channel self-attention + LSTM
+     - TransformerEncoder computes soft channel weights before temporal merging
+   - `SmallerAllV2Attn`: SmallerAllV2 variant replacing LSTM with temporal self-attention
+   - `SmallerAllV3`: Multi-channel model concatenating all channel features at each time step
+     - Feeds concatenated (8×features) vectors to LSTM directly (no soft gating)
+   - `Deformer`: EEG-Deformer (J-BHI 2024) — raw EEG transformer with shallow CNN + hierarchical transformer layers
+     - Accepts raw EEG `(batch, channels, time)` instead of spectrograms
+     - Implemented in `thesis/deformer.py` (CBCR License 1.0)
+   - `DeformerS`: Smaller Deformer variant (~1/3 params): depth 4→3, heads 16→4, num_kernel 64→48
+   - **`RAW_EEG_MODELS`** frozenset: `{"Deformer", "DeformerS"}` — models that consume raw time-series instead of spectrograms
 
 3. **`thesis/model_factory.py`** - Model creation factory
    - `create_model()`: Instantiates models from `MODEL_REGISTRY`, optionally loads pretrained weights, and freezes layers
+     - Accepts optional `deformer_config` for raw-EEG models; applies model-appropriate defaults if `None`
+   - `DeformerConfig`: Dataclass of Deformer hyperparameters (num_time=2500, temporal_kernel=25, num_kernel=64, depth=4, heads=16, mlp_dim=16, dim_head=16)
+   - `DeformerSConfig`: Reduced-parameter variant defaults (num_kernel=48, depth=3, heads=4)
+   - `_DEFORMER_DEFAULT_CONFIGS`: Dict mapping model names to their default config classes
    - Used by both CLI (`main.py`) and API (`api/model_manager.py`)
 
 4. **`thesis/inference.py`** - Shared inference pipeline
    - `preprocess_file()`: Preprocesses EDF/CSV files into EEG chunks
+     - Auto-detects EDF channel config via `_detect_edf_channel_config()` (tries MDD then SAD layouts; falls back to identity mapping with a warning)
    - `run_chunk_inference()`: Runs per-chunk model inference
    - `aggregate_predictions()`: Majority-vote aggregation
    - `preprocess_and_infer()`: High-level convenience combining all steps
@@ -285,6 +317,11 @@ Run with: `poetry run jupyter notebook`
 - **Transfer learning support**: Load pretrained weights and optionally freeze CNN layers
 - **Model registry**: `MODEL_REGISTRY` dict in `thesis/model.py` maps model names to (class, default_rnn_hidden) tuples
 - **Model factory**: `create_model()` in `thesis/model_factory.py` handles model instantiation, weight loading, and layer freezing
+- **Cosine annealing LR**: Enabled by default for all models (`T_max=num_epochs`, `eta_min=1e-6`); disable with `--no-cosine-lr`
+- **LR scheduler support in `train_one_fold()`**: Scheduler stepped once per epoch; scheduler class name logged at fold start
+- **Parametric chunk duration**: `--chunk-duration` (default 10.0 s) for raw-EEG models; spectrogram models always use 10 s
+- **Train accuracy at best val epoch**: Tracked per fold as `train_acc_at_best` and included in CV results
+- **Deformer config building**: `train()` computes `num_time = chunk_duration × 250`, loads model defaults from `_DEFORMER_DEFAULT_CONFIGS`, applies CLI overrides via `dataclasses_replace()`
 
 **`train_cv_example.py`** - Clean reference implementation
 - Shows proper 10-fold cross-validation pattern
@@ -315,12 +352,13 @@ The `MDDDataset` supports two modes:
   - IDUN (replaces CANE): Real in-ear recordings from IDUN device
 - Multi-channel: `(batch_size, 8, 2500)` - 8 channels × 2500 samples
 - Output from datasets as `batch['eeg']`
+- **Deformer/DeformerS** consume raw EEG directly `(batch, channels, num_time)` where `num_time = chunk_duration × 250`; they bypass `SpectrogramDataset`
 
 **Spectrogram Input:**
 - Single channel (CNN_LSTM_DepCap, Smaller): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
 - In-ear channel: Same as single channel `(batch_size, 1, H, W)` with 50% sign flip augmentation per chunk
   - IDUN or synthetic in-ear depending on dataset
-- Multi-channel (SmallerAll): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
+- Multi-channel (SmallerAll/V2/V3): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
 - Current default: `(129, 41)` with nperseg=256, noverlap=192
 - Paper target: `(254, 342)` (may require parameter tuning)
 - Created via STFT in `SpectrogramDataset` or preprocessing
@@ -471,6 +509,22 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - **Spatial Dropout**: Added `nn.Dropout2d` after CNN pooling layers for better feature map regularization
 - **L2 Regularization**: Added weight decay parameter (default 1e-4) for L2 penalty on weights
 - **Training visualization**: Added `plot_training_curves.py` for analyzing fold performance
+- **SmallerAllV2 / SmallerAllV2Attn** (Apr 2026): Multi-channel models with per-channel weight-shared CNN + cross-channel TransformerEncoder soft gating; V2Attn replaces LSTM with temporal self-attention
+- **SmallerAllV3** (Apr 2026): Redesigned from soft gating to full channel concatenation before LSTM; simpler and often stronger
+- **EEG-Deformer / DeformerS** (Apr 2026): Raw-EEG transformer models from J-BHI 2024 paper
+  - `Deformer`: full model (~1.78M params); `DeformerS`: reduced variant (~588k params)
+  - Implemented in `thesis/deformer.py`; bypass spectrogram pipeline entirely
+  - Configured via `DeformerConfig` / `DeformerSConfig` dataclasses in `thesis/model_factory.py`
+  - CLI overrides via `--deformer-depth`, `--deformer-heads`, `--deformer-num-kernel`, `--deformer-mlp-dim`, `--deformer-dim-head`, `--deformer-temporal-kernel`
+- **Parametric chunk duration** (Apr 2026): `--chunk-duration` (default 10.0 s) controls raw-EEG window size for Deformer/DeformerS; spectrogram models always use 10 s
+- **Cosine annealing LR extended to all models** (Apr 2026): Previously only for RAW_EEG_MODELS; now default for all architectures
+  - Disable with `--no-cosine-lr` for constant-LR ablations
+  - `T_max=num_epochs`, `eta_min=1e-6`
+- **Train accuracy at best val epoch** (Apr 2026): Now tracked per fold and written to CV results
+- **EDF channel auto-detection in inference** (Apr 2026): `_detect_edf_channel_config()` tries known layouts (MDD, SAD) before falling back with a warning; removes hardcoded assumptions
+- **API: `classification_task` renamed** (Apr 2026): `"2class"` → `"binary"` throughout API and model manager
+- **API: rate limit raised** (Apr 2026): 10 → 50 requests per 10 seconds
+- **API: model keys updated** (Apr 2026): `model_in_ear_2class` → `model_in_ear_binary`; `model_8channel_2class` → `model_8channel_binary`; default models upgraded (in-ear: `CNN_LSTM_DepCap` → `Smaller`; 8-channel: `SmallerAll` → `SmallerAllV2Attn`)
 
 **Deprecated Patterns:**
 - ~~Direct use of `MDDDataset` for training~~ → Use `prepare_mdd_dataset()`
@@ -485,6 +539,11 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Model expects preprocessed spectrograms, not raw EEG directly (unless using the raw EEG example model)
 - Use logging for prints, not print statements.
 - Add mypy typing to any newly generated code.
+- **Parameter logging requirement**: Every new CLI parameter added to training MUST be logged in three places:
+  1. Console — `logger.info(f"  <Param Name>: {args.<param>}")` in the `train()` preamble block
+  2. Log file — via the same `logger.info()` call (the file handler captures it automatically)
+  3. `results.txt` — `f.write(f"<Param Name>: {args.<param>}\n")` in the results-writing block
+  This ensures full reproducibility: any experiment can be reconstructed from its `results.txt` alone.
 
 ## Training Utilities
 
@@ -514,6 +573,7 @@ Use today's date and a short title derived from the task. Existing plans in that
 - `thesis/model_factory.py` - `create_model()` factory used by CLI and API
 - `thesis/version.py` - Single source of truth for version string (reads from pyproject.toml)
 - `thesis/labels.py` - Centralized label definitions, display names, and mappings
+- `thesis/deformer.py` - EEG-Deformer and DeformerS raw-EEG transformer implementations
 - `thesis/loss.py` - Custom loss functions (`FocalLoss` with alpha/gamma)
 - `thesis/cli.py` - CLI argument parser with all training options
 - `main.py` - Training orchestration, cross-validation logic, transfer learning support, and CANE/IDUN swap logic
@@ -523,6 +583,9 @@ Use today's date and a short title derived from the task. Existing plans in that
 - **API dependencies**: Install with `poetry install --with api`
 - **Model loading strategy**: Set `MODEL_LOADING=on_demand` env var to defer model loading until first request (default: `startup` loads all 4 models immediately)
 - **Version**: API reads version from `pyproject.toml` via `thesis/version.py`
+- **`classification_task` values**: `"binary"` (was `"2class"`) and `"4class"` — update any client code that used the old name
+- **Rate limit**: 50 requests per 10 seconds (raised from 10)
+- **Config keys**: `model_in_ear_binary`, `model_8channel_binary` (renamed from `*_2class` equivalents)
 
 ## Important Implementation Notes
 - **IDUN/CANE replacement**: When using `--channel in-ear` with `--dataset cane` or `--dataset all`, CANE is automatically replaced with IDUN real in-ear data
