@@ -274,6 +274,7 @@ def train_one_fold(
     checkpoint_dir: Path = Path("checkpoints"),
     val_subject_dataset_map: dict[str, str] | None = None,
     log_file: Path | None = None,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
 ) -> dict:
     """
     Train model for one-fold with comprehensive logging, checkpointing, and early stopping.
@@ -293,6 +294,8 @@ def train_one_fold(
     :param dict[str, str] | None val_subject_dataset_map: Optional mapping from validation subject
         IDs to dataset labels for per-dataset metrics.
     :param Path | None log_file: Path to the log file for JSON metrics output.
+    :param torch.optim.lr_scheduler.LRScheduler | None scheduler: Optional LR scheduler stepped
+        once per epoch. Pass ``None`` (default) to keep a constant learning rate.
     :return: Dictionary with fold results.
     :rtype: dict
     """
@@ -319,6 +322,8 @@ def train_one_fold(
     }
 
     logger.info(f"Starting training for fold {fold + 1}")
+    if scheduler is not None:
+        logger.info(f"LR schedule: {scheduler.__class__.__name__} over {num_epochs} epochs")
 
     epoch = 0
     for epoch in range(1, num_epochs + 1):
@@ -339,6 +344,9 @@ def train_one_fold(
         fold_history["train_loss"].append(train_metrics["loss"])
         fold_history["train_acc"].append(train_metrics["accuracy"])
         fold_history["epochs"].append(epoch)
+
+        if scheduler is not None:
+            scheduler.step()
 
         # Validate every val_every epochs
         if epoch % val_every == 0 or epoch == num_epochs:
@@ -838,6 +846,16 @@ def train_cross_validation(
             lr=learning_rate,
             weight_decay=weight_decay,
         )
+        # Cosine annealing schedule for raw-EEG models (Deformer/DeformerS).
+        # Spectrogram models use a constant LR because they converge well without a schedule
+        # and adding one would require tuning an additional hyperparameter.
+        fold_scheduler: torch.optim.lr_scheduler.LRScheduler | None
+        if model_name in RAW_EEG_MODELS:
+            fold_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=num_epochs, eta_min=1e-6
+            )
+        else:
+            fold_scheduler = None
 
         # Train this fold
         fold_result = train_one_fold(
@@ -856,6 +874,7 @@ def train_cross_validation(
             checkpoint_dir=checkpoint_dir,
             val_subject_dataset_map=val_subject_dataset_map,
             log_file=log_file,
+            scheduler=fold_scheduler,
         )
 
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
