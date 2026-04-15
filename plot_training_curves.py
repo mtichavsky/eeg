@@ -212,7 +212,8 @@ def plot_axes(
         label="Eval Accuracy",
         linewidth=linewidth,
         alpha=0.8,
-        color="gray",
+        color="darkorange",
+        linestyle="--",
     )
     ax2.set_ylim(0.25, 1)
 
@@ -221,7 +222,7 @@ def plot_axes(
         ax1.axvline(
             x=best_epoch,
             color="red",
-            linestyle="--",
+            linestyle=":",
             linewidth=linewidth,
             alpha=0.7,
             label=f"Best Model (epoch {best_epoch})",
