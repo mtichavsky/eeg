@@ -965,7 +965,7 @@ def train(args: argparse.Namespace) -> None:
     if args.deformer_temporal_kernel is not None:
         _overrides["temporal_kernel"] = args.deformer_temporal_kernel
     deformer_config = dataclasses_replace(_base_cfg, **_overrides)
-    logger.info(f"Deformer config: {deformer_config}")
+    logger.info(f"Deformer config: {deformer_config} (chunk_duration={args.chunk_duration}s)")
 
     # Run cross-validation training
     results = train_cross_validation(
