@@ -64,6 +64,7 @@ TODO double check normals count for MDD
 | `SmallerAllV3`     | 8 (per-channel shared CNN + full concat projection) | LSTM                            | 100 (default)         | 1,001,522  |
 | `Deformer`         | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4) | heads=16, dim_head=16 | 1,776,814  |
 | `DeformerS`        | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3) | heads=4,  dim_head=16 |   587,526  |
+| `DeformerS` (5 s)  | 8 (raw EEG, 1250 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3) | heads=4,  dim_head=16 |   390,314  |
 
 ## Architecture Summary
 
@@ -139,6 +140,11 @@ Key differences from `Deformer`:
 - **num_kernel 64→48**: narrower CNN encoder and fewer transformer tokens
 - **depth 4→3**: one fewer hierarchical level; final sequence is 156 samples (~0.6 s) instead of 78 (~0.3 s)
 - **heads 16→4**: inner attention dim 256→64, the largest single saving (~67% reduction in attention params)
+
+Parameter count scales with `num_time` because: (a) the learned positional embedding is
+`(1, num_kernel, num_time // 2)` and (b) the Dense Transformer accumulates a coarser-grained
+log-power vector at each depth level whose size depends on the input sequence length; both feed
+the final MLP head. At `num_time=1250` (5 s) → **390,314 params**; at `num_time=2500` (10 s) → **587,526 params**.
 
 ---
 

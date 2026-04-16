@@ -1,8 +1,7 @@
 # Review experiments command
 
 Your goal is to review performed experiments and provide actionable insights for
-model improvements. The ultimate goal is a model that works on both datasets
-(MDD and CANE), but currently training focuses on single datasets.
+model improvements. The ultimate goal is a model that works on all datasets.
 
 ## Analysis Workflow
 
