@@ -21,6 +21,11 @@
 | 4-class, 8-ch, SmallerAll          | 63.46% ± 9.60% × 64.57% ±11.36% |                      |                | all3-018-all-4class-smallerAll-weighted-sampler       |
 | 4-class, 8-ch, Attn                | 64.76% ± 8.05% × 66.09% ± 8.23% |                      |                | all3-018-all-4class-smallerAllAttn-weighted-sampler   |
 | **4-class, 8-ch, V2Attn**          | 65.91% ± 6.63% × 68.49% ± 6.68% |                      |                | all3-020-all-4class-smallerAllV2Attn-weighted-sampler |
+| binary, 8-ch, LGGNet (hem)         | —                                 | —                    | —              | all3-025-all-binary-lggnet; **6 fold, planned**       |
+| binary, 8-ch, LGGNetS (hem)        | —                                 | —                    | —              | all3-025-all-binary-lggnet-s; **6 fold, planned**     |
+| binary, 8-ch, LGGNet frontal       | —                                 | —                    | —              | all3-025-all-binary-lggnet-frontal; **6 fold, planned** |
+| binary, 8-ch, LGGNet+FL            | —                                 | —                    | —              | all3-025-all-binary-lggnet-focal; **6 fold, planned** |
+| 4-class, 8-ch, LGGNet+FL           | —                                 | —                    | —              | all3-025-all-4class-lggnet-focal; **6 fold, planned** |
 
 CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV3 --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal
 CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV3 --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-022-all-binary-smallerAllV3-focal
@@ -275,6 +280,66 @@ Higher dropout doesn't make sense.
   - but MDD shows good performance, probably in anxiety+depression I'd be looking for a problem
 - AX_MALIK 100% accuracy, CANE absolutely shitty
 - Command `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-4class-smallerall --class-mode=4`
+
+### LGGNet experiments (025 series) — planned
+
+LGGNet (TNNLS 2023) introduces a local-global graph approach: multi-scale temporal CNN → local
+graph filter (mean-pools channels into anatomical brain regions) → global GCN with learnable
+adjacency mask. Two variants: LGGNet (~1.17M params) and LGGNetS (~585K, matches DeformerS).
+
+**Rationale for lr=1e-3, dropout=0.5:**
+Paper defaults. Validated by the DeformerS-head experiment: raw-EEG models fail at lr=1e-4 but
+recover at lr=1e-3. The local filter weight (230K params) and GCN (922K params) are prone to
+overfit, so dropout=0.5 matches the paper's regularization strategy.
+
+**Graph topologies for 8 channels (Fp1,Fp2,T7,T8,C3,C4,Cz,Oz):**
+- `hemisphere` (default, 3 regions): Left {Fp1,T7,C3} / Right {Fp2,T8,C4} / Midline {Cz,Oz}
+- `frontal` (4 regions): {Fp1,Fp2} / {T7,T8} / {C3,C4,Cz} / {Oz}
+
+#### all3-025-all-binary-lggnet
+
+- Model: LGGNet (~1.17M params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
+- Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, batch=64, pool=32 (250 Hz scaled from paper's 16@128 Hz)
+- Purpose: core LGGNet baseline with paper-recommended settings; establishes whether graph-based
+  EEG modelling outperforms CNN-LSTM baselines (V2Attn 79.10%, V3+FL 78.84%)
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-025-all-binary-lggnet`
+
+#### all3-025-all-binary-lggnet-s
+
+- Model: LGGNetS (~585K params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
+- Hyperparams: identical to all3-025-all-binary-lggnet
+- Purpose: size ablation — does halving temporal filters (num_T 64→32) hurt accuracy?
+  LGGNetS matches DeformerS in parameter count; direct comparison shows whether architecture
+  or capacity explains the DeformerS underperformance
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNetS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-025-all-binary-lggnet-s`
+
+#### all3-025-all-binary-lggnet-frontal
+
+- Model: LGGNet (~1.17M params), binary, 8-channel, **frontal graph**, ec+eo, **6-fold**
+- Hyperparams: identical to all3-025-all-binary-lggnet
+- Purpose: graph topology ablation — 4-region anatomical grouping (frontal/temporal/central/occipital)
+  vs 3-region hemisphere grouping. Clinically motivated: frontal asymmetry (Fp1−Fp2) and
+  temporal asymmetry (T7−T8) are established biomarkers for depression and anxiety
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --lggnet-graph-type frontal --checkpoint-dir=experiments/all3-025-all-binary-lggnet-frontal`
+
+#### all3-025-all-binary-lggnet-focal
+
+- Model: LGGNet (~1.17M params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**, focal loss
+- Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, focal gamma=2.0
+- Purpose: focal loss ablation on LGGNet — prior experiments show FL consistently improves
+  specificity at the cost of ~1pp sensitivity (V2Attn+FL-d2: spec +7.38pp, V3+FL: spec +6.76pp).
+  Testing whether the same pattern holds for a graph-based architecture
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-025-all-binary-lggnet-focal`
+
+#### all3-025-all-4class-lggnet-focal
+
+- Model: LGGNet (~1.17M params), **4-class**, 8-channel, hemisphere graph, ec+eo, **6-fold**, focal loss
+- Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, focal gamma=2.0
+- Purpose: core 4-class LGGNet experiment. The key scientific question: can learning inter-region
+  functional connectivity (via the learnable global adjacency) help distinguish the four classes
+  (normal/anxiety/depression/comorbid) where CNNs plateau at ~66%? Comorbid class is
+  particularly challenging; graph-level representations may capture co-occurrence patterns
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --class-mode 4 --focal-loss --checkpoint-dir=experiments/all3-025-all-4class-lggnet-focal`
 
 ### all3-014b-inear-binary-smaller
 
