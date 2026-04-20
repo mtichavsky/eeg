@@ -45,7 +45,12 @@ from thesis.metrics import (
     extract_classification_metrics,
     write_results,
 )
-from thesis.model_factory import DeformerConfig, _DEFORMER_DEFAULT_CONFIGS, create_model
+from thesis.model_factory import (
+    DeformerConfig,
+    LGGNetConfig,
+    _RAW_EEG_DEFAULT_CONFIGS,
+    create_model,
+)
 
 RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -505,7 +510,7 @@ def train_cross_validation(
     focal_loss: bool = False,
     focal_gamma: float = 2.0,
     cosine_lr: bool = True,
-    deformer_config: DeformerConfig | None = None,
+    raw_eeg_config: DeformerConfig | LGGNetConfig | None = None,
     chunk_duration: float = 10.0,
 ) -> dict:
     """
@@ -836,7 +841,7 @@ def train_cross_validation(
             pretrained_checkpoint=pretrained_checkpoint,
             freeze_cnn=freeze_cnn,
             freeze_lstm=freeze_lstm,
-            deformer_config=deformer_config,
+            raw_eeg_config=raw_eeg_config,
         )
 
         if focal_loss:
@@ -951,7 +956,7 @@ def train(args: argparse.Namespace) -> None:
 
     # Build Deformer config: start from the model-appropriate defaults, then apply
     # any CLI overrides (None means "keep model default").
-    _base_cfg = _DEFORMER_DEFAULT_CONFIGS.get(args.model, DeformerConfig)()
+    _base_cfg = _RAW_EEG_DEFAULT_CONFIGS.get(args.model, DeformerConfig)()
     _overrides: dict = {"num_time": int(args.chunk_duration * 250)}
     if args.deformer_depth is not None:
         _overrides["depth"] = args.deformer_depth
@@ -967,6 +972,31 @@ def train(args: argparse.Namespace) -> None:
         _overrides["temporal_kernel"] = args.deformer_temporal_kernel
     deformer_config = dataclasses_replace(_base_cfg, **_overrides)
     logger.info(f"Deformer config: {deformer_config} (chunk_duration={args.chunk_duration}s)")
+
+    # Build LGGNet config: start from the model-appropriate defaults, then apply CLI overrides.
+    logger.info(f"  LGGNet num_T: {args.lggnet_num_t}")
+    logger.info(f"  LGGNet out_graph: {args.lggnet_out_graph}")
+    logger.info(f"  LGGNet pool: {args.lggnet_pool}")
+    logger.info(f"  LGGNet pool_step_rate: {args.lggnet_pool_step_rate}")
+    logger.info(f"  LGGNet graph_type: {args.lggnet_graph_type}")
+    _lgg_base = _RAW_EEG_DEFAULT_CONFIGS.get(args.model, LGGNetConfig)()
+    _lgg_overrides: dict = {"num_time": int(args.chunk_duration * 250), "sampling_rate": 250}
+    if args.lggnet_num_t is not None:
+        _lgg_overrides["num_T"] = args.lggnet_num_t
+    if args.lggnet_out_graph is not None:
+        _lgg_overrides["out_graph"] = args.lggnet_out_graph
+    if args.lggnet_pool is not None:
+        _lgg_overrides["pool"] = args.lggnet_pool
+    if args.lggnet_pool_step_rate is not None:
+        _lgg_overrides["pool_step_rate"] = args.lggnet_pool_step_rate
+    if args.lggnet_graph_type is not None:
+        _lgg_overrides["graph_type"] = args.lggnet_graph_type
+    lggnet_config = dataclasses_replace(_lgg_base, **_lgg_overrides)
+    logger.info(f"LGGNet config: {lggnet_config} (chunk_duration={args.chunk_duration}s)")
+
+    raw_eeg_config: DeformerConfig | LGGNetConfig = (
+        lggnet_config if args.model in {"LGGNet", "LGGNetS"} else deformer_config
+    )
 
     # Run cross-validation training
     results = train_cross_validation(
@@ -996,7 +1026,7 @@ def train(args: argparse.Namespace) -> None:
         focal_loss=args.focal_loss,
         focal_gamma=args.focal_gamma,
         cosine_lr=args.cosine_lr,
-        deformer_config=deformer_config,
+        raw_eeg_config=raw_eeg_config,
         chunk_duration=args.chunk_duration,
     )
 
@@ -1019,7 +1049,12 @@ def train(args: argparse.Namespace) -> None:
             f.write("Data Augmentation: disabled\n")
         f.write(f"Pretrained Checkpoint: {args.pretrained_checkpoint}\n")
         f.write(f"Freeze CNN: {args.freeze_cnn}\n")
-        f.write(f"Freeze LSTM: {args.freeze_lstm}\n\n")
+        f.write(f"Freeze LSTM: {args.freeze_lstm}\n")
+        f.write(f"LGGNet num_T: {args.lggnet_num_t}\n")
+        f.write(f"LGGNet out_graph: {args.lggnet_out_graph}\n")
+        f.write(f"LGGNet pool: {args.lggnet_pool}\n")
+        f.write(f"LGGNet pool_step_rate: {args.lggnet_pool_step_rate}\n")
+        f.write(f"LGGNet graph_type: {args.lggnet_graph_type}\n\n")
         f.write("Per-fold best validation accuracy:\n")
         for i in range(len(results["fold_chunk_metrics"])):
             chunk_acc = results["fold_chunk_metrics"][i]["accuracy"]

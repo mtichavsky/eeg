@@ -32,6 +32,13 @@ reproduced in full at the top of the file:
                           Source: https://github.com/yi-ding-cs/EEG-Deformer
                           Paper:  DOI 10.1109/JBHI.2024.3504604
 
+  thesis/lggnet.py    —  CBCR License 1.0 (non-commercial use only)
+                          Copyright 2022 Centre for Brain Computing Research
+                          Source: https://github.com/yi-ding-cs/LGG
+                          Paper:  DOI 10.1109/TNNLS.2023.3236635
+                          (Modified port: Aggregator promoted to nn.Module,
+                           constructor refactored, device-independence fix,
+                           mypy annotations added.)
+
 It is your responsibility to asses if any other files are impacted by vendoring
-this file or any other third-party code contribution, though this is the only
-third-party code contribution I'm aware I made during writing this project.
+these files or any other third-party code contribution.
