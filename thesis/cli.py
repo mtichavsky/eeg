@@ -254,6 +254,46 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "Paper formula: Odd(0.1 × sampling_rate). Default: 25 for 250 Hz.",
     )
 
+    # LGGNet hyperparameters (ignored for non-LGGNet models)
+    lggnet_group = train_parser.add_argument_group(
+        "LGGNet hyperparameters",
+        description="Only used when --model LGGNet or --model LGGNetS is selected. "
+        "Defaults are model-specific (LGGNet: num_T=64, LGGNetS: num_T=32; all other defaults "
+        "are shared). Passing any flag overrides the model's default for that parameter only.",
+    )
+    lggnet_group.add_argument(
+        "--lggnet-num-t",
+        type=int,
+        default=None,
+        help="Temporal filters per branch. Default: 64 (LGGNet) or 32 (LGGNetS).",
+    )
+    lggnet_group.add_argument(
+        "--lggnet-out-graph",
+        type=int,
+        default=None,
+        help="GCN output features. Default: 32.",
+    )
+    lggnet_group.add_argument(
+        "--lggnet-pool",
+        type=int,
+        default=None,
+        help="PowerLayer pooling window. Paper uses 16 at 128 Hz; default here is 32 at 250 Hz.",
+    )
+    lggnet_group.add_argument(
+        "--lggnet-pool-step-rate",
+        type=float,
+        default=None,
+        help="Pool stride as a fraction of pool size (stride = pool × rate). Default: 0.25.",
+    )
+    lggnet_group.add_argument(
+        "--lggnet-graph-type",
+        type=str,
+        default=None,
+        choices=["frontal", "hemisphere"],
+        help="Graph topology. 'hemisphere': L{Fp1,T7,C3}/R{Fp2,T8,C4}/Mid{Cz,Oz} (default). "
+        "'frontal': {Fp1,Fp2}/{T7,T8}/{C3,C4,Cz}/{Oz}.",
+    )
+
     # Run subcommand
     run_parser = subparsers.add_parser(
         "run", help="Run inference on a single EEG file (.edf or .csv)"

@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from thesis.deformer import Deformer
+from thesis.lggnet import LGGNet
 
 logger = logging.getLogger(__name__)
 
@@ -888,7 +889,7 @@ class AllTransformerV4(Smaller):
 
 # Models that consume raw EEG time-series (batch, channels, time) instead of spectrograms.
 # These bypass the STFT pipeline and use FlattenedRawEEGDataset.
-RAW_EEG_MODELS: frozenset[str] = frozenset({"Deformer", "DeformerS"})
+RAW_EEG_MODELS: frozenset[str] = frozenset({"Deformer", "DeformerS", "LGGNet", "LGGNetS"})
 
 # Model registry: maps model names to (model_class, default_rnn_hidden).
 # rnn_hidden is None for raw-EEG models that don't use an RNN.
@@ -904,4 +905,6 @@ MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int | None]] = {
     "AllTransformerV4": (AllTransformerV4, 64),
     "Deformer": (Deformer, None),
     "DeformerS": (Deformer, None),
+    "LGGNet": (LGGNet, None),
+    "LGGNetS": (LGGNet, None),
 }
