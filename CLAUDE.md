@@ -564,6 +564,21 @@ docs/plans/YYYY-MM-DD-kebab-case-title.md
 
 Use today's date and a short title derived from the task. Existing plans in that directory follow this convention — match their style.
 
+**Always save the final plan to `docs/plans/` at the end of plan mode.** The `.claude/plans/` file created during planning is ephemeral — the permanent record belongs in `docs/plans/`.
+
+## Vendored Third-Party Code (Licenses)
+
+This project vendors code from external repositories under CBCR License 1.0 (non-commercial). When adding any new vendored file:
+
+1. **Add the full license header** to the vendored file (see `thesis/deformer.py` for the exact format).
+2. **Add an entry to `LICENSE`** under the `THIRD-PARTY EXCEPTIONS` section, including:
+   - Filename, license name, copyright holder
+   - Source URL and paper DOI
+   - Any modifications made
+3. **Keep the project's MIT License separate** — vendored files are governed by their own license, not MIT.
+
+The project's main license (MIT) is in `LICENSE`. All CBCR-licensed files are listed there in the THIRD-PARTY EXCEPTIONS section.
+
 ## Quick Reference Files
 - `docs/plans/` - Saved plan mode outputs, dated and titled
 - `EXPERIMENTS.md` - Log of experiment configurations and results
