@@ -125,6 +125,14 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Weight decay (L2 regularization)",
     )
     train_parser.add_argument(
+        "--l1-lambda",
+        type=float,
+        default=0.0,
+        help="L1 regularization coefficient added to the training loss as "
+        "lambda × sum(|params|). Default: 0.0 (disabled). "
+        "TSception paper uses 1e-6.",
+    )
+    train_parser.add_argument(
         "--no-cosine-lr",
         dest="cosine_lr",
         action="store_false",
@@ -292,6 +300,40 @@ def get_arg_parser() -> argparse.ArgumentParser:
         choices=["frontal", "hemisphere"],
         help="Graph topology. 'hemisphere': L{Fp1,T7,C3}/R{Fp2,T8,C4}/Mid{Cz,Oz} (default). "
         "'frontal': {Fp1,Fp2}/{T7,T8}/{C3,C4,Cz}/{Oz}.",
+    )
+
+    # TSception hyperparameters (ignored for non-TSception models)
+    tsception_group = train_parser.add_argument_group(
+        "TSception hyperparameters",
+        description="Only used when --model TSception or --model TSceptionS is selected. "
+        "TSception uses hidden=128 (paper default, ~1.05 M params); "
+        "TSceptionS uses hidden=32 (paper's cross-dataset recommendation, ~264 K params). "
+        "Passing any flag overrides the model's default for that parameter only.",
+    )
+    tsception_group.add_argument(
+        "--tsception-num-t",
+        type=int,
+        default=None,
+        help="Temporal inception filter count. Default: 9 (both variants, paper value).",
+    )
+    tsception_group.add_argument(
+        "--tsception-num-s",
+        type=int,
+        default=None,
+        help="Spatial filter count per branch. Default: 6 (both variants, paper value).",
+    )
+    tsception_group.add_argument(
+        "--tsception-hidden",
+        type=int,
+        default=None,
+        help="FC hidden layer nodes. Default: 128 (TSception) / 32 (TSceptionS).",
+    )
+    tsception_group.add_argument(
+        "--tsception-sampling-rate",
+        type=int,
+        default=None,
+        help="Sampling rate in Hz used to compute temporal kernel sizes as "
+        "int(fraction × rate) for fractions [0.5, 0.25, 0.125]. Default: 250 Hz.",
     )
 
     # Run subcommand

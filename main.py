@@ -48,6 +48,8 @@ from thesis.metrics import (
 from thesis.model_factory import (
     DeformerConfig,
     LGGNetConfig,
+    TSceptionConfig,
+    TSceptionSConfig,
     _RAW_EEG_DEFAULT_CONFIGS,
     create_model,
 )
@@ -141,6 +143,7 @@ def train_epoch(
     criterion: nn.Module,
     device: torch.device,
     num_classes: int = 2,
+    l1_lambda: float = 0.0,
 ) -> dict[str, float | int | np.ndarray]:
     """
     Train model for one epoch at chunk/spectrogram level.
@@ -161,6 +164,9 @@ def train_epoch(
         optimizer.zero_grad()
         logits = model(xb)
         loss = criterion(logits, yb)
+        if l1_lambda > 0.0:
+            l1_reg = l1_lambda * sum(p.abs().sum() for p in model.parameters())
+            loss = loss + l1_reg
         loss.backward()
         optimizer.step()
         # TODO also this calculation
@@ -280,6 +286,7 @@ def train_one_fold(
     val_subject_dataset_map: dict[str, str] | None = None,
     log_file: Path | None = None,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+    l1_lambda: float = 0.0,
 ) -> dict:
     """
     Train model for one-fold with comprehensive logging, checkpointing, and early stopping.
@@ -333,7 +340,9 @@ def train_one_fold(
     epoch = 0
     for epoch in range(1, num_epochs + 1):
         # Train
-        train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, num_classes)
+        train_metrics = train_epoch(
+            model, train_loader, optimizer, criterion, device, num_classes, l1_lambda
+        )
 
         log_metrics_json(
             "train",
@@ -510,8 +519,9 @@ def train_cross_validation(
     focal_loss: bool = False,
     focal_gamma: float = 2.0,
     cosine_lr: bool = True,
-    raw_eeg_config: DeformerConfig | LGGNetConfig | None = None,
+    raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig | None = None,
     chunk_duration: float = 10.0,
+    l1_lambda: float = 0.0,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -880,6 +890,7 @@ def train_cross_validation(
             val_subject_dataset_map=val_subject_dataset_map,
             log_file=log_file,
             scheduler=fold_scheduler,
+            l1_lambda=l1_lambda,
         )
 
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
@@ -994,8 +1005,27 @@ def train(args: argparse.Namespace) -> None:
     lggnet_config = dataclasses_replace(_lgg_base, **_lgg_overrides)
     logger.info(f"LGGNet config: {lggnet_config} (chunk_duration={args.chunk_duration}s)")
 
-    raw_eeg_config: DeformerConfig | LGGNetConfig = (
-        lggnet_config if args.model in {"LGGNet", "LGGNetS"} else deformer_config
+    # Build TSception config: start from model-appropriate defaults, apply CLI overrides.
+    _tsc_base = _RAW_EEG_DEFAULT_CONFIGS.get(args.model, TSceptionConfig)()
+    _tsc_overrides: dict = {"num_time": int(args.chunk_duration * 250)}
+    if args.tsception_num_t is not None:
+        _tsc_overrides["num_T"] = args.tsception_num_t
+    if args.tsception_num_s is not None:
+        _tsc_overrides["num_S"] = args.tsception_num_s
+    if args.tsception_hidden is not None:
+        _tsc_overrides["hidden"] = args.tsception_hidden
+    if args.tsception_sampling_rate is not None:
+        _tsc_overrides["sampling_rate"] = args.tsception_sampling_rate
+    tsception_config = dataclasses_replace(_tsc_base, **_tsc_overrides)
+    logger.info(f"TSception config: {tsception_config} (chunk_duration={args.chunk_duration}s)")
+    logger.info(f"  L1 Lambda: {args.l1_lambda}")
+
+    raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig = (
+        tsception_config
+        if args.model in {"TSception", "TSceptionS"}
+        else lggnet_config
+        if args.model in {"LGGNet", "LGGNetS"}
+        else deformer_config
     )
 
     # Run cross-validation training
@@ -1028,6 +1058,7 @@ def train(args: argparse.Namespace) -> None:
         cosine_lr=args.cosine_lr,
         raw_eeg_config=raw_eeg_config,
         chunk_duration=args.chunk_duration,
+        l1_lambda=args.l1_lambda,
     )
 
     # Save final results to file
@@ -1054,7 +1085,12 @@ def train(args: argparse.Namespace) -> None:
         f.write(f"LGGNet out_graph: {args.lggnet_out_graph}\n")
         f.write(f"LGGNet pool: {args.lggnet_pool}\n")
         f.write(f"LGGNet pool_step_rate: {args.lggnet_pool_step_rate}\n")
-        f.write(f"LGGNet graph_type: {args.lggnet_graph_type}\n\n")
+        f.write(f"LGGNet graph_type: {args.lggnet_graph_type}\n")
+        f.write(f"TSception num_T: {args.tsception_num_t}\n")
+        f.write(f"TSception num_S: {args.tsception_num_s}\n")
+        f.write(f"TSception hidden: {args.tsception_hidden}\n")
+        f.write(f"TSception sampling_rate: {args.tsception_sampling_rate}\n")
+        f.write(f"L1 Lambda: {args.l1_lambda}\n\n")
         f.write("Per-fold best validation accuracy:\n")
         for i in range(len(results["fold_chunk_metrics"])):
             chunk_acc = results["fold_chunk_metrics"][i]["accuracy"]

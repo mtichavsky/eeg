@@ -133,6 +133,50 @@ class LGGNetSConfig:
     graph_type: str = "hemisphere"
 
 
+@dataclass
+class TSceptionConfig:
+    """
+    Hyperparameters for the TSception architecture (IJCNN 2020).
+
+    Defaults match the paper's ``Train.py`` configuration (hidden=128) adapted to
+    250 Hz EEG with 10-second chunks.  Temporal kernel sizes are computed as
+    ``int(fraction × sampling_rate)`` for fractions [0.5, 0.25, 0.125].
+    """
+
+    num_T: int = 9
+    """Temporal inception filter count (paper default)."""
+
+    num_S: int = 6
+    """Spatial filter count per branch (paper default)."""
+
+    hidden: int = 128
+    """FC hidden layer nodes (paper default for training on DEAP / MAHNOB-HCI)."""
+
+    sampling_rate: int = 250
+    """EEG sampling rate in Hz — determines temporal kernel sizes."""
+
+    num_time: int = 2500
+    """Number of time samples per chunk (10 s × 250 Hz = 2500)."""
+
+
+@dataclass
+class TSceptionSConfig:
+    """
+    Smaller TSception variant (~264 K params), matching SmallerAll in parameter count.
+
+    Uses hidden=32, following the paper's own cross-dataset recommendation:
+    'We also suggest T=S=15 and hidden_node=32 when applying TSception to other datasets.'
+    All other fields are identical to ``TSceptionConfig``.
+    """
+
+    num_T: int = 9
+    num_S: int = 6
+    hidden: int = 32
+    """FC hidden layer nodes (paper's cross-dataset recommendation)."""
+    sampling_rate: int = 250
+    num_time: int = 2500
+
+
 # Maps each raw-EEG model name to its default config class.
 # Add an entry here whenever a new raw-EEG model is registered in MODEL_REGISTRY.
 _RAW_EEG_DEFAULT_CONFIGS: dict[str, type] = {
@@ -140,6 +184,8 @@ _RAW_EEG_DEFAULT_CONFIGS: dict[str, type] = {
     "DeformerS": DeformerSConfig,
     "LGGNet": LGGNetConfig,
     "LGGNetS": LGGNetSConfig,
+    "TSception": TSceptionConfig,
+    "TSceptionS": TSceptionSConfig,
 }
 
 
@@ -153,7 +199,7 @@ def create_model(
     pretrained_checkpoint: str | None = None,
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
-    raw_eeg_config: DeformerConfig | LGGNetConfig | None = None,
+    raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig | None = None,
 ) -> nn.Module:
     """
     Create and initialize a model, optionally loading pretrained weights.
