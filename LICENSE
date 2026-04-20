@@ -40,5 +40,15 @@ reproduced in full at the top of the file:
                            constructor refactored, device-independence fix,
                            mypy annotations added.)
 
+  thesis/tsception.py —  CBCR License 1.0 (non-commercial use only) [TSception class only]
+                          Copyright 2022 Centre for Brain Computing Research
+                          Source: https://github.com/yi-ding-cs/TSception
+                          Paper:  Yi Ding et al., "TSception: Capturing Temporal Dynamics
+                                  and Spatial Asymmetry from EEG for Emotion Recognition."
+                                  IEEE Trans. Affective Computing, 2022.
+                                  DOI: 10.1109/TAFFC.2022.3169001
+                          (Adapted: mypy annotations added, formatting; TSceptionWrapper
+                           class is original project code under MIT License above.)
+
 It is your responsibility to asses if any other files are impacted by vendoring
 these files or any other third-party code contribution.
