@@ -84,11 +84,62 @@ class DeformerSConfig:
     """Dimension per attention head."""
 
 
+@dataclass
+class LGGNetConfig:
+    """
+    Hyperparameters for the LGGNet architecture (TNNLS 2023).
+
+    Pool size scaled from the paper's 16 at 128 Hz to 32 at 250 Hz.
+    Graph type 'hemisphere' matches the paper's default ``hem`` topology.
+    """
+
+    num_time: int = 2500
+    """Number of time samples per chunk (10 s × 250 Hz = 2500)."""
+
+    sampling_rate: int = 250
+    """EEG sampling rate in Hz."""
+
+    num_T: int = 64
+    """Number of temporal filters per branch."""
+
+    out_graph: int = 32
+    """Output dimension of the GCN layer."""
+
+    pool: int = 32
+    """PowerLayer pooling window. Paper uses 16 at 128 Hz → scaled to 32 at 250 Hz."""
+
+    pool_step_rate: float = 0.25
+    """Pool stride as a fraction of pool size (stride = pool × pool_step_rate)."""
+
+    graph_type: str = "hemisphere"
+    """Graph topology: 'frontal' (4 regions) or 'hemisphere' (3 regions)."""
+
+
+@dataclass
+class LGGNetSConfig:
+    """
+    Smaller LGGNet variant (~585 K params), matching DeformerS in parameter count.
+
+    Reduces num_T from 64 to 32 relative to LGGNetConfig; all other fields identical.
+    """
+
+    num_time: int = 2500
+    sampling_rate: int = 250
+    num_T: int = 32
+    """Temporal filters per branch (reduced from 64 to halve the feature dimension)."""
+    out_graph: int = 32
+    pool: int = 32
+    pool_step_rate: float = 0.25
+    graph_type: str = "hemisphere"
+
+
 # Maps each raw-EEG model name to its default config class.
-# Add an entry here whenever a new Deformer variant is registered in MODEL_REGISTRY.
-_DEFORMER_DEFAULT_CONFIGS: dict[str, type[DeformerConfig] | type[DeformerSConfig]] = {
+# Add an entry here whenever a new raw-EEG model is registered in MODEL_REGISTRY.
+_RAW_EEG_DEFAULT_CONFIGS: dict[str, type] = {
     "Deformer": DeformerConfig,
     "DeformerS": DeformerSConfig,
+    "LGGNet": LGGNetConfig,
+    "LGGNetS": LGGNetSConfig,
 }
 
 
@@ -102,7 +153,7 @@ def create_model(
     pretrained_checkpoint: str | None = None,
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
-    deformer_config: DeformerConfig | None = None,
+    raw_eeg_config: DeformerConfig | LGGNetConfig | None = None,
 ) -> nn.Module:
     """
     Create and initialize a model, optionally loading pretrained weights.
@@ -116,9 +167,9 @@ def create_model(
     :param str | None pretrained_checkpoint: Path to pretrained checkpoint for transfer learning.
     :param bool freeze_cnn: If True, freeze CNN layers (conv1, conv2) during training.
     :param bool freeze_lstm: If True, freeze LSTM layer during training.
-    :param DeformerConfig | None deformer_config: Hyperparameters for Deformer. Required when
-        model_name is in RAW_EEG_MODELS; ignored otherwise. Defaults are applied if None is
-        passed for a raw-EEG model.
+    :param DeformerConfig | LGGNetConfig | None raw_eeg_config: Hyperparameters for raw-EEG
+        models (Deformer, LGGNet variants). Ignored for spectrogram models. Defaults from
+        ``_RAW_EEG_DEFAULT_CONFIGS`` are applied when None is passed for a raw-EEG model.
     :return: Initialized model.
     :rtype: nn.Module
     """
@@ -128,8 +179,8 @@ def create_model(
     model_class, rnn_hidden = MODEL_REGISTRY[model_name]
 
     if model_name in RAW_EEG_MODELS:
-        # Raw EEG models (e.g. Deformer) take (batch, channels, time) directly
-        cfg = deformer_config if deformer_config is not None else _DEFORMER_DEFAULT_CONFIGS[model_name]()
+        # Raw EEG models take (batch, channels, time) directly — bypass spectrogram pipeline
+        cfg = raw_eeg_config if raw_eeg_config is not None else _RAW_EEG_DEFAULT_CONFIGS[model_name]()
         model = model_class(
             num_chan=in_channels,
             num_classes=num_classes,
