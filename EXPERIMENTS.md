@@ -30,290 +30,14 @@
 | 4-class, 8-ch, LGGNet+FL           | —                                 | —                    | —              | all3-027-all-4class-lggnet-focal; **6 fold, planned** |
 | binary, 8-ch, TSception            | 68.84% ± 5.65% × 71.00% ± 9.11% | 77.82% ± 7.77%       | 55.01% ± 4.67% | all3-026-all-binary-tsception; **6 fold**             |
 | binary, 8-ch, TSceptionS           | 70.80% ± 4.60% × 72.93% ± 5.69% | 78.08% ± 6.95%       | 59.06% ± 5.18% | all3-026-all-binary-tsception-s; **6 fold**           |
+| binary, 8-ch, TSceptionS 4s        | 71.52% ± 4.35% × 72.61% ± 8.00% | 77.88% ± 5.95%       | 61.30% ± 9.42% | all3-026-all-binary-tsceptions-ch4_rpr; **10 fold, 4s @ 250 Hz (not resampled)** |
 | binary, 8-ch, TSception+FL         | —                                 | —                    | —              | all3-026-all-binary-tsception-focal; **6 fold, planned** |
 | binary, 8-ch, TSceptionS+FL        | —                                 | —                    | —              | all3-026-all-binary-tsception-s-focal; **6 fold, planned** |
 | 4-class, 8-ch, TSception+FL        | —                                 | —                    | —              | all3-026-all-4class-tsception-focal; **6 fold, planned** |
 
-CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsceptions-ch4 --chunk-duration 4
+> **Tip:** append `> /dev/null 2>&1 &` to any command to run it in the background and detach from the terminal.
 
-CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV3 --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal
-CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV3 --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-022-all-binary-smallerAllV3-focal
-
-CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.3   --weight-decay 1e-4   --val-every 1 --focal-loss   --checkpoint-dir=experiments/all3-020-inear-binary-smallerAttn-focal-d3
-CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1 --focal-loss  --checkpoint-dir=experiments/all3-019-inear-4class-smallerAttn-focal
-CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.3  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-020-all-binary-smallerAllV2Attn-focal-d3
-CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-4class-smallerAllV2Attn-weighted-sampler
-
-CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model AllTransformerV4 --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 2 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-022-all-2class-V3All-weighted-sampler
-
-CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model Deformer --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 2 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-023-all-2class-Deformer-weighted-sampler
-
-Higher dropout doesn't make sense.
-
-### all3-020-all-binary-smallerAllV2Attn-weighted-sampler
-
-- Model: SmallerAllV2Attn (per-channel shared CNN + cross-channel self-attention + temporal attention), binary, 8-channel, ec+eo, 10-fold, weighted sampler
-- Chunk accuracy: 79.10% ± 4.90% | Subject accuracy: 79.83% ± 5.98%
-- Chunk sensitivity: 89.43% ± 6.78% | Chunk specificity: 63.42% ± 11.22%
-- Per-dataset chunk accuracy: CANE 72.55%, MDD 90.20%, SAD 68.08%
-- vs SmallerAllAttn (018, 8ch binary): no direct baseline but matches in-ear SmallerAttn (78.26% chunk) — 8 channels provide no gain over 1 channel
-- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-binary-smallerAllV2Attn-weighted-sampler`
-
-### all3-020-all-4class-smallerAllV2Attn-weighted-sampler
-
-- Model: SmallerAllV2Attn (per-channel shared CNN + cross-channel self-attention + temporal attention), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
-- Chunk accuracy: 65.91% ± 6.63% | Subject accuracy: 68.49% ± 6.68%
-- Chunk recall: Healthy 55.87%, Anxiety 42.18%, Depression 90.35%, Comorbid 79.63%
-- Per-dataset chunk accuracy: CANE 46.30%, MDD 86.59%, SAD 69.14%
-- vs SmallerAllAttn (018): +1.15pp chunk, +2.40pp subject — marginal improvement; CANE still at ~46%
-- Architecture: per-channel CNN (shared weights) preserves channel identity longer than Conv3D, but cross-channel attention still provides no measurable gain over single-channel models
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-4class-smallerAllV2Attn-weighted-sampler`
-
-### all3-019-inear-binary-smallerAttn-focal
-
-- Model: SmallerAttn, binary, in-ear, ec+eo, 10-fold, focal loss (gamma=2.0) + weighted sampler
-- Chunk accuracy: 77.76% ± 4.64% | Subject accuracy: 78.74% ± 7.50%
-- Chunk sensitivity: 84.21% ± 6.97% | Chunk specificity: 68.78% ± 6.26%
-- Per-dataset chunk accuracy: CANE 69.56%, MDD 89.03%, SAD 62.62%
-- vs 018-Attn (no focal): specificity +5.67pp, sensitivity -5.20pp — better balanced, balanced accuracy 76.26% → 76.50%
-- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1 --focal-loss   --checkpoint-dir=experiments/all3-019-inear-binary-smallerAttn-focal`
-
-### all3-019-inear-4class-smallerAttn-focal
-
-- Model: SmallerAttn, 4-class, in-ear, ec+eo, 10-fold, focal loss (gamma=2.0) + weighted sampler
-- Chunk accuracy: 66.51% ± 7.32% | Subject accuracy: 67.10% ± 9.13%
-- Chunk recall: Healthy 50.39%, Anxiety 60.90%, Depression 89.44%, Comorbid 89.31%
-- Per-dataset chunk accuracy: CANE 42.60%, MDD 85.92%, SAD 62.17%
-- vs 018-Attn (no focal): overall +1.75pp chunk; Anxiety +14.92pp, Comorbid +18.97pp, but Healthy -9.97pp
-- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1 --focal-loss --class-mode 4  --checkpoint-dir=experiments/all3-019-inear-4class-smallerAttn-focal`
-
-### all3-018-all-4class-smallerAll-weighted-sampler
-
-- Model: SmallerAll (LSTM), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
-- Chunk accuracy: 63.46% ± 9.60% | Subject accuracy: 64.57% ± 11.36%
-- Chunk recall: Healthy 54.64%, Anxiety 57.69%, Depression 86.06%, Comorbid 61.78%
-- Per-dataset chunk accuracy: CANE 44.40%, MDD 84.07%, SAD 65.87%
-- Overall chunk accuracy (aggregated): 63.30%
-- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-all-4class-smallerAll-weighted-sampler`
-
-### all3-018-all-4class-smallerAllAttn-weighted-sampler
-
-- Model: SmallerAllAttn (self-attention replacing LSTM), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
-- Chunk accuracy: 64.76% ± 8.05% | Subject accuracy: 66.09% ± 8.23%
-- Chunk recall: Healthy 60.36%, Anxiety 45.98%, Depression 85.04%, Comorbid 70.34%
-- Per-dataset chunk accuracy: CANE 46.42%, MDD 86.48%, SAD 62.26%
-- Overall chunk accuracy (aggregated): 64.72%
-- Attention slightly improves overall accuracy (+1.3pp chunk, +1.5pp subject) and Comorbid recall, but hurts Anxiety recall vs LSTM baseline
-- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllAttn   --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-all-4class-smallerAllAttn-weighted-sampler`
-
-### all3-018-inear-binary-smaller-weighted-sampler
-
-- Model: Smaller (LSTM), binary, in-ear, ec+eo, 10-fold, weighted sampler
-- Chunk accuracy: 77.44% ± 4.64% | Subject accuracy: 75.87% ± 6.78%
-- Chunk sensitivity: 88.87% ± 7.11% | Chunk specificity: 61.96% ± 8.59%
-- Per-dataset chunk accuracy: CANE 70.30%, MDD 86.50%, SAD 66.15%
-- Overall chunk accuracy (aggregated): 77.49%
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-inear-binary-smaller-weighted-sampler`
-
-### all3-018-inear-binary-smallerAttn
-
-- Model: SmallerAttn (self-attention replacing LSTM), binary, in-ear, ec+eo, 10-fold
-- Chunk accuracy: 78.26% ± 4.92% | Subject accuracy: 77.39% ± 7.05%
-- Chunk sensitivity: 89.41% ± 7.02% | Chunk specificity: 63.11% ± 8.76%
-- Per-dataset chunk accuracy: CANE 70.73%, MDD 88.16%, SAD 65.79%
-- Overall chunk accuracy (aggregated): 78.39%
-- Attention marginally outperforms LSTM (+0.82pp chunk, +1.52pp subject), consistent with 4-class findings
-- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-inear-binary-smallerAttn`
-
-### all3-024-inear-binary-smallerAttn-focal
-
-- Model: SmallerAttn, binary, in-ear (IDUN+MDD+AX_MALIK), ec+eo, **6-fold**, focal loss, lr=1e-3, dropout=0.3, weight_decay=1e-3
-- Chunk accuracy: 76.66% ± 2.36% | Subject accuracy: 76.61% ± 5.78%
-- Chunk sensitivity: 86.91% ± 6.63% | Chunk specificity: 62.71% ± 10.22%
-- Per-dataset chunk accuracy: CANE/IDUN 69.29%, MDD 88.84%, SAD 59.59%
-- Train acc at best val: 73.87% ± 5.80%  — train/val close, suggesting LR=1e-3 + WD=1e-3 is too aggressive for exploration
-- Best epochs: fold 1=44, folds 2/4=9/16, folds 3/5/6=1/2/1 — model dies in 3 of 6 folds within first 2 epochs
-- vs 019 (best: 77.76%, lr=1e-4, wd=1e-4): −1.10pp chunk. Higher LR does not help; SAD accuracy collapsed (59.6% vs 62.6%)
-- **Conclusion**: lr=1e-3 with wd=1e-3 is too aggressive for SmallerAttn; 019 remains best in-ear config
-- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel in-ear --batch-size 64 --dataset all --model SmallerAttn --condition ec+eo --n-folds 6 --dropout 0.3 --weight-decay 1e-3 --lr 0.001 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-024-inear-binary-smallerAttn-focal`
-
-### all3-024-all-2class-V4-weighted-sampler
-
-- Model: AllTransformerV4 ((channel×time) token Transformer), binary, 8-channel, ec+eo, **6-fold**, lr=1e-4, dropout=0.1, wd=1e-4
-- Chunk accuracy: 76.53% ± 2.48% | Subject accuracy: 74.27% ± 3.00%
-- Chunk sensitivity: 87.22% ± 7.80% | Chunk specificity: 59.53% ± 10.55%
-- Per-dataset chunk accuracy: CANE 70.78%, MDD 87.27%, SAD 63.67%
-- Train acc at best val: 73.77% ± 10.51% — high variance fold-to-fold (range 55-88%)
-- Best epochs: very inconsistent (1, 10, 42, 45, 2, 12) — fold 3 stops at epoch 1, fold 4 at epoch 45; architecture is sensitive to fold composition
-- vs SmallerAllV2Attn 020 (79.10%): −2.57pp. V4 (token transformer) underperforms the CNN+LSTM baseline; likely under-regularized
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model AllTransformerV4 --condition ec+eo --n-folds 6 --dropout 0.1 --class-mode 2 --lr 1e-4 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-024-all-2class-V4-weighted-sampler`
-
-### all3-024-all-2class-V4-5sec
-
-- Model: AllTransformerV4, binary, 8-channel, ec+eo, **6-fold**, lr=1e-4, dropout=0.1, wd=1e-4, `--chunk-duration 5`
-- **Note: `--chunk-duration 5` has no effect on AllTransformerV4** — it is a spectrogram model (not in RAW_EEG_MODELS), so it always uses 10-second chunks. Chunk counts identical to standard 10s runs.
-- Chunk accuracy: 76.84% ± 2.88% | Subject accuracy: 74.37% ± 4.86%
-- Chunk sensitivity: 89.53% ± 7.10% | Chunk specificity: 56.78% ± 8.71%
-- Per-dataset chunk accuracy: CANE 72.98%, MDD 87.77%, SAD 56.97%
-- Train acc at best val: 75.61% ± 3.29% — unusually consistent vs previous V4 run
-- Best epochs: moderate (3–24), slightly more stable than V4-weighted-sampler
-- vs V4-weighted-sampler (same architecture): +0.31pp. Effectively a replicate with slightly different RNG state; difference within noise
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model AllTransformerV4 --condition ec+eo --n-folds 6 --dropout 0.1 --class-mode 2 --lr 1e-4 --weight-decay 1e-4 --val-every 1 --epochs 200 --chunk-duration 5 --checkpoint-dir=experiments/all3-024-all-2class-V4-5sec`
-
-### all3-024-all-2class-V4-LR
-
-- Model: AllTransformerV4, binary, 8-channel, ec+eo, **6-fold**, lr=5e-4, dropout=0.1, wd=1e-4, `--chunk-duration 5` (no effect)
-- Chunk accuracy: 77.58% ± 3.41% | Subject accuracy: 77.54% ± 6.69%
-- Chunk sensitivity: 87.92% ± 4.58% | Chunk specificity: 61.50% ± 7.10%
-- Per-dataset chunk accuracy: CANE 72.93%, MDD 88.35%, SAD 61.38%
-- Train acc at best val: 82.12% ± 14.21% — **very high variance** (range 62-98%); folds 3/4/5 heavily overfit (train 95-98%)
-- Best epochs: highly bimodal — folds 1/2/6 stop at epoch 1/1/2 (diverge immediately); folds 3/4/5 run 22-47 epochs
-- vs V4 lr=1e-4 (024-V4-weighted-sampler): +1.05pp chunk, +3.27pp subject. Higher LR helps on average but adds instability
-- Loss curves: dramatic fold-to-fold variance; LR=5e-4 is on the edge of stability for V4
-- **Best V4 result so far** but high fold variance makes it unreliable
-- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model AllTransformerV4 --condition ec+eo --n-folds 6 --dropout 0.1 --class-mode 2 --lr 5e-4 --weight-decay 1e-4 --val-every 1 --epochs 200 --chunk-duration 5 --checkpoint-dir=experiments/all3-024-all-2class-V4-LR`
-
-### all3-023-all-2class-Deformer-weighted-sampler
-
-- Model: Deformer (full, ~5.4M params, 21MB checkpoints), binary, 8-channel, ec+eo, **10-fold**, lr=1e-4, dropout=0.1
-- No results.txt generated (training likely completed without writing summary)
-- Per-fold best chunk acc from log: fold 1≈0.77, fold 2≈0.76, fold 3≈0.77, fold 4≈0.66, fold 5≈0.75, fold 6≈0.73, fold 7≈0.73, fold 8=0.77, fold 9=0.65, fold 10=0.80 → estimated mean ~74%
-- Massive overfitting: train acc reaches 97-99% by epoch 3-5; best val occurs at epoch 2-18 then degrades sharply
-- Val loss spiky and increasing from epoch 5+; model memorizes training set almost immediately
-- Pattern: 10-fold folds with fewer pathological samples (fold 4, 9) collapse to ~65%; lucky folds reach ~80%
-- **Conclusion**: Full Deformer is far too large for this dataset (~330 subjects). Not competitive with SmallerAllV2Attn/V3 despite more parameters.
-
-### all3-023-all-2class-Deformer-weighted-sampler-50-dropout
-
-- Model: Deformer (full), binary, 8-channel, ec+eo, 6-fold, lr=1e-4, dropout=0.5, wd=1e-4
-- Chunk accuracy: 63.83% ± 9.86% | Subject accuracy: 64.91% ± 7.93%
-- Chunk sensitivity: 57.37% ± 31.28% | Chunk specificity: 71.07% ± 23.65%
-- Per-dataset chunk accuracy: CANE 56.01%, MDD 78.53%, SAD 51.68%
-- Train acc at best val: 93.29% ± 4.76% — dropout=0.5 reduces overfitting slightly but not enough
-- High sensitivity variance (±31%) indicates model is threshold-unstable across folds
-- vs d=0.1 (10-fold estimated ~74%): much worse. Excessive dropout hurts Deformer substantially.
-
-### all3-023-all-2class-DeformerS-weighted-sampler-30drop
-
-- Model: DeformerS (~588K params), binary, 8-channel, ec+eo, 6-fold, lr=1e-4, dropout=0.3, wd=1e-4
-- Chunk accuracy: 64.85% ± 8.27% | Subject accuracy: 65.10% ± 8.78%
-- Chunk sensitivity: 66.87% ± 24.36% | Chunk specificity: 63.15% ± 17.13%
-- Per-dataset chunk accuracy: CANE 56.68%, MDD 75.21%, SAD 60.32%
-- Train acc at best val: 96.21% ± 2.65% — **extreme overfitting** despite being smaller model
-- Best epochs: wildly variable (6, 6, 93, 9, 8, 8) — fold 3 runs to epoch 93 suggesting lucky initialization
-- DeformerS at standard lr=1e-4 fails dramatically; raw-EEG approach needs fundamentally different regularization
-
-### all3-023-all-2class-DeformerS-weighted-sampler-50drop
-
-- Model: DeformerS, binary, 8-channel, ec+eo, 6-fold, lr=1e-4, dropout=0.5, wd=1e-4
-- Chunk accuracy: 60.78% ± 13.43% | Subject accuracy: 62.10% ± 14.38%
-- Chunk sensitivity: 55.63% ± 34.53% | Chunk specificity: 71.25% ± 25.96%
-- Train acc at best val: 89.69% ± 12.16% — still massively overfit even with heavy dropout
-- Two folds completely fail (chunk ≈ 39-46%) — model collapses to majority-class prediction
-- **Conclusion**: DeformerS cannot be fixed with dropout alone at standard LR. Architecture doesn't regularize well on ~8000 training chunks.
-
-### all3-024-all-2class-DeformerS-head
-
-- Model: DeformerS with modified head (likely different classifier layers), binary, 8-channel, ec+eo, **6-fold**, lr=1e-3, dropout=0.5, wd=1e-3
-- Chunk accuracy: 75.71% ± 4.30% | Subject accuracy: 74.13% ± 7.91%
-- Chunk sensitivity: 85.79% ± 6.29% | Chunk specificity: 59.59% ± 14.57%
-- Per-dataset chunk accuracy: CANE 69.95%, MDD 87.58%, SAD 58.17%
-- Train acc at best val: 91.35% ± 6.19% — still overfit but at higher LR the model finds usable solutions faster
-- Best epochs: early (1-5 for 4 folds, 19 and 30 for 2 folds) — aggressive LR+WD pushes early convergence
-- vs DeformerS-30drop (lr=1e-4): **+10.86pp chunk** — dramatically better. The key was lr=1e-3 not the head modification.
-- vs SmallerAllV2Attn best (79.10%): −3.39pp. DeformerS still trails CNN-LSTM baselines.
-- SAD still at 58%, same bottleneck as all other models
-
-### all3-022-all-binary-smallerAllV3-focal
-
-- Model: SmallerAllV3 (4b, concat) — **first run of the concat architecture**; 021 turned out to use the old 3a design
-- Config: binary, 8-channel, ec+eo, 10-fold, focal loss (gamma=2.0), dropout=0.1, rnn_hidden=100, chan_d_model=128
-- Chunk accuracy: 78.56% ± 3.54% | Subject accuracy: 79.39% ± 6.35%
-- Chunk sensitivity: 86.68% ± 6.10% | Chunk specificity: 66.56% ± 9.59% | Balanced acc: 76.62%
-- Per-dataset chunk accuracy: CANE 72.19%, MDD 89.62%, SAD 66.49%
-- vs 021 (3a design): −0.28pp chunk, within noise. Different architecture so not a clean comparison.
-- Loss curves: epoch-1/2 best in ~3 folds, train/val divergence from epoch 3+. Overfitting pattern consistent with 021 despite different architecture.
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec+eo --n-folds 10 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-022-all-binary-smallerAllV3-focal`
-
-### all3-021-all-binary-smallerAllV3-focal_hsf
-
-- Model: SmallerAllV3 (3a design — rnn_hidden=330, chan_d_model=128) — V3 with oversized LSTM
-- Config: binary, 8-channel, EC only (4217 chunks vs 8444 for ec+eo), focal loss, dropout=0.2
-- Chunk accuracy: 78.68% ± 4.98% | Subject accuracy: 79.24% ± 8.41%
-- Chunk sensitivity: 85.15% ± 8.56% | Chunk specificity: 68.62% ± 13.35% | Balanced acc: 76.89%
-- Note: trained on EC condition only (half the data). High variance in subject accuracy (±8.4%) reflects smaller val sets per fold.
-- vs 021 (V3 3b, ec+eo): nearly identical despite 3a design and half the data. Confirms the concat approach (3b) offers no systematic advantage once overfitting dominates both.
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec --n-folds 10 --dropout 0.2 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal_hsf`
-
-### all3-021-all-binary-smallerAllV3-focal
-
-- Model: SmallerAllV3 (4a, per-frame attention) — confirmed via `nhead=8, rnn_hidden=330` in training log
-- Config: binary, 8-channel, ec+eo, 10-fold, focal loss (gamma=2.0), dropout=0.1, rnn_hidden=330, chan_d_model=128
-- Chunk accuracy: 78.84% ± 6.39% | Subject accuracy: 80.22% ± 6.94%
-- Chunk sensitivity: 83.74% ± 11.02% | Chunk specificity: 70.18% ± 13.38% | Balanced acc: 76.96%
-- Per-dataset chunk accuracy: CANE 72.21%, MDD 88.47%, SAD 73.02%
-- Best balanced accuracy of all experiments (76.96%). SAD accuracy improved significantly vs 020 (+4.94pp).
-- Loss curves: epoch-1/2 best in folds 1, 5, 10. Val loss spiky throughout. Train loss decreasing steadily. Classic overfitting from oversized chan_proj layer (~885K params of ~1M total).
-- Key takeaway: V3 4a (per-frame attention) matches V2Attn in accuracy. The 4b concat design was not tested until 022.
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec+eo --n-folds 10 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal`
-
-### all3-020-all-binary-smallerAllV2Attn-focal-d3
-
-- Model: SmallerAllV2Attn, binary, 8-channel, ec+eo, 10-fold, focal loss, dropout=0.3
-- Incomplete run — no results.txt. Abandoned (higher dropout found not to help for V2Attn).
-
-### all3-020-inear-binary-smallerAttn-focal-d3
-
-- Model: SmallerAttn, binary, in-ear, ec+eo, 10-fold, focal loss, dropout=0.3
-- Chunk accuracy: 77.30% ± 5.29% | Subject accuracy: 76.77% ± 5.94%
-- Chunk sensitivity: 84.84% ± 9.51% | Chunk specificity: 66.54% ± 14.60%
-- vs 019 (dropout=0.1): +0.54pp chunk, nearly identical. Dropout d=0.3 does not help SmallerAttn.
-
-### all3-020-inear-binary-smallerAttn-focal-d5
-
-- Model: SmallerAttn, binary, in-ear, ec+eo, 10-fold, focal loss, dropout=0.5 (typo: d5 = 0.5)
-- Chunk accuracy: 76.32% ± 5.81% | Subject accuracy: 73.86% ± 6.93%
-- Chunk sensitivity: 85.76% ± 9.58% | Chunk specificity: 64.00% ± 10.44%
-- vs 019: −1.44pp chunk, −4.88pp subject. Too much dropout hurts SmallerAttn.
-
-### all3-014b-all-binary-smallerall
-
-- Loss curve visualization doesn't work after switch to JSON logs
-- Problem AX_MALIK missing healthy classes drives accuracy through the roof, also the specificity is still low
-- Command: `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-binary-smallerall`
-
-
-### all3-014b-all-4class-smallerall
-
-- The confusion matrix doesn't make sense, there's definitely more depression samples, why is that???
-  - but MDD shows good performance, probably in anxiety+depression I'd be looking for a problem
-- AX_MALIK 100% accuracy, CANE absolutely shitty
-- Command `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-4class-smallerall --class-mode=4`
-
-### all3-026-all-binary-lggnet
-
-- Model: LGGNet (~1.17M params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
-- Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, batch=64
-- **Result: complete failure — loss=NaN every epoch, sensitivity=0%, specificity=100% all folds**
-- Root cause 1: **Aggregator `_get_idx` bug** — returned `idx_[1:]` = `[3,6,8]` (end indices) but
-  loop used them as start indices, so the Left hemisphere region (channels 0-2) was never aggregated,
-  and the last slice `x[:, 8:, :]` was an empty tensor. Mean of empty tensor → NaN → propagates
-  to all subsequent ops and loss.
-- Root cause 2: **PowerLayer `log(0)` instability** — `torch.log(avg_pool(x²))` without a clamp
-  produces `-inf` for near-zero power windows (common after bandpass/notch filtering in CANE data).
-- Fix applied (2026-04-21): `thesis/lggnet.py` updated — `_get_idx` corrected to return start
-  indices `[0, 3, 6]` and `forward` rewrites to use `x.narrow()`; PowerLayer adds `.clamp(min=1e-6)`.
-- Re-run as all3-027-all-binary-lggnet with fixed code.
-- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-026-all-binary-lggnet`
-
-### all3-026-all-binary-lggnet-s
-
-- Model: LGGNetS (~585K params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
-- **Result: identical failure to all3-026-all-binary-lggnet** — same NaN loss pattern, same bugs
-- Exact same per-fold accuracies as LGGNet (39.21% chunk, 40.61% subject, all predict healthy):
-  both models fail before learning anything, so num_T 64 vs 32 makes no observable difference
-- Fix applied: same as all3-026-all-binary-lggnet.
-- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNetS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-026-all-binary-lggnet-s`
+---
 
 ### LGGNet experiments (027 series) — planned
 
@@ -381,20 +105,23 @@ overfit, so dropout=0.5 matches the paper's regularization strategy.
   the architecture for class-specific connectivity patterns.
 - Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --class-mode 4 --focal-loss --checkpoint-dir=experiments/all3-027-all-4class-lggnet-focal`
 
-### all3-026-all-binary-tsception
+### all3-026-all-binary-tsceptions-ch4_rpr
 
-- Model: TSception (~1.05M params, hidden=128), binary, 8-channel, ec+eo, **6-fold**, paper-exact hyperparams
-- Hyperparams: lr=1e-3, dropout=0.3, wd=0, l1-lambda=1e-6, batch=128, epochs=200
-- Chunk accuracy: 68.84% ± 5.65% | Subject accuracy: 71.00% ± 9.11%
-- Chunk sensitivity: 77.82% ± 7.77% | Chunk specificity: 55.01% ± 4.67%
-- Per-dataset chunk accuracy: CANE 59.70%, MDD 82.08%, SAD 60.93%
-- **CANE specificity: 23.79%** — model predicts nearly all healthy CANE subjects as pathological
-- Train acc at best val: 99.13% ± 1.32% — catastrophic overfitting, ~30pp gap with val
-- Root cause: **99.7% of model parameters are in the FC layer** (8172×128 = 1,046,016 of 1,049,081 total).
-  Original paper used 4ch × 1024-sample inputs → FC input ~3200. Our 8ch × 2500-sample input grows it to 8172
-  (2.5×), making the FC layer the entire model rather than a classifier on learned features
-- vs SmallerAllV2Attn (79.10%): −10.26pp. FC-dominated architecture cannot generalise
-- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception`
+- Model: TSceptionS (~102 K params with 4s input), binary, 8-channel, ec+eo, **10-fold**
+- Hyperparams: identical to all3-026-all-binary-tsception-s, except `--chunk-duration 4` and `--n-folds 10`
+- Chunk accuracy: 71.52% ± 4.35% | Subject accuracy: 72.61% ± 8.00%
+- Chunk sensitivity: 77.88% ± 5.95% | Chunk specificity: 61.30% ± 9.42%
+- Per-dataset chunk accuracy: CANE 62.75%, MDD 84.72%, SAD 61.91%
+- Train acc at best val: 95.50% ± 6.73% — overfit gap reduced to ~24pp (from ~27pp at 10s)
+- **Purpose:** closest-to-paper baseline. The original TSception paper split DEAP trials into 4s segments
+  downsampled to 128 Hz (512 samples). This run uses 4s × 250 Hz = **1000 samples** — not resampled, but
+  comparable to the paper's second dataset (MAHNOB-HCI, 256 Hz). FC input shrinks from 8172 → 3114 features,
+  model from ~264 K → ~102 K params.
+- **Result: marginal improvement.** +0.7pp chunk vs 10s TSceptionS; overfit gap 24pp vs 27pp. Cutting the
+  flat feature 2.6× moved the needle only 0.7pp — the architecture plateaus regardless of input length.
+  CANE specificity remains at ~30%, confirming this is a task-fit problem, not an input-size problem.
+- vs SmallerAllV2Attn (79.10%): −7.6pp. Conclusion: TSception does not transfer competitively to this task.
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --chunk-duration 4 --checkpoint-dir=experiments/all3-026-all-binary-tsceptions-ch4_rpr`
 
 ### all3-026-all-binary-tsception-s
 
@@ -411,7 +138,47 @@ overfit, so dropout=0.5 matches the paper's regularization strategy.
 - vs SmallerAllV2Attn (79.10%): −8.30pp. Better than TSception but still well below CNN-LSTM baseline
 - Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception-s`
 
-### TSception experiments (026 series) — planned
+### all3-026-all-binary-tsception
+
+- Model: TSception (~1.05M params, hidden=128), binary, 8-channel, ec+eo, **6-fold**, paper-exact hyperparams
+- Hyperparams: lr=1e-3, dropout=0.3, wd=0, l1-lambda=1e-6, batch=128, epochs=200
+- Chunk accuracy: 68.84% ± 5.65% | Subject accuracy: 71.00% ± 9.11%
+- Chunk sensitivity: 77.82% ± 7.77% | Chunk specificity: 55.01% ± 4.67%
+- Per-dataset chunk accuracy: CANE 59.70%, MDD 82.08%, SAD 60.93%
+- **CANE specificity: 23.79%** — model predicts nearly all healthy CANE subjects as pathological
+- Train acc at best val: 99.13% ± 1.32% — catastrophic overfitting, ~30pp gap with val
+- Root cause: **99.7% of model parameters are in the FC layer** (8172×128 = 1,046,016 of 1,049,081 total).
+  Original paper used 4ch × 1024-sample inputs → FC input ~3200. Our 8ch × 2500-sample input grows it to 8172
+  (2.5×), making the FC layer the entire model rather than a classifier on learned features
+- vs SmallerAllV2Attn (79.10%): −10.26pp. FC-dominated architecture cannot generalise
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception`
+
+### all3-026-all-binary-lggnet-s
+
+- Model: LGGNetS (~585K params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
+- **Result: identical failure to all3-026-all-binary-lggnet** — same NaN loss pattern, same bugs
+- Exact same per-fold accuracies as LGGNet (39.21% chunk, 40.61% subject, all predict healthy):
+  both models fail before learning anything, so num_T 64 vs 32 makes no observable difference
+- Fix applied: same as all3-026-all-binary-lggnet.
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNetS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-026-all-binary-lggnet-s`
+
+### all3-026-all-binary-lggnet
+
+- Model: LGGNet (~1.17M params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
+- Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, batch=64
+- **Result: complete failure — loss=NaN every epoch, sensitivity=0%, specificity=100% all folds**
+- Root cause 1: **Aggregator `_get_idx` bug** — returned `idx_[1:]` = `[3,6,8]` (end indices) but
+  loop used them as start indices, so the Left hemisphere region (channels 0-2) was never aggregated,
+  and the last slice `x[:, 8:, :]` was an empty tensor. Mean of empty tensor → NaN → propagates
+  to all subsequent ops and loss.
+- Root cause 2: **PowerLayer `log(0)` instability** — `torch.log(avg_pool(x²))` without a clamp
+  produces `-inf` for near-zero power windows (common after bandpass/notch filtering in CANE data).
+- Fix applied (2026-04-21): `thesis/lggnet.py` updated — `_get_idx` corrected to return start
+  indices `[0, 3, 6]` and `forward` rewrites to use `x.narrow()`; PowerLayer adds `.clamp(min=1e-6)`.
+- Re-run as all3-027-all-binary-lggnet with fixed code.
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-026-all-binary-lggnet`
+
+### TSception experiments (026 series) — planned (remaining)
 
 TSception (IEEE Trans. Affective Computing 2022) introduces multi-scale temporal inception
 convolutions (kernels at 0.5/0.25/0.125 × fs) concatenated along the time axis, followed by
@@ -430,27 +197,8 @@ the paper; larger batches may help the flat FC head converge. The raw-EEG models
 lr=1e-4 (DeformerS) recovered at lr=1e-3, consistent with the paper's choice.
 
 **Key questions:**
-1. Can TSception's inception+spatial design match CNN-LSTM baselines (V2Attn 79.10%, V3+FL 78.84%)?
-2. Does TSceptionS (264K) match SmallerAll (283K) — similar capacity, very different inductive bias?
-3. Does focal loss improve specificity for TSception as it did for all CNN-LSTM models?
-4. Can TSception handle 4-class beyond the ~66% CNN-LSTM plateau?
-
-#### all3-026-all-binary-tsception
-
-- Model: TSception (~1.05M params), binary, 8-channel, hemisphere, ec+eo, **6-fold**
-- Hyperparams: lr=1e-3, dropout=0.3, wd=0, l1-lambda=1e-6, batch=128, epochs=200 (paper defaults)
-- Purpose: core baseline — exact paper hyperparameters applied to the 3-dataset setup; establishes
-  whether TSception's flat inception head competes with SmallerAllV2Attn (79.10%)
-- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception`
-
-#### all3-026-all-binary-tsception-s
-
-- Model: TSceptionS (~264K params, hidden=32), binary, 8-channel, ec+eo, **6-fold**
-- Hyperparams: identical to all3-026-all-binary-tsception
-- Purpose: size ablation — paper's own recommendation for "other datasets". Direct size match to
-  SmallerAll (283K, 8-fold best ~76.83%); tests whether the temporal inception bias outperforms
-  Conv3D at equal parameter budget
-- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception-s`
+1. Does focal loss improve specificity for TSception as it did for all CNN-LSTM models?
+2. Can TSception handle 4-class beyond the ~66% CNN-LSTM plateau?
 
 #### all3-026-all-binary-tsception-focal
 
@@ -480,39 +228,245 @@ lr=1e-4 (DeformerS) recovered at lr=1e-3, consistent with the paper's choice.
   Prior 4-class best is V2Attn at 65.91%; comorbid class recall is the main bottleneck
 - Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --focal-loss --class-mode 4 --checkpoint-dir=experiments/all3-026-all-4class-tsception-focal`
 
+### all3-024-all-2class-DeformerS-head
+
+- Model: DeformerS with modified head (likely different classifier layers), binary, 8-channel, ec+eo, **6-fold**, lr=1e-3, dropout=0.5, wd=1e-3
+- Chunk accuracy: 75.71% ± 4.30% | Subject accuracy: 74.13% ± 7.91%
+- Chunk sensitivity: 85.79% ± 6.29% | Chunk specificity: 59.59% ± 14.57%
+- Per-dataset chunk accuracy: CANE 69.95%, MDD 87.58%, SAD 58.17%
+- Train acc at best val: 91.35% ± 6.19% — still overfit but at higher LR the model finds usable solutions faster
+- Best epochs: early (1-5 for 4 folds, 19 and 30 for 2 folds) — aggressive LR+WD pushes early convergence
+- vs DeformerS-30drop (lr=1e-4): **+10.86pp chunk** — dramatically better. The key was lr=1e-3 not the head modification.
+- vs SmallerAllV2Attn best (79.10%): −3.39pp. DeformerS still trails CNN-LSTM baselines.
+- SAD still at 58%, same bottleneck as all other models
+
+### all3-024-all-2class-V4-LR
+
+- Model: AllTransformerV4, binary, 8-channel, ec+eo, **6-fold**, lr=5e-4, dropout=0.1, wd=1e-4, `--chunk-duration 5` (no effect)
+- Chunk accuracy: 77.58% ± 3.41% | Subject accuracy: 77.54% ± 6.69%
+- Chunk sensitivity: 87.92% ± 4.58% | Chunk specificity: 61.50% ± 7.10%
+- Per-dataset chunk accuracy: CANE 72.93%, MDD 88.35%, SAD 61.38%
+- Train acc at best val: 82.12% ± 14.21% — **very high variance** (range 62-98%); folds 3/4/5 heavily overfit (train 95-98%)
+- Best epochs: highly bimodal — folds 1/2/6 stop at epoch 1/1/2 (diverge immediately); folds 3/4/5 run 22-47 epochs
+- vs V4 lr=1e-4 (024-V4-weighted-sampler): +1.05pp chunk, +3.27pp subject. Higher LR helps on average but adds instability
+- Loss curves: dramatic fold-to-fold variance; LR=5e-4 is on the edge of stability for V4
+- **Best V4 result so far** but high fold variance makes it unreliable
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model AllTransformerV4 --condition ec+eo --n-folds 6 --dropout 0.1 --class-mode 2 --lr 5e-4 --weight-decay 1e-4 --val-every 1 --epochs 200 --chunk-duration 5 --checkpoint-dir=experiments/all3-024-all-2class-V4-LR`
+
+### all3-024-all-2class-V4-5sec
+
+- Model: AllTransformerV4, binary, 8-channel, ec+eo, **6-fold**, lr=1e-4, dropout=0.1, wd=1e-4, `--chunk-duration 5`
+- **Note: `--chunk-duration 5` has no effect on AllTransformerV4** — it is a spectrogram model (not in RAW_EEG_MODELS), so it always uses 10-second chunks. Chunk counts identical to standard 10s runs.
+- Chunk accuracy: 76.84% ± 2.88% | Subject accuracy: 74.37% ± 4.86%
+- Chunk sensitivity: 89.53% ± 7.10% | Chunk specificity: 56.78% ± 8.71%
+- Per-dataset chunk accuracy: CANE 72.98%, MDD 87.77%, SAD 56.97%
+- Train acc at best val: 75.61% ± 3.29% — unusually consistent vs previous V4 run
+- Best epochs: moderate (3–24), slightly more stable than V4-weighted-sampler
+- vs V4-weighted-sampler (same architecture): +0.31pp. Effectively a replicate with slightly different RNG state; difference within noise
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model AllTransformerV4 --condition ec+eo --n-folds 6 --dropout 0.1 --class-mode 2 --lr 1e-4 --weight-decay 1e-4 --val-every 1 --epochs 200 --chunk-duration 5 --checkpoint-dir=experiments/all3-024-all-2class-V4-5sec`
+
+### all3-024-all-2class-V4-weighted-sampler
+
+- Model: AllTransformerV4 ((channel×time) token Transformer), binary, 8-channel, ec+eo, **6-fold**, lr=1e-4, dropout=0.1, wd=1e-4
+- Chunk accuracy: 76.53% ± 2.48% | Subject accuracy: 74.27% ± 3.00%
+- Chunk sensitivity: 87.22% ± 7.80% | Chunk specificity: 59.53% ± 10.55%
+- Per-dataset chunk accuracy: CANE 70.78%, MDD 87.27%, SAD 63.67%
+- Train acc at best val: 73.77% ± 10.51% — high variance fold-to-fold (range 55-88%)
+- Best epochs: very inconsistent (1, 10, 42, 45, 2, 12) — fold 3 stops at epoch 1, fold 4 at epoch 45; architecture is sensitive to fold composition
+- vs SmallerAllV2Attn 020 (79.10%): −2.57pp. V4 (token transformer) underperforms the CNN+LSTM baseline; likely under-regularized
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model AllTransformerV4 --condition ec+eo --n-folds 6 --dropout 0.1 --class-mode 2 --lr 1e-4 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-024-all-2class-V4-weighted-sampler`
+
+### all3-024-inear-binary-smallerAttn-focal
+
+- Model: SmallerAttn, binary, in-ear (IDUN+MDD+AX_MALIK), ec+eo, **6-fold**, focal loss, lr=1e-3, dropout=0.3, weight_decay=1e-3
+- Chunk accuracy: 76.66% ± 2.36% | Subject accuracy: 76.61% ± 5.78%
+- Chunk sensitivity: 86.91% ± 6.63% | Chunk specificity: 62.71% ± 10.22%
+- Per-dataset chunk accuracy: CANE/IDUN 69.29%, MDD 88.84%, SAD 59.59%
+- Train acc at best val: 73.87% ± 5.80%  — train/val close, suggesting LR=1e-3 + WD=1e-3 is too aggressive for exploration
+- Best epochs: fold 1=44, folds 2/4=9/16, folds 3/5/6=1/2/1 — model dies in 3 of 6 folds within first 2 epochs
+- vs 019 (best: 77.76%, lr=1e-4, wd=1e-4): −1.10pp chunk. Higher LR does not help; SAD accuracy collapsed (59.6% vs 62.6%)
+- **Conclusion**: lr=1e-3 with wd=1e-3 is too aggressive for SmallerAttn; 019 remains best in-ear config
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel in-ear --batch-size 64 --dataset all --model SmallerAttn --condition ec+eo --n-folds 6 --dropout 0.3 --weight-decay 1e-3 --lr 0.001 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-024-inear-binary-smallerAttn-focal`
+
+### all3-023-all-2class-DeformerS-weighted-sampler-50drop
+
+- Model: DeformerS, binary, 8-channel, ec+eo, 6-fold, lr=1e-4, dropout=0.5, wd=1e-4
+- Chunk accuracy: 60.78% ± 13.43% | Subject accuracy: 62.10% ± 14.38%
+- Chunk sensitivity: 55.63% ± 34.53% | Chunk specificity: 71.25% ± 25.96%
+- Train acc at best val: 89.69% ± 12.16% — still massively overfit even with heavy dropout
+- Two folds completely fail (chunk ≈ 39-46%) — model collapses to majority-class prediction
+- **Conclusion**: DeformerS cannot be fixed with dropout alone at standard LR. Architecture doesn't regularize well on ~8000 training chunks.
+
+### all3-023-all-2class-DeformerS-weighted-sampler-30drop
+
+- Model: DeformerS (~588K params), binary, 8-channel, ec+eo, 6-fold, lr=1e-4, dropout=0.3, wd=1e-4
+- Chunk accuracy: 64.85% ± 8.27% | Subject accuracy: 65.10% ± 8.78%
+- Chunk sensitivity: 66.87% ± 24.36% | Chunk specificity: 63.15% ± 17.13%
+- Per-dataset chunk accuracy: CANE 56.68%, MDD 75.21%, SAD 60.32%
+- Train acc at best val: 96.21% ± 2.65% — **extreme overfitting** despite being smaller model
+- Best epochs: wildly variable (6, 6, 93, 9, 8, 8) — fold 3 runs to epoch 93 suggesting lucky initialization
+- DeformerS at standard lr=1e-4 fails dramatically; raw-EEG approach needs fundamentally different regularization
+
+### all3-023-all-2class-Deformer-weighted-sampler-50-dropout
+
+- Model: Deformer (full), binary, 8-channel, ec+eo, 6-fold, lr=1e-4, dropout=0.5, wd=1e-4
+- Chunk accuracy: 63.83% ± 9.86% | Subject accuracy: 64.91% ± 7.93%
+- Chunk sensitivity: 57.37% ± 31.28% | Chunk specificity: 71.07% ± 23.65%
+- Per-dataset chunk accuracy: CANE 56.01%, MDD 78.53%, SAD 51.68%
+- Train acc at best val: 93.29% ± 4.76% — dropout=0.5 reduces overfitting slightly but not enough
+- High sensitivity variance (±31%) indicates model is threshold-unstable across folds
+- vs d=0.1 (10-fold estimated ~74%): much worse. Excessive dropout hurts Deformer substantially.
+
+### all3-023-all-2class-Deformer-weighted-sampler
+
+- Model: Deformer (full, ~5.4M params, 21MB checkpoints), binary, 8-channel, ec+eo, **10-fold**, lr=1e-4, dropout=0.1
+- No results.txt generated (training likely completed without writing summary)
+- Per-fold best chunk acc from log: fold 1≈0.77, fold 2≈0.76, fold 3≈0.77, fold 4≈0.66, fold 5≈0.75, fold 6≈0.73, fold 7≈0.73, fold 8=0.77, fold 9=0.65, fold 10=0.80 → estimated mean ~74%
+- Massive overfitting: train acc reaches 97-99% by epoch 3-5; best val occurs at epoch 2-18 then degrades sharply
+- Val loss spiky and increasing from epoch 5+; model memorizes training set almost immediately
+- Pattern: 10-fold folds with fewer pathological samples (fold 4, 9) collapse to ~65%; lucky folds reach ~80%
+- **Conclusion**: Full Deformer is far too large for this dataset (~330 subjects). Not competitive with SmallerAllV2Attn/V3 despite more parameters.
+
+### all3-022-all-binary-smallerAllV3-focal
+
+- Model: SmallerAllV3 (4b, concat) — **first run of the concat architecture**; 021 turned out to use the old 3a design
+- Config: binary, 8-channel, ec+eo, 10-fold, focal loss (gamma=2.0), dropout=0.1, rnn_hidden=100, chan_d_model=128
+- Chunk accuracy: 78.56% ± 3.54% | Subject accuracy: 79.39% ± 6.35%
+- Chunk sensitivity: 86.68% ± 6.10% | Chunk specificity: 66.56% ± 9.59% | Balanced acc: 76.62%
+- Per-dataset chunk accuracy: CANE 72.19%, MDD 89.62%, SAD 66.49%
+- vs 021 (3a design): −0.28pp chunk, within noise. Different architecture so not a clean comparison.
+- Loss curves: epoch-1/2 best in ~3 folds, train/val divergence from epoch 3+. Overfitting pattern consistent with 021 despite different architecture.
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec+eo --n-folds 10 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-022-all-binary-smallerAllV3-focal`
+
+### all3-021-all-binary-smallerAllV3-focal
+
+- Model: SmallerAllV3 (4a, per-frame attention) — confirmed via `nhead=8, rnn_hidden=330` in training log
+- Config: binary, 8-channel, ec+eo, 10-fold, focal loss (gamma=2.0), dropout=0.1, rnn_hidden=330, chan_d_model=128
+- Chunk accuracy: 78.84% ± 6.39% | Subject accuracy: 80.22% ± 6.94%
+- Chunk sensitivity: 83.74% ± 11.02% | Chunk specificity: 70.18% ± 13.38% | Balanced acc: 76.96%
+- Per-dataset chunk accuracy: CANE 72.21%, MDD 88.47%, SAD 73.02%
+- Best balanced accuracy of all experiments (76.96%). SAD accuracy improved significantly vs 020 (+4.94pp).
+- Loss curves: epoch-1/2 best in folds 1, 5, 10. Val loss spiky throughout. Train loss decreasing steadily. Classic overfitting from oversized chan_proj layer (~885K params of ~1M total).
+- Key takeaway: V3 4a (per-frame attention) matches V2Attn in accuracy. The 4b concat design was not tested until 022.
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec+eo --n-folds 10 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal`
+
+### all3-021-all-binary-smallerAllV3-focal_hsf
+
+- Model: SmallerAllV3 (3a design — rnn_hidden=330, chan_d_model=128) — V3 with oversized LSTM
+- Config: binary, 8-channel, EC only (4217 chunks vs 8444 for ec+eo), focal loss, dropout=0.2
+- Chunk accuracy: 78.68% ± 4.98% | Subject accuracy: 79.24% ± 8.41%
+- Chunk sensitivity: 85.15% ± 8.56% | Chunk specificity: 68.62% ± 13.35% | Balanced acc: 76.89%
+- Note: trained on EC condition only (half the data). High variance in subject accuracy (±8.4%) reflects smaller val sets per fold.
+- vs 021 (V3 3b, ec+eo): nearly identical despite 3a design and half the data. Confirms the concat approach (3b) offers no systematic advantage once overfitting dominates both.
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec --n-folds 10 --dropout 0.2 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal_hsf`
+
+### all3-020-all-binary-smallerAllV2Attn-weighted-sampler
+
+- Model: SmallerAllV2Attn (per-channel shared CNN + cross-channel self-attention + temporal attention), binary, 8-channel, ec+eo, 10-fold, weighted sampler
+- Chunk accuracy: 79.10% ± 4.90% | Subject accuracy: 79.83% ± 5.98%
+- Chunk sensitivity: 89.43% ± 6.78% | Chunk specificity: 63.42% ± 11.22%
+- Per-dataset chunk accuracy: CANE 72.55%, MDD 90.20%, SAD 68.08%
+- vs SmallerAllAttn (018, 8ch binary): no direct baseline but matches in-ear SmallerAttn (78.26% chunk) — 8 channels provide no gain over 1 channel
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-binary-smallerAllV2Attn-weighted-sampler`
+
+### all3-020-all-4class-smallerAllV2Attn-weighted-sampler
+
+- Model: SmallerAllV2Attn (per-channel shared CNN + cross-channel self-attention + temporal attention), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
+- Chunk accuracy: 65.91% ± 6.63% | Subject accuracy: 68.49% ± 6.68%
+- Chunk recall: Healthy 55.87%, Anxiety 42.18%, Depression 90.35%, Comorbid 79.63%
+- Per-dataset chunk accuracy: CANE 46.30%, MDD 86.59%, SAD 69.14%
+- vs SmallerAllAttn (018): +1.15pp chunk, +2.40pp subject — marginal improvement; CANE still at ~46%
+- Architecture: per-channel CNN (shared weights) preserves channel identity longer than Conv3D, but cross-channel attention still provides no measurable gain over single-channel models
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-4class-smallerAllV2Attn-weighted-sampler`
+
+### all3-020-all-binary-smallerAllV2Attn-focal-d3
+
+- Model: SmallerAllV2Attn, binary, 8-channel, ec+eo, 10-fold, focal loss, dropout=0.3
+- Incomplete run — no results.txt. Abandoned (higher dropout found not to help for V2Attn).
+
+### all3-020-inear-binary-smallerAttn-focal-d3
+
+- Model: SmallerAttn, binary, in-ear, ec+eo, 10-fold, focal loss, dropout=0.3
+- Chunk accuracy: 77.30% ± 5.29% | Subject accuracy: 76.77% ± 5.94%
+- Chunk sensitivity: 84.84% ± 9.51% | Chunk specificity: 66.54% ± 14.60%
+- vs 019 (dropout=0.1): +0.54pp chunk, nearly identical. Dropout d=0.3 does not help SmallerAttn.
+
+### all3-020-inear-binary-smallerAttn-focal-d5
+
+- Model: SmallerAttn, binary, in-ear, ec+eo, 10-fold, focal loss, dropout=0.5 (typo: d5 = 0.5)
+- Chunk accuracy: 76.32% ± 5.81% | Subject accuracy: 73.86% ± 6.93%
+- Chunk sensitivity: 85.76% ± 9.58% | Chunk specificity: 64.00% ± 10.44%
+- vs 019: −1.44pp chunk, −4.88pp subject. Too much dropout hurts SmallerAttn.
+
+### all3-019-inear-binary-smallerAttn-focal
+
+- Model: SmallerAttn, binary, in-ear, ec+eo, 10-fold, focal loss (gamma=2.0) + weighted sampler
+- Chunk accuracy: 77.76% ± 4.64% | Subject accuracy: 78.74% ± 7.50%
+- Chunk sensitivity: 84.21% ± 6.97% | Chunk specificity: 68.78% ± 6.26%
+- Per-dataset chunk accuracy: CANE 69.56%, MDD 89.03%, SAD 62.62%
+- vs 018-Attn (no focal): specificity +5.67pp, sensitivity -5.20pp — better balanced, balanced accuracy 76.26% → 76.50%
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1 --focal-loss   --checkpoint-dir=experiments/all3-019-inear-binary-smallerAttn-focal`
+
+### all3-019-inear-4class-smallerAttn-focal
+
+- Model: SmallerAttn, 4-class, in-ear, ec+eo, 10-fold, focal loss (gamma=2.0) + weighted sampler
+- Chunk accuracy: 66.51% ± 7.32% | Subject accuracy: 67.10% ± 9.13%
+- Chunk recall: Healthy 50.39%, Anxiety 60.90%, Depression 89.44%, Comorbid 89.31%
+- Per-dataset chunk accuracy: CANE 42.60%, MDD 85.92%, SAD 62.17%
+- vs 018-Attn (no focal): overall +1.75pp chunk; Anxiety +14.92pp, Comorbid +18.97pp, but Healthy -9.97pp
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1 --focal-loss --class-mode 4  --checkpoint-dir=experiments/all3-019-inear-4class-smallerAttn-focal`
+
+### all3-018-all-4class-smallerAll-weighted-sampler
+
+- Model: SmallerAll (LSTM), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
+- Chunk accuracy: 63.46% ± 9.60% | Subject accuracy: 64.57% ± 11.36%
+- Chunk recall: Healthy 54.64%, Anxiety 57.69%, Depression 86.06%, Comorbid 61.78%
+- Per-dataset chunk accuracy: CANE 44.40%, MDD 84.07%, SAD 65.87%
+- Overall chunk accuracy (aggregated): 63.30%
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-all-4class-smallerAll-weighted-sampler`
+
+### all3-018-all-4class-smallerAllAttn-weighted-sampler
+
+- Model: SmallerAllAttn (self-attention replacing LSTM), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
+- Chunk accuracy: 64.76% ± 8.05% | Subject accuracy: 66.09% ± 8.23%
+- Chunk recall: Healthy 60.36%, Anxiety 45.98%, Depression 85.04%, Comorbid 70.34%
+- Per-dataset chunk accuracy: CANE 46.42%, MDD 86.48%, SAD 62.26%
+- Overall chunk accuracy (aggregated): 64.72%
+- Attention slightly improves overall accuracy (+1.3pp chunk, +1.5pp subject) and Comorbid recall, but hurts Anxiety recall vs LSTM baseline
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllAttn   --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-all-4class-smallerAllAttn-weighted-sampler`
+
+### all3-018-inear-binary-smaller-weighted-sampler
+
+- Model: Smaller (LSTM), binary, in-ear, ec+eo, 10-fold, weighted sampler
+- Chunk accuracy: 77.44% ± 4.64% | Subject accuracy: 75.87% ± 6.78%
+- Chunk sensitivity: 88.87% ± 7.11% | Chunk specificity: 61.96% ± 8.59%
+- Per-dataset chunk accuracy: CANE 70.30%, MDD 86.50%, SAD 66.15%
+- Overall chunk accuracy (aggregated): 77.49%
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-inear-binary-smaller-weighted-sampler`
+
+### all3-018-inear-binary-smallerAttn
+
+- Model: SmallerAttn (self-attention replacing LSTM), binary, in-ear, ec+eo, 10-fold
+- Chunk accuracy: 78.26% ± 4.92% | Subject accuracy: 77.39% ± 7.05%
+- Chunk sensitivity: 89.41% ± 7.02% | Chunk specificity: 63.11% ± 8.76%
+- Per-dataset chunk accuracy: CANE 70.73%, MDD 88.16%, SAD 65.79%
+- Overall chunk accuracy (aggregated): 78.39%
+- Attention marginally outperforms LSTM (+0.82pp chunk, +1.52pp subject), consistent with 4-class findings
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model SmallerAttn   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-inear-binary-smallerAttn`
+
+### all3-014b-all-binary-smallerall
+
+- Loss curve visualization doesn't work after switch to JSON logs
+- Problem AX_MALIK missing healthy classes drives accuracy through the roof, also the specificity is still low
+- Command: `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-binary-smallerall`
+
+### all3-014b-all-4class-smallerall
+
+- The confusion matrix doesn't make sense, there's definitely more depression samples, why is that???
+  - but MDD shows good performance, probably in anxiety+depression I'd be looking for a problem
+- AX_MALIK 100% accuracy, CANE absolutely shitty
+- Command: `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-4class-smallerall --class-mode=4`
+
 ### all3-014b-inear-binary-smaller
 
 - Command: `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014-inear-binary-smaller`
-
----
-
-```bash
-python main.py train --skip-ica --channel all --batch-size 64 --dataset both --model SmallerAll --condition ec+eo --n-folds 6 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/both-testing01
-```
-
-
-```bash
-systemd-run --user --scope -p CPUQuota=200% python main.py train \
-  --channel all \
-  --batch-size 64 \
-  --dataset all \
-  --model SmallerAll \
-  --condition ec+eo \
-  --n-folds 6 \
-  --dropout 0.1 \
-  --weight-decay 1e-4 \
-  --val-every 1 \
-  --checkpoint-dir=experiments/both-013-all-binary-smallerall
-Running as unit: run-p10425-i10426.scope; invocation ID: 7a584f01f90e408e9ba659cffdae14c6
-[2026-02-01 09:16:22,693 WARNING main.get_unique_checkpoint_dir] Checkpoint directory 'experiments/both-testing01' already exists. Using 'experiments/both-testing01_ckk' instead to avoid overwriting.
-
-
-
-Running as unit: run-p14447-i14448.scope; invocation ID: 9fb19df3a11b428cbf28b135feee932e
-
-
-
-
-Running as unit: run-p42262-i42263.scope; invocation ID: af1f662c605147f2854bf3bdaa2d25b1
-```
-systemctl --user set-property run-p10425-i10426.scope CPUQuota=300%
