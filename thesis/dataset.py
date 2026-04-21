@@ -60,7 +60,8 @@ def load_and_preprocess_edf_file(
     """
     Load an EDF file from disk, preprocess it, and return chunks.
 
-    Applies the full preprocessing pipeline: filtering and chunking.
+    Pipeline: bandpass 1-70 Hz → notch 50 Hz → average reference → linear detrend
+    → channel selection → chunking → per-chunk z-score.
 
     :param Path file_path: Path to the EDF file to preprocess.
     :param str channel: Channel to use: specific channel name (e.g., "Fp1") or
@@ -82,23 +83,36 @@ def load_and_preprocess_edf_file(
     raw = raw.pick(list(channel_mapping.keys()))
     raw = raw.rename_channels(channel_mapping)
 
+    # Drop reference electrode before computing average reference
+    if "A2-A1" in raw.ch_names:
+        raw = raw.drop_channels(["A2-A1"])
+
     if channel == "in-ear":
-        # Bipolar derivation: T8 - T7 (right minus left, simulates in-ear EEG)
-        # Sign flip augmentation is applied later in SpectrogramDataset (per-epoch)
+        # Bipolar derivation: only T7 and T8 are needed; CAR over two electrodes is meaningless.
+        # Sign flip augmentation is applied later in SpectrogramDataset (per-epoch).
         raw = raw.pick(["T7", "T8"])
-        data = raw.get_data()
-        inear_signal = data[1] - data[0]  # T8 (index 1) minus T7 (index 0)
-        data = inear_signal.reshape(1, -1)  # Shape: (1, n_samples)
-    elif channel == "all":
-        # Pick channels in canonical order (excludes A2-A1 reference)
-        # This ensures consistent channel ordering across datasets
-        raw = raw.pick(channel_order)
-        data = raw.get_data()
-    elif channel is not None:
-        raw = raw.pick([channel])
-        data = raw.get_data()
+        pair_data = raw.get_data()  # (2, n_samples) — T7 at [0], T8 at [1]
+        pair_data = detrend(pair_data, axis=1, type="linear")
+        inear_signal = pair_data[1] - pair_data[0]  # T8 - T7
+        data = inear_signal.reshape(1, -1)
     else:
-        raise RuntimeError("Must specify 'channel' parameter")
+        # Get all EEG channel data at once for shared preprocessing steps
+        all_data = raw.get_data()  # (n_channels, n_samples)
+        ch_index = {name: i for i, name in enumerate(raw.ch_names)}
+
+        # Average reference: subtract mean across channels at each time point (matches CANE CAR)
+        all_data -= all_data.mean(axis=0, keepdims=True)
+
+        # Linear detrend per channel: removes slow DC drifts (matches CANE/IDUN)
+        all_data = detrend(all_data, axis=1, type="linear")
+
+        if channel == "all":
+            data = np.stack([all_data[ch_index[ch]] for ch in channel_order])
+        elif channel is not None:
+            data = all_data[[ch_index[channel]]]
+        else:
+            raise RuntimeError("Must specify 'channel' parameter")
+
     n_samples = data.shape[1]
     chunks_list: list[np.ndarray] = []
     for i in range(0, n_samples - chunk_samples + 1, chunk_samples):
