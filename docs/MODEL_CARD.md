@@ -65,6 +65,10 @@ TODO double check normals count for MDD
 | `Deformer`         | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4) | heads=16, dim_head=16 | 1,776,814  |
 | `DeformerS`        | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3) | heads=4,  dim_head=16 |   587,526  |
 | `DeformerS` (5 s)  | 8 (raw EEG, 1250 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3) | heads=4,  dim_head=16 |   390,314  |
+| `TSception`        | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | — |  ~1,049 K  |
+| `TSceptionS`       | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | — |    ~264 K  |
+| `LGGNet`           | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere) | out_graph=32 | 1,170,815 |
+| `LGGNetS`          | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere) | out_graph=32 |   584,511 |
 
 ## Architecture Summary
 
@@ -146,6 +150,66 @@ Parameter count scales with `num_time` because: (a) the learned positional embed
 log-power vector at each depth level whose size depends on the input sequence length; both feed
 the final MLP head. At `num_time=1250` (5 s) → **390,314 params**; at `num_time=2500` (10 s) → **587,526 params**.
 
+### `LGGNet`
+Local-Global Graph Network for raw EEG classification (Ding et al., TNNLS 2023).
+Implemented in `thesis/lggnet.py` (CBCR License 1.0). Configured via `LGGNetConfig`.
+
+Architecture stages:
+1. **Channel reorder**: channels permuted to graph-topology order, unsqueezed → `(B, 1, 8, 2500)`
+2. **Multi-scale Tception** (3 parallel `Conv2d + PowerLayer`): kernels `(1, 125)`, `(1, 62)`, `(1, 31)`;
+   PowerLayer: `log(avg_pool(x²).clamp(min=1e-6))`, pool=32, stride=8; outputs concatenated along time dim
+   → `(B, num_T, 8, ~899)`
+3. **BN + 1×1 Conv + AvgPool(1,2) + BN**: → `(B, num_T, 8, ~449)`
+4. **Permute + reshape**: → `(B, 8, num_T × ~449)` = `(B, 8, features)`
+5. **Local filter**: `ReLU(x ⊙ weight − bias)`, per-channel element-wise, weight `(8, features)` learnable
+6. **Aggregator**: mean-pools channels into brain-region nodes → `(B, num_regions, features)`
+7. **Adjacency**: `get_adj` computes self-similarity + learnable mask `global_adj` + D^(−½)AD^(−½) norm
+8. **GCN** (`GraphConvolution`): `ReLU(A · (X·W − b))`, `features → out_graph=32` → `(B, num_regions, 32)`
+9. **BN + Flatten + Dropout + Linear** → logits
+
+Graph topologies (8-channel, canonical order Fp1,Fp2,T7,T8,C3,C4,Cz,Oz):
+- `hemisphere` (default): Left {Fp1,T7,C3} / Right {Fp2,T8,C4} / Midline {Cz,Oz} — 3 regions
+- `frontal`: {Fp1,Fp2} / {T7,T8} / {C3,C4,Cz} / {Oz} — 4 regions
+
+Parameter breakdown (hemisphere, 2-class, num_T=64): temporal 18K · local_filter 230K · GCN 922K · total **1,170,815**.
+
+### `LGGNetS`
+Same architecture as `LGGNet` with **num_T 64→32** as the only change.
+
+Parameter breakdown (hemisphere, 2-class, num_T=32): temporal 9K · local_filter 115K · GCN 461K · total **584,511**.
+Matches DeformerS (~588K) in parameter count; much simpler architecture (no attention).
+
+Configured via `LGGNetSConfig` in `thesis/model_factory.py`.
+
+### `TSception`
+Multi-scale temporal inception + asymmetric spatial CNN for raw EEG (Ding et al., TAFFC 2022).
+Takes `(batch, 8, 2500)` as input. Implemented in `thesis/tsception.py` (CBCR License 1.0).
+
+Architecture stages:
+1. **Temporal inception** (3 parallel branches): `Conv2d(1→num_T, (1, k_i))` + LeakyReLU + AvgPool(1,8),
+   with kernel fractions [0.5, 0.25, 0.125]×fs → k = [125, 62, 31] at 250 Hz; concatenated along time axis
+2. **BatchNorm2d(num_T)**
+3. **Asymmetric spatial** (2 branches): global branch `Conv2d(num_T→num_S, (C,1))` + hemisphere branch
+   `Conv2d(num_T→num_S, (C//2,1), stride=(C//2,1))` + AvgPool(1,2); concatenated along channel axis
+4. **Flatten → FC**: Linear(flat→hidden) + ReLU + Dropout + Linear(hidden→num_classes)
+
+With 8 channels and 2500 samples: flat feature size = num_S×3×454 = **8172**; FC1 alone (8172×128)
+accounts for 99.7% of TSception's 1.05 M parameters. This FC dominance is an expected consequence of
+the paper's architecture scaling to longer inputs.
+
+Default config: `num_T=9, num_S=6, hidden=128, sampling_rate=250, num_time=2500`.
+Configured via `TSceptionConfig` in `thesis/model_factory.py`.
+
+### `TSceptionS`
+Reduced-parameter variant of `TSception` (~264 K), matching `SmallerAll` in scale.
+
+Same architecture as `TSception` with a single change: **hidden 128→32** (FC1: 8172×32 instead of 8172×128),
+following the paper's own cross-dataset recommendation:
+*"we also suggest T=S=15 and hidden_node=32 when applying TSception to other datasets."*
+
+Default config: `num_T=9, num_S=6, hidden=32, sampling_rate=250, num_time=2500`.
+Configured via `TSceptionSConfig` in `thesis/model_factory.py`.
+
 ---
 
 ## References
@@ -160,3 +224,12 @@ Effective Connectivity and Graph Theory Measures." *IEEE Trans. Neural and Rehab
 **Surrogate in-ear channel creation** — Tremmel C. et al. "Estimating cognitive workload using a commercial in-ear EEG
 headset." *Journal of Neural Engineering* 21 (2024) 066022. DOI: 10.1088/1741-2552/ad8ef8
 *(cited as methodological basis for in-ear EEG; the clinical CANE/IDUN data is from a separate study)*
+
+**TSception / TSceptionS** — Ding Y. et al. "TSception: Capturing Temporal Dynamics and Spatial Asymmetry
+from EEG for Emotion Recognition." *IEEE Trans. Affective Computing* (2022). DOI: 10.1109/TAFFC.2022.3169001
+Source: https://github.com/yi-ding-cs/TSception (CBCR License 1.0)
+
+**LGGNet / LGGNetS** — Ding Y. et al. "LGGNet: Learning From Local-Global-Graph Representations for
+Brain-Computer Interface." *IEEE Trans. Neural Networks and Learning Systems* (2023).
+DOI: 10.1109/TNNLS.2023.3236635
+Source: https://github.com/yi-ding-cs/LGG (CBCR License 1.0)

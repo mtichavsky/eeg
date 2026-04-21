@@ -21,16 +21,20 @@
 | 4-class, 8-ch, SmallerAll          | 63.46% ± 9.60% × 64.57% ±11.36% |                      |                | all3-018-all-4class-smallerAll-weighted-sampler       |
 | 4-class, 8-ch, Attn                | 64.76% ± 8.05% × 66.09% ± 8.23% |                      |                | all3-018-all-4class-smallerAllAttn-weighted-sampler   |
 | **4-class, 8-ch, V2Attn**          | 65.91% ± 6.63% × 68.49% ± 6.68% |                      |                | all3-020-all-4class-smallerAllV2Attn-weighted-sampler |
-| binary, 8-ch, LGGNet (hem)         | —                                 | —                    | —              | all3-025-all-binary-lggnet; **6 fold, planned**       |
-| binary, 8-ch, LGGNetS (hem)        | —                                 | —                    | —              | all3-025-all-binary-lggnet-s; **6 fold, planned**     |
-| binary, 8-ch, LGGNet frontal       | —                                 | —                    | —              | all3-025-all-binary-lggnet-frontal; **6 fold, planned** |
-| binary, 8-ch, LGGNet+FL            | —                                 | —                    | —              | all3-025-all-binary-lggnet-focal; **6 fold, planned** |
-| 4-class, 8-ch, LGGNet+FL           | —                                 | —                    | —              | all3-025-all-4class-lggnet-focal; **6 fold, planned** |
-| binary, 8-ch, TSception            | —                                 | —                    | —              | all3-026-all-binary-tsception; **6 fold, planned**    |
-| binary, 8-ch, TSceptionS           | —                                 | —                    | —              | all3-026-all-binary-tsception-s; **6 fold, planned**  |
+| binary, 8-ch, LGGNet (026, NaN bug) | failed (NaN loss)                | —                    | —              | all3-026-all-binary-lggnet; **bug fixed, re-run needed** |
+| binary, 8-ch, LGGNetS (026, NaN bug)| failed (NaN loss)                | —                    | —              | all3-026-all-binary-lggnet-s; **bug fixed, re-run needed** |
+| binary, 8-ch, LGGNet (hem)         | —                                 | —                    | —              | all3-027-all-binary-lggnet; **6 fold, planned**       |
+| binary, 8-ch, LGGNetS (hem)        | —                                 | —                    | —              | all3-027-all-binary-lggnet-s; **6 fold, planned**     |
+| binary, 8-ch, LGGNet frontal       | —                                 | —                    | —              | all3-027-all-binary-lggnet-frontal; **6 fold, planned** |
+| binary, 8-ch, LGGNet+FL            | —                                 | —                    | —              | all3-027-all-binary-lggnet-focal; **6 fold, planned** |
+| 4-class, 8-ch, LGGNet+FL           | —                                 | —                    | —              | all3-027-all-4class-lggnet-focal; **6 fold, planned** |
+| binary, 8-ch, TSception            | 68.84% ± 5.65% × 71.00% ± 9.11% | 77.82% ± 7.77%       | 55.01% ± 4.67% | all3-026-all-binary-tsception; **6 fold**             |
+| binary, 8-ch, TSceptionS           | 70.80% ± 4.60% × 72.93% ± 5.69% | 78.08% ± 6.95%       | 59.06% ± 5.18% | all3-026-all-binary-tsception-s; **6 fold**           |
 | binary, 8-ch, TSception+FL         | —                                 | —                    | —              | all3-026-all-binary-tsception-focal; **6 fold, planned** |
 | binary, 8-ch, TSceptionS+FL        | —                                 | —                    | —              | all3-026-all-binary-tsception-s-focal; **6 fold, planned** |
 | 4-class, 8-ch, TSception+FL        | —                                 | —                    | —              | all3-026-all-4class-tsception-focal; **6 fold, planned** |
+
+CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsceptions-ch4 --chunk-duration 4
 
 CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV3 --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal
 CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV3 --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-022-all-binary-smallerAllV3-focal
@@ -286,11 +290,42 @@ Higher dropout doesn't make sense.
 - AX_MALIK 100% accuracy, CANE absolutely shitty
 - Command `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-4class-smallerall --class-mode=4`
 
-### LGGNet experiments (025 series) — planned
+### all3-026-all-binary-lggnet
+
+- Model: LGGNet (~1.17M params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
+- Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, batch=64
+- **Result: complete failure — loss=NaN every epoch, sensitivity=0%, specificity=100% all folds**
+- Root cause 1: **Aggregator `_get_idx` bug** — returned `idx_[1:]` = `[3,6,8]` (end indices) but
+  loop used them as start indices, so the Left hemisphere region (channels 0-2) was never aggregated,
+  and the last slice `x[:, 8:, :]` was an empty tensor. Mean of empty tensor → NaN → propagates
+  to all subsequent ops and loss.
+- Root cause 2: **PowerLayer `log(0)` instability** — `torch.log(avg_pool(x²))` without a clamp
+  produces `-inf` for near-zero power windows (common after bandpass/notch filtering in CANE data).
+- Fix applied (2026-04-21): `thesis/lggnet.py` updated — `_get_idx` corrected to return start
+  indices `[0, 3, 6]` and `forward` rewrites to use `x.narrow()`; PowerLayer adds `.clamp(min=1e-6)`.
+- Re-run as all3-027-all-binary-lggnet with fixed code.
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-026-all-binary-lggnet`
+
+### all3-026-all-binary-lggnet-s
+
+- Model: LGGNetS (~585K params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
+- **Result: identical failure to all3-026-all-binary-lggnet** — same NaN loss pattern, same bugs
+- Exact same per-fold accuracies as LGGNet (39.21% chunk, 40.61% subject, all predict healthy):
+  both models fail before learning anything, so num_T 64 vs 32 makes no observable difference
+- Fix applied: same as all3-026-all-binary-lggnet.
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNetS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-026-all-binary-lggnet-s`
+
+### LGGNet experiments (027 series) — planned
 
 LGGNet (TNNLS 2023) introduces a local-global graph approach: multi-scale temporal CNN → local
 graph filter (mean-pools channels into anatomical brain regions) → global GCN with learnable
 adjacency mask. Two variants: LGGNet (~1.17M params) and LGGNetS (~585K, matches DeformerS).
+
+Two bugs were found and fixed in `thesis/lggnet.py` (2026-04-21):
+1. `Aggregator._get_idx` returned end indices instead of start indices; `forward()` rewritten
+   with `x.narrow()` matching the reference implementation exactly.
+2. `PowerLayer.forward` added `.clamp(min=1e-6)` before `torch.log` to prevent `-inf` from
+   near-zero pooled power values.
 
 **Rationale for lr=1e-3, dropout=0.5:**
 Paper defaults. Validated by the DeformerS-head experiment: raw-EEG models fail at lr=1e-4 but
@@ -301,50 +336,80 @@ overfit, so dropout=0.5 matches the paper's regularization strategy.
 - `hemisphere` (default, 3 regions): Left {Fp1,T7,C3} / Right {Fp2,T8,C4} / Midline {Cz,Oz}
 - `frontal` (4 regions): {Fp1,Fp2} / {T7,T8} / {C3,C4,Cz} / {Oz}
 
-#### all3-025-all-binary-lggnet
+#### all3-027-all-binary-lggnet
 
 - Model: LGGNet (~1.17M params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
 - Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, batch=64, pool=32 (250 Hz scaled from paper's 16@128 Hz)
-- Purpose: core LGGNet baseline with paper-recommended settings; establishes whether graph-based
-  EEG modelling outperforms CNN-LSTM baselines (V2Attn 79.10%, V3+FL 78.84%)
-- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-025-all-binary-lggnet`
+- Purpose: core LGGNet baseline with paper-recommended settings (post-bugfix re-run of 026);
+  establishes whether graph-based EEG modelling outperforms CNN-LSTM baselines (V2Attn 79.10%)
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-027-all-binary-lggnet`
 
-#### all3-025-all-binary-lggnet-s
+#### all3-027-all-binary-lggnet-s
 
 - Model: LGGNetS (~585K params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**
-- Hyperparams: identical to all3-025-all-binary-lggnet
+- Hyperparams: identical to all3-027-all-binary-lggnet
 - Purpose: size ablation — does halving temporal filters (num_T 64→32) hurt accuracy?
   LGGNetS matches DeformerS in parameter count; direct comparison shows whether architecture
-  or capacity explains the DeformerS underperformance
-- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNetS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-025-all-binary-lggnet-s`
+  or capacity explains the DeformerS underperformance.
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNetS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-027-all-binary-lggnet-s`
 
-#### all3-025-all-binary-lggnet-frontal
+#### all3-027-all-binary-lggnet-frontal
 
 - Model: LGGNet (~1.17M params), binary, 8-channel, **frontal graph**, ec+eo, **6-fold**
-- Hyperparams: identical to all3-025-all-binary-lggnet
+- Hyperparams: identical to all3-027-all-binary-lggnet
 - Purpose: graph topology ablation — 4-region anatomical grouping (frontal/temporal/central/occipital)
   vs 3-region hemisphere grouping. Clinically motivated: frontal asymmetry (Fp1−Fp2) and
-  temporal asymmetry (T7−T8) are established biomarkers for depression and anxiety
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --lggnet-graph-type frontal --checkpoint-dir=experiments/all3-025-all-binary-lggnet-frontal`
+  temporal asymmetry (T7−T8) are established biomarkers for depression and anxiety.
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --lggnet-graph-type frontal --checkpoint-dir=experiments/all3-027-all-binary-lggnet-frontal`
 
-#### all3-025-all-binary-lggnet-focal
+#### all3-027-all-binary-lggnet-focal
 
 - Model: LGGNet (~1.17M params), binary, 8-channel, hemisphere graph, ec+eo, **6-fold**, focal loss
 - Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, focal gamma=2.0
-- Purpose: focal loss ablation on LGGNet — prior experiments show FL consistently improves
-  specificity at the cost of ~1pp sensitivity (V2Attn+FL-d2: spec +7.38pp, V3+FL: spec +6.76pp).
-  Testing whether the same pattern holds for a graph-based architecture
-- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-025-all-binary-lggnet-focal`
+- Purpose: focal loss ablation — prior experiments show FL consistently improves specificity by
+  ~6-7pp at cost of ~1pp sensitivity (V2Attn+FL, V3+FL). Tests whether the same pattern holds
+  for the graph-based architecture; also helps if LGGNet tends to collapse to majority class.
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-027-all-binary-lggnet-focal`
 
-#### all3-025-all-4class-lggnet-focal
+#### all3-027-all-4class-lggnet-focal
 
 - Model: LGGNet (~1.17M params), **4-class**, 8-channel, hemisphere graph, ec+eo, **6-fold**, focal loss
 - Hyperparams: lr=1e-3, dropout=0.5, wd=1e-4, focal gamma=2.0
-- Purpose: core 4-class LGGNet experiment. The key scientific question: can learning inter-region
+- Purpose: core 4-class LGGNet experiment. Key scientific question: can learning inter-region
   functional connectivity (via the learnable global adjacency) help distinguish the four classes
-  (normal/anxiety/depression/comorbid) where CNNs plateau at ~66%? Comorbid class is
-  particularly challenging; graph-level representations may capture co-occurrence patterns
-- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --class-mode 4 --focal-loss --checkpoint-dir=experiments/all3-025-all-4class-lggnet-focal`
+  where CNNs plateau at ~66%? The global adjacency is potentially the most expressive part of
+  the architecture for class-specific connectivity patterns.
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --class-mode 4 --focal-loss --checkpoint-dir=experiments/all3-027-all-4class-lggnet-focal`
+
+### all3-026-all-binary-tsception
+
+- Model: TSception (~1.05M params, hidden=128), binary, 8-channel, ec+eo, **6-fold**, paper-exact hyperparams
+- Hyperparams: lr=1e-3, dropout=0.3, wd=0, l1-lambda=1e-6, batch=128, epochs=200
+- Chunk accuracy: 68.84% ± 5.65% | Subject accuracy: 71.00% ± 9.11%
+- Chunk sensitivity: 77.82% ± 7.77% | Chunk specificity: 55.01% ± 4.67%
+- Per-dataset chunk accuracy: CANE 59.70%, MDD 82.08%, SAD 60.93%
+- **CANE specificity: 23.79%** — model predicts nearly all healthy CANE subjects as pathological
+- Train acc at best val: 99.13% ± 1.32% — catastrophic overfitting, ~30pp gap with val
+- Root cause: **99.7% of model parameters are in the FC layer** (8172×128 = 1,046,016 of 1,049,081 total).
+  Original paper used 4ch × 1024-sample inputs → FC input ~3200. Our 8ch × 2500-sample input grows it to 8172
+  (2.5×), making the FC layer the entire model rather than a classifier on learned features
+- vs SmallerAllV2Attn (79.10%): −10.26pp. FC-dominated architecture cannot generalise
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception`
+
+### all3-026-all-binary-tsception-s
+
+- Model: TSceptionS (~264K params, hidden=32), binary, 8-channel, ec+eo, **6-fold**
+- Hyperparams: identical to all3-026-all-binary-tsception
+- Chunk accuracy: 70.80% ± 4.60% | Subject accuracy: 72.93% ± 5.69%
+- Chunk sensitivity: 78.08% ± 6.95% | Chunk specificity: 59.06% ± 5.18%
+- Per-dataset chunk accuracy: CANE 62.65%, MDD 83.46%, SAD 60.93%
+- CANE specificity: 31.57% — still low but +7.78pp over TSception
+- Train acc at best val: 97.71% ± 4.07% — still heavily overfit but less so than 1.05M model
+- **TSceptionS beats TSception** (+1.96pp chunk, +1.93pp subject): forcing hidden=32 prevents FC from memorising
+  the training set as effectively; the inception+spatial feature extractor is the same in both models
+- 99% of parameters still in FC (261,504 of 264,281); same structural problem, just smaller
+- vs SmallerAllV2Attn (79.10%): −8.30pp. Better than TSception but still well below CNN-LSTM baseline
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception-s`
 
 ### TSception experiments (026 series) — planned
 
