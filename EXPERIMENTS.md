@@ -26,6 +26,11 @@
 | binary, 8-ch, LGGNet frontal       | —                                 | —                    | —              | all3-025-all-binary-lggnet-frontal; **6 fold, planned** |
 | binary, 8-ch, LGGNet+FL            | —                                 | —                    | —              | all3-025-all-binary-lggnet-focal; **6 fold, planned** |
 | 4-class, 8-ch, LGGNet+FL           | —                                 | —                    | —              | all3-025-all-4class-lggnet-focal; **6 fold, planned** |
+| binary, 8-ch, TSception            | —                                 | —                    | —              | all3-026-all-binary-tsception; **6 fold, planned**    |
+| binary, 8-ch, TSceptionS           | —                                 | —                    | —              | all3-026-all-binary-tsception-s; **6 fold, planned**  |
+| binary, 8-ch, TSception+FL         | —                                 | —                    | —              | all3-026-all-binary-tsception-focal; **6 fold, planned** |
+| binary, 8-ch, TSceptionS+FL        | —                                 | —                    | —              | all3-026-all-binary-tsception-s-focal; **6 fold, planned** |
+| 4-class, 8-ch, TSception+FL        | —                                 | —                    | —              | all3-026-all-4class-tsception-focal; **6 fold, planned** |
 
 CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV3 --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal
 CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV3 --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1  --focal-loss --checkpoint-dir=experiments/all3-022-all-binary-smallerAllV3-focal
@@ -340,6 +345,75 @@ overfit, so dropout=0.5 matches the paper's regularization strategy.
   (normal/anxiety/depression/comorbid) where CNNs plateau at ~66%? Comorbid class is
   particularly challenging; graph-level representations may capture co-occurrence patterns
 - Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --class-mode 4 --focal-loss --checkpoint-dir=experiments/all3-025-all-4class-lggnet-focal`
+
+### TSception experiments (026 series) — planned
+
+TSception (IEEE Trans. Affective Computing 2022) introduces multi-scale temporal inception
+convolutions (kernels at 0.5/0.25/0.125 × fs) concatenated along the time axis, followed by
+asymmetric spatial convolutions (global channel kernel + hemisphere-stride kernel) designed to
+capture left–right EEG asymmetry. Unlike CNN-LSTM models, it uses a flat→FC head (no recurrence),
+making it particularly fast and easy to regularise.
+
+Two variants:
+- **TSception** (~1.05M params, hidden=128): paper's original configuration; comparable to SmallerAllV3
+- **TSceptionS** (~264K params, hidden=32): paper's own cross-dataset recommendation; comparable to SmallerAll
+
+**Rationale for lr=1e-3, dropout=0.3, wd=0, l1=1e-6, batch=128:**
+Paper's exact Train.py defaults. L1 regularisation (lambda=1e-6) replaces the project's standard
+L2 weight decay — the paper adds `lambda × sum(|w|)` directly to the CE loss. Batch=128 follows
+the paper; larger batches may help the flat FC head converge. The raw-EEG models that failed at
+lr=1e-4 (DeformerS) recovered at lr=1e-3, consistent with the paper's choice.
+
+**Key questions:**
+1. Can TSception's inception+spatial design match CNN-LSTM baselines (V2Attn 79.10%, V3+FL 78.84%)?
+2. Does TSceptionS (264K) match SmallerAll (283K) — similar capacity, very different inductive bias?
+3. Does focal loss improve specificity for TSception as it did for all CNN-LSTM models?
+4. Can TSception handle 4-class beyond the ~66% CNN-LSTM plateau?
+
+#### all3-026-all-binary-tsception
+
+- Model: TSception (~1.05M params), binary, 8-channel, hemisphere, ec+eo, **6-fold**
+- Hyperparams: lr=1e-3, dropout=0.3, wd=0, l1-lambda=1e-6, batch=128, epochs=200 (paper defaults)
+- Purpose: core baseline — exact paper hyperparameters applied to the 3-dataset setup; establishes
+  whether TSception's flat inception head competes with SmallerAllV2Attn (79.10%)
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception`
+
+#### all3-026-all-binary-tsception-s
+
+- Model: TSceptionS (~264K params, hidden=32), binary, 8-channel, ec+eo, **6-fold**
+- Hyperparams: identical to all3-026-all-binary-tsception
+- Purpose: size ablation — paper's own recommendation for "other datasets". Direct size match to
+  SmallerAll (283K, 8-fold best ~76.83%); tests whether the temporal inception bias outperforms
+  Conv3D at equal parameter budget
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception-s`
+
+#### all3-026-all-binary-tsception-focal
+
+- Model: TSception (~1.05M params), binary, 8-channel, ec+eo, **6-fold**, focal loss (gamma=2.0)
+- Hyperparams: lr=1e-3, dropout=0.3, wd=0, l1-lambda=1e-6, batch=128, epochs=200
+- Purpose: focal loss ablation — FL consistently shifted sensitivity/specificity balance in
+  CNN-LSTM experiments (+5–7pp specificity at cost of ~1pp sensitivity). Tests if the same
+  pattern holds for TSception's flat-head architecture
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --focal-loss --checkpoint-dir=experiments/all3-026-all-binary-tsception-focal`
+
+#### all3-026-all-binary-tsception-s-focal
+
+- Model: TSceptionS (~264K params), binary, 8-channel, ec+eo, **6-fold**, focal loss (gamma=2.0)
+- Hyperparams: identical to all3-026-all-binary-tsception-focal
+- Purpose: small model + FL — can the 264K model with focal loss close the gap to the 1.05M model?
+  If TSceptionS+FL ≈ TSception+FL it suggests the hidden-layer bottleneck (32 vs 128) is not the
+  limiting factor, and the inception+spatial feature extractor alone carries the discriminative power
+- Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --focal-loss --checkpoint-dir=experiments/all3-026-all-binary-tsception-s-focal`
+
+#### all3-026-all-4class-tsception-focal
+
+- Model: TSception (~1.05M params), **4-class**, 8-channel, ec+eo, **6-fold**, focal loss (gamma=2.0)
+- Hyperparams: lr=1e-3, dropout=0.3, wd=0, l1-lambda=1e-6, batch=128, epochs=200
+- Purpose: 4-class TSception. The hemisphere spatial kernel has a clinically motivated hypothesis:
+  left–right asymmetry patterns differ across anxiety and depression, so the asymmetric spatial
+  branch may better separate those two classes than symmetric Conv3D/attention approaches.
+  Prior 4-class best is V2Attn at 65.91%; comorbid class recall is the main bottleneck
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --focal-loss --class-mode 4 --checkpoint-dir=experiments/all3-026-all-4class-tsception-focal`
 
 ### all3-014b-inear-binary-smaller
 
