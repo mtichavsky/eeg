@@ -258,7 +258,8 @@ Run with: `poetry run jupyter notebook`
    - `create_cross_validation_splits()`: Subject-level stratified K-fold CV
    - `get_preprocessed_chunks()`: Legacy function for single-file processing
    - Preprocessing pipelines:
-     - EDF files (MDD/CANE/AX_MALIK): bandpass filter (1-70 Hz) → notch filter (50 Hz) → optional artifact removal → 10s chunking
+     - EDF files (MDD/SAD): bandpass filter (1-70 Hz) → notch filter (50 Hz) → average reference (CAR) → linear detrend → 10s chunking
+     - EDF files (CANE): CAR → detrend → optional artifact removal → bandpass filter (1-70 Hz) → notch filter (50 Hz) → 10s chunking
      - CSV files (IDUN): z-score → detrend → bandpass filter (1-70 Hz) → notch filter (50 Hz) → 10s chunking → quality-based rejection
    - CANE artifact removal can be skipped with `--skip-artifact-removal` flag
 
@@ -395,20 +396,21 @@ The `MDDDataset` supports two modes:
 
 **Preprocessing Pipeline (in `thesis/dataset.py`):**
 
-Applied to each .edf file:
+Applied to each MDD/SAD .edf file (`load_and_preprocess_edf_file`):
 
 1. Load EDF
 2. Bandpass filter 1-70 Hz (IIR)
 3. Notch filter 50 Hz (remove power line noise)
-4. Select channels:
+4. Drop reference electrode (A2-A1 if present)
+5. **Average reference** (CAR — subtract mean across all 8 EEG channels at each time point)
+6. **Linear detrend** per channel (removes slow DC drifts)
+7. Select channels:
    - 8 channels (when `--channel all`)
    - Specific single channel (e.g., `--channel Fp1`)
-   - Synthetic in-ear: Load T7 and T8, compute bipolar derivation T8 - T7 (when `--channel in-ear`)
-5. Average reference
-6. Optional: Artifact interpolation/clipping for CANE (--skip-artifact-removal to disable)
-7. Chunk into 10-second segments
-8. Convert to PyTorch tensors
-9. For in-ear: Apply 50% sign flip augmentation per chunk during training (in `SpectrogramDataset`)
+   - Synthetic in-ear: pick T7+T8, detrend (no CAR — meaningless with 2 electrodes), compute T8-T7
+8. Chunk into 10-second segments
+9. Per-chunk z-score normalization
+10. For in-ear: Apply 50% sign flip augmentation per chunk during training (in `SpectrogramDataset`)
 
 **Note:** Preprocessing is now more flexible - artifact removal can be skipped for faster iteration. The model can learn to handle artifacts directly from the data.
 
