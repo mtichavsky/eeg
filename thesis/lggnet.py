@@ -81,7 +81,7 @@ class PowerLayer(nn.Module):
         self.pooling = nn.AvgPool2d(kernel_size=(1, length), stride=(1, step))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return torch.log(self.pooling(x.pow(2)))
+        return torch.log(self.pooling(x.pow(2)).clamp(min=1e-6))
 
 
 class GraphConvolution(nn.Module):
@@ -116,19 +116,17 @@ class Aggregator(nn.Module):
         self.idx = self._get_idx(idx_area)
 
     def _get_idx(self, chan_in_area: list[int]) -> list[int]:
+        # Start index of each region: [0, 3, 6] for [3, 3, 2]
         idx_: list[int] = [0]
-        for n in chan_in_area:
+        for n in chan_in_area[:-1]:
             idx_.append(idx_[-1] + n)
-        return idx_[1:]  # start index of each region; last element = total channels
+        return idx_
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: (batch, channels, features)
         data: list[torch.Tensor] = []
         for i in range(self.area):
-            if i < self.area - 1:
-                region = x[:, self.idx[i] : self.idx[i + 1], :]
-            else:
-                region = x[:, self.idx[i] :, :]
+            region = x.narrow(1, self.idx[i], self.chan_in_area[i])
             data.append(region.mean(dim=1))
         return torch.stack(data, dim=1)  # (batch, num_regions, features)
 
