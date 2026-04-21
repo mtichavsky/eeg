@@ -52,23 +52,29 @@ TODO double check normals count for MDD
 
 ## Parameter Counts
 
-| Model              | Input channels                                      | Temporal aggregation            | RNN hidden / d\_model | Parameters |
-|--------------------|-----------------------------------------------------|---------------------------------|-----------------------|------------|
-| `CNN_LSTM_DepCap`  | 1                                                   | LSTM                            | 100                   | 798,306    |
-| `Smaller`          | 1                                                   | LSTM                            | 64                    | 256,770    |
-| `SmallerAttn`      | 1                                                   | Self-attention (Transformer)    | 128                   | 265,218    |
-| `SmallerAll`       | 8 (Conv3d)                                          | LSTM                            | 64                    | 283,266    |
-| `SmallerAllAttn`   | 8 (Conv3d)                                          | Self-attention (Transformer)    | 128                   | 289,794    |
-| `SmallerAllV2`     | 8 (per-channel shared CNN + cross-channel attn)     | LSTM                            | 64                    | 345,667    |
-| `SmallerAllV2Attn` | 8 (per-channel shared CNN + cross-channel attn)     | Self-attention (Transformer)    | 128                   | 354,115    |
-| `SmallerAllV3`     | 8 (per-channel shared CNN + full concat projection) | LSTM                            | 100 (default)         | 1,001,522  |
-| `Deformer`         | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4) | heads=16, dim_head=16 | 1,776,814  |
-| `DeformerS`        | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3) | heads=4,  dim_head=16 |   587,526  |
-| `DeformerS` (5 s)  | 8 (raw EEG, 1250 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3) | heads=4,  dim_head=16 |   390,314  |
-| `TSception`        | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | — |  ~1,049 K  |
-| `TSceptionS`       | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | — |    ~264 K  |
-| `LGGNet`           | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere) | out_graph=32 | 1,170,815 |
-| `LGGNetS`          | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere) | out_graph=32 |   584,511 |
+| Model                  | Params   | Input channels                                      | Temporal aggregation                                   | RNN hidden / d\_model |
+|------------------------|----------|-----------------------------------------------------|--------------------------------------------------------|-----------------------|
+| `CNN_LSTM_DepCap`      | 798 K    | 1                                                   | LSTM                                                   | 100                   |
+| `Smaller`              | 257 K    | 1                                                   | LSTM                                                   | 64                    |
+| `SmallerAttn`          | 265 K    | 1                                                   | Self-attention (Transformer)                           | 128                   |
+| `SmallerAll`           | 283 K    | 8 (Conv3d)                                          | LSTM                                                   | 64                    |
+| `SmallerAllAttn`       | 290 K    | 8 (Conv3d)                                          | Self-attention (Transformer)                           | 128                   |
+| `SmallerAllV2`         | 346 K    | 8 (per-channel shared CNN + cross-channel attn)     | LSTM                                                   | 64                    |
+| `SmallerAllV2Attn`     | 354 K    | 8 (per-channel shared CNN + cross-channel attn)     | Self-attention (Transformer)                           | 128                   |
+| `SmallerAllV3`         | 1.00 M   | 8 (per-channel shared CNN + full concat projection) | LSTM                                                   | 100 (default)         |
+| `Deformer`             | 1.78 M   | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4)                        | heads=16, dim_head=16 |
+| `DeformerS`            | 588 K    | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3)                        | heads=4,  dim_head=16 |
+| `DeformerS` (5 s)      | 390 K    | 8 (raw EEG, 1250 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3)                        | heads=4,  dim_head=16 |
+| `TSception`            | ~1.05 M  | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                    |
+| `TSceptionS`           | ~264 K   | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                    |
+| `TSceptionS` (4 s) †   | ~102 K   | 8 (raw EEG, 1000 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                    |
+| `LGGNet`               | 1.17 M   | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere) | out_graph=32         |
+| `LGGNetS`              | 585 K    | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere) | out_graph=32         |
+
+† The paper (TAFFC 2022) downsampled DEAP from 512 Hz to **128 Hz**, giving 4 s × 128 Hz = **512 samples**.
+MAHNOB-HCI (the paper's second dataset) was recorded at **256 Hz** and was not explicitly downsampled.
+This project's data is at **250 Hz and was not resampled**, so 4 s chunks contain **1000 samples** —
+2× the DEAP input length but comparable to MAHNOB-HCI conditions.
 
 ## Architecture Summary
 
