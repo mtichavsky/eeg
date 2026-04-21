@@ -523,7 +523,6 @@ lr=1e-4 (DeformerS) recovered at lr=1e-3, consistent with the paper's choice.
   - but MDD shows good performance, probably in anxiety+depression I'd be looking for a problem
 - AX_MALIK 100% accuracy, CANE absolutely shitty
 - Command: `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAll   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014b-all-4class-smallerall --class-mode=4`
-
 ### all3-014b-inear-binary-smaller
 
 - Command: `systemd-run --user --scope -p CPUQuota=200% python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model Smaller   --condition ec+eo   --n-folds 6   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/both-014-inear-binary-smaller`
