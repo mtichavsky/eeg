@@ -1,9 +1,10 @@
 # My stuff
-experiments/**/fold_*_loss_curves.png
+experiments/
 .idea/
 spectrogram_*.png
 visualized_*.png
 drawio
+.venv-pip-tools/
 
 ### Python template
 # Byte-compiled / optimized / DLL files
