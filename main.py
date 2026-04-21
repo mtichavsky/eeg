@@ -982,14 +982,10 @@ def train(args: argparse.Namespace) -> None:
     if args.deformer_temporal_kernel is not None:
         _overrides["temporal_kernel"] = args.deformer_temporal_kernel
     deformer_config = dataclasses_replace(_base_cfg, **_overrides)
-    logger.info(f"Deformer config: {deformer_config} (chunk_duration={args.chunk_duration}s)")
+    if args.model in {"Deformer", "DeformerS"}:
+        logger.info(f"Deformer config: {deformer_config} (chunk_duration={args.chunk_duration}s)")
 
     # Build LGGNet config: start from the model-appropriate defaults, then apply CLI overrides.
-    logger.info(f"  LGGNet num_T: {args.lggnet_num_t}")
-    logger.info(f"  LGGNet out_graph: {args.lggnet_out_graph}")
-    logger.info(f"  LGGNet pool: {args.lggnet_pool}")
-    logger.info(f"  LGGNet pool_step_rate: {args.lggnet_pool_step_rate}")
-    logger.info(f"  LGGNet graph_type: {args.lggnet_graph_type}")
     _lgg_base = _RAW_EEG_DEFAULT_CONFIGS.get(args.model, LGGNetConfig)()
     _lgg_overrides: dict = {"num_time": int(args.chunk_duration * 250), "sampling_rate": 250}
     if args.lggnet_num_t is not None:
@@ -1003,7 +999,13 @@ def train(args: argparse.Namespace) -> None:
     if args.lggnet_graph_type is not None:
         _lgg_overrides["graph_type"] = args.lggnet_graph_type
     lggnet_config = dataclasses_replace(_lgg_base, **_lgg_overrides)
-    logger.info(f"LGGNet config: {lggnet_config} (chunk_duration={args.chunk_duration}s)")
+    if args.model in {"LGGNet", "LGGNetS"}:
+        logger.info(f"LGGNet config: {lggnet_config} (chunk_duration={args.chunk_duration}s)")
+        logger.info(f"  LGGNet num_T: {args.lggnet_num_t}")
+        logger.info(f"  LGGNet out_graph: {args.lggnet_out_graph}")
+        logger.info(f"  LGGNet pool: {args.lggnet_pool}")
+        logger.info(f"  LGGNet pool_step_rate: {args.lggnet_pool_step_rate}")
+        logger.info(f"  LGGNet graph_type: {args.lggnet_graph_type}")
 
     # Build TSception config: start from model-appropriate defaults, apply CLI overrides.
     _tsc_base = _RAW_EEG_DEFAULT_CONFIGS.get(args.model, TSceptionConfig)()
@@ -1017,7 +1019,8 @@ def train(args: argparse.Namespace) -> None:
     if args.tsception_sampling_rate is not None:
         _tsc_overrides["sampling_rate"] = args.tsception_sampling_rate
     tsception_config = dataclasses_replace(_tsc_base, **_tsc_overrides)
-    logger.info(f"TSception config: {tsception_config} (chunk_duration={args.chunk_duration}s)")
+    if args.model in {"TSception", "TSceptionS"}:
+        logger.info(f"TSception config: {tsception_config} (chunk_duration={args.chunk_duration}s)")
     logger.info(f"  L1 Lambda: {args.l1_lambda}")
 
     raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig = (
