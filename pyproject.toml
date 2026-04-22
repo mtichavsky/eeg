@@ -6,10 +6,15 @@ authors = ["Milan Tichavský <milantichavsky@seznam.cz>"]
 readme = "README.md"
 package-mode = false
 
+[[tool.poetry.source]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu126"
+priority = "explicit"
+
 [tool.poetry.dependencies]
 python = "^3.12"
 numpy = "*"
-torch = "*"
+torch = {version = "^2.6.0", source = "pytorch-cuda"}
 scipy = "*"
 scikit-learn = "*"
 pandas = "*"
