@@ -985,21 +985,22 @@ def train(args: argparse.Namespace) -> None:
     if args.model in {"Deformer", "DeformerS"}:
         logger.info(f"Deformer config: {deformer_config} (chunk_duration={args.chunk_duration}s)")
 
-    # Build LGGNet config: start from the model-appropriate defaults, then apply CLI overrides.
-    _lgg_base = _RAW_EEG_DEFAULT_CONFIGS.get(args.model, LGGNetConfig)()
-    _lgg_overrides: dict = {"num_time": int(args.chunk_duration * 250), "sampling_rate": 250}
-    if args.lggnet_num_t is not None:
-        _lgg_overrides["num_T"] = args.lggnet_num_t
-    if args.lggnet_out_graph is not None:
-        _lgg_overrides["out_graph"] = args.lggnet_out_graph
-    if args.lggnet_pool is not None:
-        _lgg_overrides["pool"] = args.lggnet_pool
-    if args.lggnet_pool_step_rate is not None:
-        _lgg_overrides["pool_step_rate"] = args.lggnet_pool_step_rate
-    if args.lggnet_graph_type is not None:
-        _lgg_overrides["graph_type"] = args.lggnet_graph_type
-    lggnet_config = dataclasses_replace(_lgg_base, **_lgg_overrides)
+    # Build LGGNet config: only for LGGNet/LGGNetS models.
+    lggnet_config: LGGNetConfig | None = None
     if args.model in {"LGGNet", "LGGNetS"}:
+        _lgg_base = _RAW_EEG_DEFAULT_CONFIGS[args.model]()
+        _lgg_overrides: dict = {"num_time": int(args.chunk_duration * 250), "sampling_rate": 250}
+        if args.lggnet_num_t is not None:
+            _lgg_overrides["num_T"] = args.lggnet_num_t
+        if args.lggnet_out_graph is not None:
+            _lgg_overrides["out_graph"] = args.lggnet_out_graph
+        if args.lggnet_pool is not None:
+            _lgg_overrides["pool"] = args.lggnet_pool
+        if args.lggnet_pool_step_rate is not None:
+            _lgg_overrides["pool_step_rate"] = args.lggnet_pool_step_rate
+        if args.lggnet_graph_type is not None:
+            _lgg_overrides["graph_type"] = args.lggnet_graph_type
+        lggnet_config = dataclasses_replace(_lgg_base, **_lgg_overrides)
         logger.info(f"LGGNet config: {lggnet_config} (chunk_duration={args.chunk_duration}s)")
         logger.info(f"  LGGNet num_T: {args.lggnet_num_t}")
         logger.info(f"  LGGNet out_graph: {args.lggnet_out_graph}")
@@ -1007,19 +1008,20 @@ def train(args: argparse.Namespace) -> None:
         logger.info(f"  LGGNet pool_step_rate: {args.lggnet_pool_step_rate}")
         logger.info(f"  LGGNet graph_type: {args.lggnet_graph_type}")
 
-    # Build TSception config: start from model-appropriate defaults, apply CLI overrides.
-    _tsc_base = _RAW_EEG_DEFAULT_CONFIGS.get(args.model, TSceptionConfig)()
-    _tsc_overrides: dict = {"num_time": int(args.chunk_duration * 250)}
-    if args.tsception_num_t is not None:
-        _tsc_overrides["num_T"] = args.tsception_num_t
-    if args.tsception_num_s is not None:
-        _tsc_overrides["num_S"] = args.tsception_num_s
-    if args.tsception_hidden is not None:
-        _tsc_overrides["hidden"] = args.tsception_hidden
-    if args.tsception_sampling_rate is not None:
-        _tsc_overrides["sampling_rate"] = args.tsception_sampling_rate
-    tsception_config = dataclasses_replace(_tsc_base, **_tsc_overrides)
+    # Build TSception config: only for TSception/TSceptionS models.
+    tsception_config: TSceptionConfig | None = None
     if args.model in {"TSception", "TSceptionS"}:
+        _tsc_base = _RAW_EEG_DEFAULT_CONFIGS[args.model]()
+        _tsc_overrides: dict = {"num_time": int(args.chunk_duration * 250)}
+        if args.tsception_num_t is not None:
+            _tsc_overrides["num_T"] = args.tsception_num_t
+        if args.tsception_num_s is not None:
+            _tsc_overrides["num_S"] = args.tsception_num_s
+        if args.tsception_hidden is not None:
+            _tsc_overrides["hidden"] = args.tsception_hidden
+        if args.tsception_sampling_rate is not None:
+            _tsc_overrides["sampling_rate"] = args.tsception_sampling_rate
+        tsception_config = dataclasses_replace(_tsc_base, **_tsc_overrides)
         logger.info(f"TSception config: {tsception_config} (chunk_duration={args.chunk_duration}s)")
     logger.info(f"  L1 Lambda: {args.l1_lambda}")
 
