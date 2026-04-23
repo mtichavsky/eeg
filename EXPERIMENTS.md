@@ -1,43 +1,107 @@
 # EXPERIMENTS
 
-| model                              | accuracy (chunk × subject)        | sensitivity          | specificity    | directory                                             |
-|------------------------------------|-----------------------------------|----------------------|----------------|-------------------------------------------------------|
-| binary, in-ear, 3 dts.             | 76.86% ± 2.84% × 77.79% ± 2.74% | 86.23% ± 4.29%       | 63.90% ± 4.66% | all3-016-inear-binary-smaller; **6 fold only**        |
-| binary, in-ear, LSTM               | 77.44% ± 4.64% × 75.87% ± 6.78% | 88.87% ± 7.11%       | 61.96% ± 8.59% | all3-018-inear-binary-smaller-weighted-sampler        |
-| binary, in-ear, Attn               | 78.26% ± 4.92% × 77.39% ± 7.05% | 89.41% ± 7.02%       | 63.11% ± 8.76% | all3-018-inear-binary-smallerAttn                     |
-| **binary, in-ear, Attn+FL**        | 77.76% ± 4.64% × 78.74% ± 7.50% | 84.21% ± 6.97%       | 68.78% ± 6.26% | all3-019-inear-binary-smallerAttn-focal               |
-| binary, in-ear, Attn+FL, lr=1e-3   | 76.66% ± 2.36% × 76.61% ± 5.78% | 86.91% ± 6.63%       | 62.71% ±10.22% | all3-024-inear-binary-smallerAttn-focal; **6 fold**   |
-| 4-class, in-ear, 3 dts.            | 63.62% ± 4.45%                   |                      |                | all3-016-inear-4class-smaller; **6 fold only**        |
-| **4-class, in-ear, Attn+FL**       | 66.51% ± 7.32% × 67.10% ± 9.13% |                      |                | all3-019-inear-4class-smallerAttn-focal               |
-| binary, 8-ch, 3 dts.               | 76.83% ± 2.12%                   | 88.72% ± 2.86%       | 58.25% ± 6.44% | all3-017-all-binary-smallerall-weighted-sampler       |
-| **binary, 8-ch, V2Attn**           | 79.10% ± 4.90% × 79.83% ± 5.98% | 89.43% ± 6.78%       | 63.42% ±11.22% | all3-020-all-binary-smallerAllV2Attn-weighted-sampler |
-| binary, 8-ch, V2Attn+FL d2         | 76.99% ± 5.16% × 76.75% ± 6.61% | 80.84% ± 7.26%       | 70.80% ± 9.98% | all3-020-all-binary-smallerAllV2Attn-focal-d2         |
-| **binary, 8-ch, V3+FL**            | 78.84% ± 6.39% × 80.22% ± 6.94% | 83.74% ±11.02%       | 70.18% ±13.38% | all3-021-all-binary-smallerAllV3-focal                |
-| binary, 8-ch, V3+FL (run 2)        | 78.56% ± 3.54% × 79.39% ± 6.35% | 86.68% ± 6.10%       | 66.56% ± 9.59% | all3-022-all-binary-smallerAllV3-focal                |
-| binary, 8-ch, AllTransformerV4     | 76.53% ± 2.48% × 74.27% ± 3.00% | 87.22% ± 7.80%       | 59.53% ±10.55% | all3-024-all-2class-V4-weighted-sampler; **6 fold**   |
-| binary, 8-ch, V4, lr=5e-4          | 77.58% ± 3.41% × 77.54% ± 6.69% | 87.92% ± 4.58%       | 61.50% ± 7.10% | all3-024-all-2class-V4-LR; **6 fold**                 |
-| binary, 8-ch, DeformerS, d=0.3     | 64.85% ± 8.27% × 65.10% ± 8.78% | 66.87% ±24.36%       | 63.15% ±17.13% | all3-023-all-2class-DeformerS-weighted-sampler-30drop |
-| binary, 8-ch, DeformerS-head       | 75.71% ± 4.30% × 74.13% ± 7.91% | 85.79% ± 6.29%       | 59.59% ±14.57% | all3-024-all-2class-DeformerS-head; **6 fold**        |
-| 4-class, 8-ch, SmallerAll          | 63.46% ± 9.60% × 64.57% ±11.36% |                      |                | all3-018-all-4class-smallerAll-weighted-sampler       |
-| 4-class, 8-ch, Attn                | 64.76% ± 8.05% × 66.09% ± 8.23% |                      |                | all3-018-all-4class-smallerAllAttn-weighted-sampler   |
-| **4-class, 8-ch, V2Attn**          | 65.91% ± 6.63% × 68.49% ± 6.68% |                      |                | all3-020-all-4class-smallerAllV2Attn-weighted-sampler |
-| binary, 8-ch, LGGNet (026, NaN bug) | failed (NaN loss)                | —                    | —              | all3-026-all-binary-lggnet; **bug fixed, re-run needed** |
-| binary, 8-ch, LGGNetS (026, NaN bug)| failed (NaN loss)                | —                    | —              | all3-026-all-binary-lggnet-s; **bug fixed, re-run needed** |
-| binary, 8-ch, LGGNet (hem)         | —                                 | —                    | —              | all3-027-all-binary-lggnet; **planned**               |
-| binary, 8-ch, LGGNetS (hem)        | 73.35% ± 4.66% × 74.42% ± 6.99% | 85.25% ± 8.30%       | 54.85% ± 8.47% | all3-027-all-binary-lggnet-s; **10 fold**             |
-| binary, 8-ch, LGGNetS out_graph=16 | 72.80% ± 3.96% × 74.38% ± 4.83% | 81.92% ± 7.07%       | 58.15% ±10.04% | all3-027-all-binary-lggnet-s-out16_byh; **10 fold**   |
-| binary, 8-ch, LGGNet frontal       | —                                 | —                    | —              | all3-027-all-binary-lggnet-frontal; **planned**       |
-| binary, 8-ch, LGGNet+FL            | 74.55% ± 4.02% × 76.51% ± 7.19% | 85.79% ± 5.33%       | 56.72% ± 8.43% | all3-027-all-binary-lggnet-focal; **10 fold**         |
-| binary, 8-ch, LGGNetS+FL wd=5e-4  | 72.40% ± 3.23% × 72.44% ± 3.76% | 79.27% ± 6.08%       | 61.81% ±10.18% | all3-027-all-binary-lggnet-s-focal-5e-4; **8 fold**   |
-| 4-class, 8-ch, LGGNet+FL           | —                                 | —                    | —              | all3-027-all-4class-lggnet-focal; **planned**         |
-| binary, 8-ch, TSception            | 68.84% ± 5.65% × 71.00% ± 9.11% | 77.82% ± 7.77%       | 55.01% ± 4.67% | all3-026-all-binary-tsception; **6 fold**             |
-| binary, 8-ch, TSceptionS           | 70.80% ± 4.60% × 72.93% ± 5.69% | 78.08% ± 6.95%       | 59.06% ± 5.18% | all3-026-all-binary-tsception-s; **6 fold**           |
-| binary, 8-ch, TSceptionS 4s        | 71.52% ± 4.35% × 72.61% ± 8.00% | 77.88% ± 5.95%       | 61.30% ± 9.42% | all3-026-all-binary-tsceptions-ch4_rpr; **10 fold, 4s @ 250 Hz (not resampled)** |
-| binary, 8-ch, TSception+FL         | —                                 | —                    | —              | all3-026-all-binary-tsception-focal; **6 fold, planned** |
-| binary, 8-ch, TSceptionS+FL        | —                                 | —                    | —              | all3-026-all-binary-tsception-s-focal; **6 fold, planned** |
-| 4-class, 8-ch, TSception+FL        | —                                 | —                    | —              | all3-026-all-4class-tsception-focal; **6 fold, planned** |
+| model                                | accuracy (chunk × subject)          | sensitivity    | specificity        | directory                                                                        |
+|--------------------------------------|-------------------------------------|----------------|--------------------|----------------------------------------------------------------------------------|
+| binary, in-ear, 3 dts.               | 76.86% ± 2.84% × 77.79% ± 2.74%     | 86.23% ± 4.29% | 63.90% ± 4.66%     | all3-016-inear-binary-smaller; **6 fold only**                                   |
+| binary, in-ear, LSTM                 | 77.44% ± 4.64% × 75.87% ± 6.78%     | 88.87% ± 7.11% | 61.96% ± 8.59%     | all3-018-inear-binary-smaller-weighted-sampler                                   |
+| binary, in-ear, Attn                 | 78.26% ± 4.92% × 77.39% ± 7.05%     | 89.41% ± 7.02% | 63.11% ± 8.76%     | all3-018-inear-binary-smallerAttn                                                |
+| **binary, in-ear, Attn+FL**          | 77.76% ± 4.64% × 78.74% ± 7.50%     | 84.21% ± 6.97% | 68.78% ± 6.26%     | all3-019-inear-binary-smallerAttn-focal                                          |
+| binary, in-ear, Attn+FL, lr=1e-3     | 76.66% ± 2.36% × 76.61% ± 5.78%     | 86.91% ± 6.63% | 62.71% ±10.22%     | all3-024-inear-binary-smallerAttn-focal; **6 fold**                              |
+| 4-class, in-ear, 3 dts.              | 63.62% ± 4.45%                      |                |                    | all3-016-inear-4class-smaller; **6 fold only**                                   |
+| **4-class, in-ear, Attn+FL**         | 66.51% ± 7.32% × 67.10% ± 9.13%     |                |                    | all3-019-inear-4class-smallerAttn-focal                                          |
+| binary, 8-ch, 3 dts.                 | 76.83% ± 2.12%                      | 88.72% ± 2.86% | 58.25% ± 6.44%     | all3-017-all-binary-smallerall-weighted-sampler                                  |
+| **binary, 8-ch, V2Attn**             | 79.10% ± 4.90% × 79.83% ± 5.98%     | 89.43% ± 6.78% | 63.42% ±11.22%     | all3-020-all-binary-smallerAllV2Attn-weighted-sampler                            |
+| binary, 8-ch, V2Attn+FL d2           | 76.99% ± 5.16% × 76.75% ± 6.61%     | 80.84% ± 7.26% | 70.80% ± 9.98%     | all3-020-all-binary-smallerAllV2Attn-focal-d2                                    |
+| **binary, 8-ch, V3+FL**              | 78.84% ± 6.39% × 80.22% ± 6.94%     | 83.74% ±11.02% | 70.18% ±13.38%     | all3-021-all-binary-smallerAllV3-focal                                           |
+| binary, 8-ch, V3+FL+CAR (028)        | 77.73% ± 3.97% × 77.61% ± 5.37%     | 84.86% ± 6.09% | 66.96% ± 7.70%     | all3-028-all-binary-smallerAllV3-focal_jjr; **10 fold**                          |
+| binary, 8-ch, V3+FL (run 2)          | 78.56% ± 3.54% × 79.39% ± 6.35%     | 86.68% ± 6.10% | 66.56% ± 9.59%     | all3-022-all-binary-smallerAllV3-focal                                           |
+| binary, 8-ch, AllTransformerV4       | 76.53% ± 2.48% × 74.27% ± 3.00%     | 87.22% ± 7.80% | 59.53% ±10.55%     | all3-024-all-2class-V4-weighted-sampler; **6 fold**                              |
+| binary, 8-ch, V4, lr=5e-4            | 77.58% ± 3.41% × 77.54% ± 6.69%     | 87.92% ± 4.58% | 61.50% ± 7.10%     | all3-024-all-2class-V4-LR; **6 fold**                                            |
+| binary, 8-ch, DeformerS, d=0.3       | 64.85% ± 8.27% × 65.10% ± 8.78%     | 66.87% ±24.36% | 63.15% ±17.13%     | all3-023-all-2class-DeformerS-weighted-sampler-30drop                            |
+| binary, 8-ch, **DeformerS-head**     | 75.71% ± 4.30% × 74.13% ± 7.91%     | 85.79% ± 6.29% | 59.59% ±14.57%     | all3-024-all-2class-DeformerS-head; **6 fold**                                   |
+| binary, 8-ch, DeformerS-head+CAR     | 74.96% ± 5.60% × 75.41% ± 6.28%     | 77.00% ±11.46% | **71.18% ± 5.64%** | all3-028-all-2class-DeformerS-head_ucb; **6 fold**                               |
+| binary, 8-ch, DeformerS-head+CAR     | **76.02% ± 8.05% × 75.58% ±10.63%** | 80.24% ±11.07% | 69.60% ±12.05%     | all3-028-all-2class-DeformerS-head-10fold_dzf; **10 fold**                       |
+| 4-class, 8-ch, SmallerAll            | 63.46% ± 9.60% × 64.57% ±11.36%     |                |                    | all3-018-all-4class-smallerAll-weighted-sampler                                  |
+| 4-class, 8-ch, Attn                  | 64.76% ± 8.05% × 66.09% ± 8.23%     |                |                    | all3-018-all-4class-smallerAllAttn-weighted-sampler                              |
+| **4-class, 8-ch, V2Attn**            | 65.91% ± 6.63% × 68.49% ± 6.68%     |                |                    | all3-020-all-4class-smallerAllV2Attn-weighted-sampler                            |
+| binary, 8-ch, LGGNet (026, NaN bug)  | failed (NaN loss)                   | —              | —                  | all3-026-all-binary-lggnet; **bug fixed, re-run needed**                         |
+| binary, 8-ch, LGGNetS (026, NaN bug) | failed (NaN loss)                   | —              | —                  | all3-026-all-binary-lggnet-s; **bug fixed, re-run needed**                       |
+| binary, 8-ch, LGGNet (hem)           | —                                   | —              | —                  | all3-027-all-binary-lggnet; **planned**                                          |
+| binary, 8-ch, LGGNetS (hem)          | 73.35% ± 4.66% × 74.42% ± 6.99%     | 85.25% ± 8.30% | 54.85% ± 8.47%     | all3-027-all-binary-lggnet-s; **10 fold**                                        |
+| binary, 8-ch, LGGNetS out_graph=16   | 72.80% ± 3.96% × 74.38% ± 4.83%     | 81.92% ± 7.07% | 58.15% ±10.04%     | all3-027-all-binary-lggnet-s-out16_byh; **10 fold**                              |
+| binary, 8-ch, LGGNet frontal         | —                                   | —              | —                  | all3-027-all-binary-lggnet-frontal; **planned**                                  |
+| binary, 8-ch, LGGNet+FL              | 74.55% ± 4.02% × 76.51% ± 7.19%     | 85.79% ± 5.33% | 56.72% ± 8.43%     | all3-027-all-binary-lggnet-focal; **10 fold**                                    |
+| binary, 8-ch, LGGNetS+FL wd=5e-4     | 72.40% ± 3.23% × 72.44% ± 3.76%     | 79.27% ± 6.08% | 61.81% ±10.18%     | all3-027-all-binary-lggnet-s-focal-5e-4; **8 fold**                              |
+| 4-class, 8-ch, LGGNet+FL             | —                                   | —              | —                  | all3-027-all-4class-lggnet-focal; **planned**                                    |
+| binary, 8-ch, TSception              | 68.84% ± 5.65% × 71.00% ± 9.11%     | 77.82% ± 7.77% | 55.01% ± 4.67%     | all3-026-all-binary-tsception; **6 fold**                                        |
+| binary, 8-ch, TSceptionS             | 70.80% ± 4.60% × 72.93% ± 5.69%     | 78.08% ± 6.95% | 59.06% ± 5.18%     | all3-026-all-binary-tsception-s; **6 fold**                                      |
+| binary, 8-ch, TSceptionS 4s          | 71.52% ± 4.35% × 72.61% ± 8.00%     | 77.88% ± 5.95% | 61.30% ± 9.42%     | all3-026-all-binary-tsceptions-ch4_rpr; **10 fold, 4s @ 250 Hz (not resampled)** |
+| binary, 8-ch, TSception+FL           | —                                   | —              | —                  | all3-026-all-binary-tsception-focal; **6 fold, planned**                         |
+| binary, 8-ch, TSceptionS+FL          | —                                   | —              | —                  | all3-026-all-binary-tsception-s-focal; **6 fold, planned**                       |
+| 4-class, 8-ch, TSception+FL          | —                                   | —              | —                  | all3-026-all-4class-tsception-focal; **6 fold, planned**                         |
 
 > **Tip:** append `> /dev/null 2>&1 &` to any command to run it in the background and detach from the terminal.
+
+---
+
+### 028 series — CAR + linear detrend preprocessing ablation
+
+**Change under test (commit b25d514, 2026-04-22):** MDD and SAD (AX_MALIK) datasets were missing two
+preprocessing steps that CANE and IDUN already had, producing inconsistent inputs across datasets:
+1. **Average reference (CAR)** — subtract per-time-point mean across all 8 EEG channels
+2. **Linear detrend** — removes slow DC drift per channel before chunking
+3. **Per-chunk z-score** — also added alongside the above
+
+Previously only CANE/IDUN had CAR+detrend; after the change all four datasets share the same
+normalisation sequence.  For `--channel in-ear`, CAR is skipped (meaningless with 2 electrodes);
+detrend is still applied to T7/T8 before the bipolar derivation.
+
+Two baseline models were re-run with the updated preprocessing:
+- **SmallerAllV3 + focal loss** (028 _jjr, 10-fold) — replicate of 022
+- **DeformerS-head** (028 _ucb 6-fold + 028 _dzf 10-fold) — replicate of 024-DeformerS-head
+
+#### all3-028-all-binary-smallerAllV3-focal_jjr
+
+- Model: SmallerAllV3 (~1M params, 4b concat), binary, 8-channel, **CAR+detrend preprocessing**, ec+eo, **10-fold**, focal loss (gamma=2.0)
+- Hyperparams: lr=1e-4, dropout=0.1, wd=1e-4 (identical to 022)
+- Chunk accuracy: 77.73% ± 3.97% | Subject accuracy: 77.61% ± 5.37%
+- Chunk sensitivity: 84.86% ± 6.09% | Chunk specificity: 66.96% ± 7.70%
+- Train acc at best val: 79.80% ± 15.37% — very high variance (folds 5, 8, 10 stop at epoch 1–2)
+- Per-dataset chunk accuracy: CANE 72.93% (spec 53.29%), MDD 87.44% (spec 86.36%), SAD 64.64% (spec 63.88%)
+- vs 022 baseline (no CAR): −0.83pp chunk, −1.78pp subject. Sens/spec nearly unchanged (+0.40pp spec).
+- **Result: preprocessing change has a small negative effect on SmallerAllV3+FL.** CAR/detrend does not help the
+  spectrogram-based pipeline; the STFT log-magnitude representation already discards DC offsets, so the extra
+  normalisation adds noise without benefit. Performance is within 1pp and within noise, but consistently lower.
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec+eo --n-folds 10 --lr 1e-4 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-028-all-binary-smallerAllV3-focal_jjr`
+
+#### all3-028-all-2class-DeformerS-head_ucb
+
+- Model: DeformerS (~588K params), binary, 8-channel, **CAR+detrend preprocessing**, ec+eo, **6-fold**
+- Hyperparams: lr=1e-3, dropout=0.5, wd=1e-3 (identical to 024-DeformerS-head)
+- Chunk accuracy: 74.96% ± 5.60% | Subject accuracy: 75.41% ± 6.28%
+- Chunk sensitivity: 77.00% ± 11.46% | Chunk specificity: 71.18% ± 5.64%
+- Per-dataset chunk accuracy: CANE 67.28% (spec 42.41%), MDD 85.93% (spec 83.66%), SAD 66.71% (spec 67.97%)
+- vs 024-DeformerS-head baseline (no CAR): −0.75pp chunk, +1.28pp subject; **+11.59pp specificity, −8.79pp sensitivity**
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model DeformerS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.5 --weight-decay 1e-3 --val-every 1 --checkpoint-dir=experiments/all3-028-all-2class-DeformerS-head_ucb`
+
+#### all3-028-all-2class-DeformerS-head-10fold_dzf
+
+- Model: DeformerS (~588K params), binary, 8-channel, **CAR+detrend preprocessing**, ec+eo, **10-fold**
+- Hyperparams: identical to all3-028-all-2class-DeformerS-head_ucb
+- Chunk accuracy: 76.02% ± 8.05% | Subject accuracy: 75.58% ± 10.63%
+- Chunk sensitivity: 80.24% ± 11.07% | Chunk specificity: 69.60% ± 12.05%
+- Per-dataset chunk accuracy: CANE 66.82% (spec 41.40%), MDD 88.33% (spec 88.01%), SAD 66.31% (spec 69.12%)
+- vs 024-DeformerS-head (6-fold): +0.31pp chunk, +1.45pp subject; +10.01pp specificity vs baseline
+- **Combined 028 DeformerS verdict:** Chunk accuracy is essentially unchanged (−0.75pp to +0.31pp), but CAR+detrend
+  dramatically rebalances sens/spec for DeformerS — specificity rises ~10–12pp while sensitivity drops ~6–9pp.
+  MDD specificity goes from ~60% to 83–88%, and SAD specificity improves by ~9–10pp. The raw-EEG pipeline benefits
+  from explicit DC removal that the spectrogram pipeline gets "for free" via the log transform. The CANE specificity
+  (41–42%) remains the main bottleneck — CAR helps MDD/SAD but not CANE bias.
+- **Decision guidance:** Keep the preprocessing change. It does not hurt accuracy for SmallerAllV3 (−0.83pp, within
+  noise) and produces a meaningfully more balanced model for DeformerS without losing accuracy. More importantly,
+  harmonising the pipeline across all four datasets is scientifically correct: models trained on combined data
+  should not receive differently-normalised inputs per dataset.
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model DeformerS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.5 --weight-decay 1e-3 --val-every 1 --checkpoint-dir=experiments/all3-028-all-2class-DeformerS-head-10fold_dzf`
 
 ---
 
