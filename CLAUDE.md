@@ -559,11 +559,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Model expects preprocessed spectrograms, not raw EEG directly (unless using the raw EEG example model)
 - Use logging for prints, not print statements.
 - Add mypy typing to any newly generated code.
-- **Parameter logging requirement**: Every new CLI parameter added to training MUST be logged in three places:
-  1. Console — `logger.info(f"  <Param Name>: {args.<param>}")` in the `train()` preamble block
-  2. Log file — via the same `logger.info()` call (the file handler captures it automatically)
-  3. `results.txt` — `f.write(f"<Param Name>: {args.<param>}\n")` in the results-writing block
-  This ensures full reproducibility: any experiment can be reconstructed from its `results.txt` alone.
+- **Parameter logging**: New CLI parameters are logged automatically — `train()` builds a `cfg` dict from `vars(args)` plus derived values (`augment_data`, `device`, `checkpoint_dir`, `log_file`, `git_commit`) and iterates it for both the console logger and `results.txt`. No manual additions needed when adding new args.
 
 ## Training Utilities
 
