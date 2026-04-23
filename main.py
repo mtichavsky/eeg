@@ -2,6 +2,7 @@ import argparse
 import logging
 import random
 import string
+import subprocess
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -918,6 +919,19 @@ def train_cross_validation(
     return cv_results
 
 
+def _get_git_commit() -> str:
+    try:
+        hash_ = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        return f"{hash_}{'-dirty' if dirty else ''}"
+    except Exception:
+        return "unknown"
+
+
 def train(args: argparse.Namespace) -> None:
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -929,41 +943,24 @@ def train(args: argparse.Namespace) -> None:
     # Setup logging to both console and file
     log_path = setup_logging(checkpoint_dir, args.condition, args.channel)
 
-    logger.info("Starting EEG Classification Training")
-    logger.info("Hyperparameters:")
-    logger.info(f"  Dataset: {args.dataset}")
-    logger.info(f"  Condition: {args.condition}")
-    logger.info(f"  Channel: {args.channel}")
-    logger.info(f"  N-Fold CV: {args.n_folds}")
-    logger.info(f"  Batch Size: {args.batch_size}")
-    logger.info(f"  Learning Rate: {args.lr}")
-    logger.info(f"  Dropout: {args.dropout}")
-    logger.info(f"  Weight decay (L2 penalty): {args.weight_decay}")
-    logger.info(f"  Max Epochs: {args.epochs}")
-    logger.info(f"  Validation Every: {args.val_every} epochs")
-    logger.info(f"  Save Checkpoint Every: {args.save_every} epochs")
-    logger.info(f"  Early Stopping Patience: {args.patience} epochs")
-    logger.info(f"  Skip Artifact Removal: {args.skip_artifact_removal}")
     if args.augment_data is not None:
         augmentation: EEGAugmentation | None = EEGAugmentation(p_aug=args.augment_data)
-        logger.info(f"  Data Augmentation: enabled (p={args.augment_data})")
     else:
         augmentation = None
-        logger.info("  Data Augmentation: disabled")
-    logger.info(f"  Pretrained Checkpoint: {args.pretrained_checkpoint}")
-    logger.info(f"  Freeze CNN: {args.freeze_cnn}")
-    logger.info(f"  Freeze LSTM: {args.freeze_lstm}")
-    logger.info(f"  Class mode: {args.class_mode}")
-    logger.info(f"  Test mode: {args.test_mode}")
-    logger.info(f"  Cosine LR: {args.cosine_lr}")
-    logger.info(f"  L1 Lambda: {args.l1_lambda}")
-    logger.info(
-        f"  Focal Loss: {args.focal_loss}"
-        + (f" (gamma={args.focal_gamma})" if args.focal_loss else "")
+
+    cfg: dict[str, object] = vars(args).copy()
+    cfg["augment_data"] = (
+        f"enabled (p={args.augment_data})" if augmentation is not None else "disabled"
     )
-    logger.info(f"  Device: {device}")
-    logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
-    logger.info(f"  Log File: {log_path}")
+    cfg["device"] = device
+    cfg["checkpoint_dir"] = checkpoint_dir
+    cfg["log_file"] = log_path
+    cfg["git_commit"] = _get_git_commit()
+
+    logger.info("Starting EEG Classification Training")
+    logger.info("Hyperparameters:")
+    for key, val in cfg.items():
+        logger.info(f"  {key}: {val}")
 
     # Resolve raw-EEG config from defaults + CLI overrides (None for spectrogram models).
     raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig | None = (
@@ -1012,31 +1009,10 @@ def train(args: argparse.Namespace) -> None:
     with open(results_file, "w") as f:
         f.write(f"{args.n_folds}-Fold Cross-Validation Results\n")
         f.write(f"{'=' * 80}\n\n")
-        f.write(f"Dataset: {args.dataset}\n")
-        f.write(f"Condition: {args.condition}\n")
-        f.write(f"Batch Size: {args.batch_size}\n")
-        f.write(f"Learning Rate: {args.lr}\n")
-        f.write(f"Dropout: {args.dropout}\n")
-        f.write(f"Weight Decay (L2 regularization): {args.weight_decay}\n")
-        f.write(f"Cosine LR: {args.cosine_lr}\n")
-        f.write(f"Skip Artifact Removal: {args.skip_artifact_removal}\n")
-        if args.augment_data is not None:
-            f.write(f"Data Augmentation: enabled (p={args.augment_data})\n")
-        else:
-            f.write("Data Augmentation: disabled\n")
-        f.write(f"Pretrained Checkpoint: {args.pretrained_checkpoint}\n")
-        f.write(f"Freeze CNN: {args.freeze_cnn}\n")
-        f.write(f"Freeze LSTM: {args.freeze_lstm}\n")
-        f.write(f"LGGNet num_T: {args.lggnet_num_t}\n")
-        f.write(f"LGGNet out_graph: {args.lggnet_out_graph}\n")
-        f.write(f"LGGNet pool: {args.lggnet_pool}\n")
-        f.write(f"LGGNet pool_step_rate: {args.lggnet_pool_step_rate}\n")
-        f.write(f"LGGNet graph_type: {args.lggnet_graph_type}\n")
-        f.write(f"TSception num_T: {args.tsception_num_t}\n")
-        f.write(f"TSception num_S: {args.tsception_num_s}\n")
-        f.write(f"TSception hidden: {args.tsception_hidden}\n")
-        f.write(f"TSception sampling_rate: {args.tsception_sampling_rate}\n")
-        f.write(f"L1 Lambda: {args.l1_lambda}\n\n")
+        f.write("Configuration:\n")
+        for key, val in cfg.items():
+            f.write(f"  {key}: {val}\n")
+        f.write("\n")
         f.write("Per-fold best validation accuracy:\n")
         for i in range(len(results["fold_chunk_metrics"])):
             chunk_acc = results["fold_chunk_metrics"][i]["accuracy"]
