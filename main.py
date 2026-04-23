@@ -3,7 +3,6 @@ import logging
 import random
 import string
 from collections.abc import Callable
-from dataclasses import replace as dataclasses_replace
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -33,7 +32,6 @@ from thesis.data_preparation import (
 from thesis.dataset import (
     collate_spectrograms,
 )
-from thesis.model import RAW_EEG_MODELS
 from thesis.early_stopping import EarlyStopping
 from thesis.inference import preprocess_and_infer
 from thesis.json_logging import log_metrics_json
@@ -45,12 +43,13 @@ from thesis.metrics import (
     extract_classification_metrics,
     write_results,
 )
+from thesis.model import RAW_EEG_MODELS
 from thesis.model_factory import (
     DeformerConfig,
     LGGNetConfig,
     TSceptionConfig,
     TSceptionSConfig,
-    _RAW_EEG_DEFAULT_CONFIGS,
+    build_raw_eeg_config,
     create_model,
 )
 
@@ -957,6 +956,7 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Class mode: {args.class_mode}")
     logger.info(f"  Test mode: {args.test_mode}")
     logger.info(f"  Cosine LR: {args.cosine_lr}")
+    logger.info(f"  L1 Lambda: {args.l1_lambda}")
     logger.info(
         f"  Focal Loss: {args.focal_loss}"
         + (f" (gamma={args.focal_gamma})" if args.focal_loss else "")
@@ -965,73 +965,14 @@ def train(args: argparse.Namespace) -> None:
     logger.info(f"  Checkpoint Directory: {checkpoint_dir}")
     logger.info(f"  Log File: {log_path}")
 
-    # Build Deformer config: start from the model-appropriate defaults, then apply
-    # any CLI overrides (None means "keep model default").
-    _base_cfg = _RAW_EEG_DEFAULT_CONFIGS.get(args.model, DeformerConfig)()
-    _overrides: dict = {"num_time": int(args.chunk_duration * 250)}
-    if args.deformer_depth is not None:
-        _overrides["depth"] = args.deformer_depth
-    if args.deformer_heads is not None:
-        _overrides["heads"] = args.deformer_heads
-    if args.deformer_num_kernel is not None:
-        _overrides["num_kernel"] = args.deformer_num_kernel
-    if args.deformer_mlp_dim is not None:
-        _overrides["mlp_dim"] = args.deformer_mlp_dim
-    if args.deformer_dim_head is not None:
-        _overrides["dim_head"] = args.deformer_dim_head
-    if args.deformer_temporal_kernel is not None:
-        _overrides["temporal_kernel"] = args.deformer_temporal_kernel
-    deformer_config = dataclasses_replace(_base_cfg, **_overrides)
-    if args.model in {"Deformer", "DeformerS"}:
-        logger.info(f"Deformer config: {deformer_config} (chunk_duration={args.chunk_duration}s)")
-
-    # Build LGGNet config: only for LGGNet/LGGNetS models.
-    lggnet_config: LGGNetConfig | None = None
-    if args.model in {"LGGNet", "LGGNetS"}:
-        _lgg_base = _RAW_EEG_DEFAULT_CONFIGS[args.model]()
-        _lgg_overrides: dict = {"num_time": int(args.chunk_duration * 250), "sampling_rate": 250}
-        if args.lggnet_num_t is not None:
-            _lgg_overrides["num_T"] = args.lggnet_num_t
-        if args.lggnet_out_graph is not None:
-            _lgg_overrides["out_graph"] = args.lggnet_out_graph
-        if args.lggnet_pool is not None:
-            _lgg_overrides["pool"] = args.lggnet_pool
-        if args.lggnet_pool_step_rate is not None:
-            _lgg_overrides["pool_step_rate"] = args.lggnet_pool_step_rate
-        if args.lggnet_graph_type is not None:
-            _lgg_overrides["graph_type"] = args.lggnet_graph_type
-        lggnet_config = dataclasses_replace(_lgg_base, **_lgg_overrides)
-        logger.info(f"LGGNet config: {lggnet_config} (chunk_duration={args.chunk_duration}s)")
-        logger.info(f"  LGGNet num_T: {args.lggnet_num_t}")
-        logger.info(f"  LGGNet out_graph: {args.lggnet_out_graph}")
-        logger.info(f"  LGGNet pool: {args.lggnet_pool}")
-        logger.info(f"  LGGNet pool_step_rate: {args.lggnet_pool_step_rate}")
-        logger.info(f"  LGGNet graph_type: {args.lggnet_graph_type}")
-
-    # Build TSception config: only for TSception/TSceptionS models.
-    tsception_config: TSceptionConfig | None = None
-    if args.model in {"TSception", "TSceptionS"}:
-        _tsc_base = _RAW_EEG_DEFAULT_CONFIGS[args.model]()
-        _tsc_overrides: dict = {"num_time": int(args.chunk_duration * 250)}
-        if args.tsception_num_t is not None:
-            _tsc_overrides["num_T"] = args.tsception_num_t
-        if args.tsception_num_s is not None:
-            _tsc_overrides["num_S"] = args.tsception_num_s
-        if args.tsception_hidden is not None:
-            _tsc_overrides["hidden"] = args.tsception_hidden
-        if args.tsception_sampling_rate is not None:
-            _tsc_overrides["sampling_rate"] = args.tsception_sampling_rate
-        tsception_config = dataclasses_replace(_tsc_base, **_tsc_overrides)
-        logger.info(f"TSception config: {tsception_config} (chunk_duration={args.chunk_duration}s)")
-    logger.info(f"  L1 Lambda: {args.l1_lambda}")
-
-    raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig = (
-        tsception_config
-        if args.model in {"TSception", "TSceptionS"}
-        else lggnet_config
-        if args.model in {"LGGNet", "LGGNetS"}
-        else deformer_config
+    # Resolve raw-EEG config from defaults + CLI overrides (None for spectrogram models).
+    raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig | None = (
+        build_raw_eeg_config(args.model, args)
     )
+    if raw_eeg_config is not None:
+        logger.info(
+            f"{args.model} config: {raw_eeg_config} (chunk_duration={args.chunk_duration}s)"
+        )
 
     # Run cross-validation training
     results = train_cross_validation(

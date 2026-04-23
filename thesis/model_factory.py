@@ -5,8 +5,11 @@ Provides a single `create_model()` function used by both CLI and API
 to instantiate, optionally load pretrained weights, and freeze layers.
 """
 
+import argparse
 import logging
 from dataclasses import asdict, dataclass
+from dataclasses import replace as dataclasses_replace
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -179,7 +182,7 @@ class TSceptionSConfig:
 
 # Maps each raw-EEG model name to its default config class.
 # Add an entry here whenever a new raw-EEG model is registered in MODEL_REGISTRY.
-_RAW_EEG_DEFAULT_CONFIGS: dict[str, type] = {
+RAW_EEG_DEFAULT_CONFIGS: dict[str, type] = {
     "Deformer": DeformerConfig,
     "DeformerS": DeformerSConfig,
     "LGGNet": LGGNetConfig,
@@ -187,6 +190,67 @@ _RAW_EEG_DEFAULT_CONFIGS: dict[str, type] = {
     "TSception": TSceptionConfig,
     "TSceptionS": TSceptionSConfig,
 }
+
+
+# Per-family mapping from CLI arg name → config dataclass field name.
+# When adding a new CLI flag for a raw-EEG model, register it here.
+_CLI_OVERRIDES: dict[str, dict[str, str]] = {
+    "Deformer": {
+        "deformer_depth": "depth",
+        "deformer_heads": "heads",
+        "deformer_num_kernel": "num_kernel",
+        "deformer_mlp_dim": "mlp_dim",
+        "deformer_dim_head": "dim_head",
+        "deformer_temporal_kernel": "temporal_kernel",
+    },
+    "LGGNet": {
+        "lggnet_num_t": "num_T",
+        "lggnet_out_graph": "out_graph",
+        "lggnet_pool": "pool",
+        "lggnet_pool_step_rate": "pool_step_rate",
+        "lggnet_graph_type": "graph_type",
+    },
+    "TSception": {
+        "tsception_num_t": "num_T",
+        "tsception_num_s": "num_S",
+        "tsception_hidden": "hidden",
+        "tsception_sampling_rate": "sampling_rate",
+    },
+}
+
+
+def _model_family(model_name: str) -> str:
+    """Return the raw-EEG family ("Deformer", "LGGNet", "TSception") for a model name."""
+    for family in _CLI_OVERRIDES:
+        if family in model_name:
+            return family
+    raise ValueError(f"{model_name} is not a raw-EEG model")
+
+
+def build_raw_eeg_config(
+    model_name: str, args: argparse.Namespace
+) -> DeformerConfig | DeformerSConfig | LGGNetConfig | LGGNetSConfig | TSceptionConfig | TSceptionSConfig | None:
+    """
+    Build the raw-EEG config for ``model_name`` from defaults plus non-None CLI overrides.
+
+    Returns ``None`` for spectrogram models. ``args.chunk_duration`` (seconds) is converted to
+    ``num_time`` at 250 Hz. Family-specific CLI flags listed in ``_CLI_OVERRIDES`` are applied
+    only when the user passed a non-None value.
+
+    :param str model_name: Model name from MODEL_REGISTRY.
+    :param argparse.Namespace args: Parsed CLI arguments.
+    :return: Resolved config dataclass instance, or None for spectrogram models.
+    """
+    if model_name not in RAW_EEG_MODELS:
+        return None
+
+    base = RAW_EEG_DEFAULT_CONFIGS[model_name]()
+    overrides: dict[str, Any] = {"num_time": int(args.chunk_duration * 250)}
+    for arg_name, field_name in _CLI_OVERRIDES[_model_family(model_name)].items():
+        value = getattr(args, arg_name, None)
+        if value is not None:
+            overrides[field_name] = value
+    return dataclasses_replace(base, **overrides)
 
 
 def create_model(
@@ -215,7 +279,7 @@ def create_model(
     :param bool freeze_lstm: If True, freeze LSTM layer during training.
     :param DeformerConfig | LGGNetConfig | None raw_eeg_config: Hyperparameters for raw-EEG
         models (Deformer, LGGNet variants). Ignored for spectrogram models. Defaults from
-        ``_RAW_EEG_DEFAULT_CONFIGS`` are applied when None is passed for a raw-EEG model.
+        ``RAW_EEG_DEFAULT_CONFIGS`` are applied when None is passed for a raw-EEG model.
     :return: Initialized model.
     :rtype: nn.Module
     """
@@ -226,7 +290,7 @@ def create_model(
 
     if model_name in RAW_EEG_MODELS:
         # Raw EEG models take (batch, channels, time) directly — bypass spectrogram pipeline
-        cfg = raw_eeg_config if raw_eeg_config is not None else _RAW_EEG_DEFAULT_CONFIGS[model_name]()
+        cfg = raw_eeg_config if raw_eeg_config is not None else RAW_EEG_DEFAULT_CONFIGS[model_name]()
         model = model_class(
             num_chan=in_channels,
             num_classes=num_classes,
