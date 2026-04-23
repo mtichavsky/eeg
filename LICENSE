@@ -23,9 +23,10 @@ SOFTWARE.
 -------------------------------------------------------------------------------
 THIRD-PARTY EXCEPTIONS
 
-The following file is NOT covered by the MIT License above. It is a verbatim
-copy of third-party source code and is governed by its own license, which is
-reproduced in full at the top of the file:
+The following file is NOT covered by the MIT License above. They are either
+verbatim copies of third-party source code or copies that were edited. This code
+is governed by its own license, which is reproduced in full at the top of each
+such file:
 
   thesis/deformer.py  —  CBCR License 1.0 (non-commercial use only)
                           Copyright 2022 Centre for Brain Computing Research
