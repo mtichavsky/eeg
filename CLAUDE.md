@@ -282,14 +282,25 @@ Run with: `poetry run jupyter notebook`
      - Accepts raw EEG `(batch, channels, time)` instead of spectrograms
      - Implemented in `thesis/deformer.py` (CBCR License 1.0)
    - `DeformerS`: Smaller Deformer variant (~1/3 params): depth 4→3, heads 16→4, num_kernel 64→48
-   - **`RAW_EEG_MODELS`** frozenset: `{"Deformer", "DeformerS"}` — models that consume raw time-series instead of spectrograms
+   - `LGGNet` / `LGGNetS`: Local-Global-Graph Network (TNNLS 2023) — graph neural network over EEG channels
+     - Uses predefined adjacency graphs (global, hemisphere, frontal) to aggregate spatial features
+     - Implemented in `thesis/lggnet.py` (CBCR License 1.0)
+     - `LGGNetS`: smaller variant (num_T 64→32, ~585K params)
+   - `TSception` / `TSceptionS`: Temporal-Spatial CNN (IJCNN 2020) — multi-scale temporal + asymmetric spatial filters
+     - Implemented in `thesis/tsception.py` (CBCR License 1.0, TSceptionWrapper class only)
+     - `TSceptionS`: smaller variant (hidden 128→32, ~264K params; paper's cross-dataset recommendation)
+   - **`RAW_EEG_MODELS`** frozenset: `{"Deformer", "DeformerS", "LGGNet", "LGGNetS", "TSception", "TSceptionS"}` — models that consume raw time-series instead of spectrograms
 
 3. **`thesis/model_factory.py`** - Model creation factory
    - `create_model()`: Instantiates models from `MODEL_REGISTRY`, optionally loads pretrained weights, and freezes layers
-     - Accepts optional `deformer_config` for raw-EEG models; applies model-appropriate defaults if `None`
+     - Accepts optional `raw_eeg_config` for raw-EEG models; applies model-appropriate defaults if `None`
    - `DeformerConfig`: Dataclass of Deformer hyperparameters (num_time=2500, temporal_kernel=25, num_kernel=64, depth=4, heads=16, mlp_dim=16, dim_head=16)
    - `DeformerSConfig`: Reduced-parameter variant defaults (num_kernel=48, depth=3, heads=4)
-   - `_DEFORMER_DEFAULT_CONFIGS`: Dict mapping model names to their default config classes
+   - `LGGNetConfig`: Dataclass of LGGNet hyperparameters (num_T=64, out_graph=32, pool=16, pool_step_rate=0.25, graph_type="hem")
+   - `LGGNetSConfig`: Smaller variant defaults (num_T=32; all other fields identical to LGGNetConfig)
+   - `TSceptionConfig`: Dataclass of TSception hyperparameters (num_T=15, num_S=15, hidden=128)
+   - `TSceptionSConfig`: Smaller variant defaults (hidden=32; paper's cross-dataset recommendation)
+   - `_RAW_EEG_DEFAULT_CONFIGS`: Dict mapping model names to their default config classes
    - Used by both CLI (`main.py`) and API (`api/model_manager.py`)
 
 4. **`thesis/inference.py`** - Shared inference pipeline
@@ -322,7 +333,9 @@ Run with: `poetry run jupyter notebook`
 - **LR scheduler support in `train_one_fold()`**: Scheduler stepped once per epoch; scheduler class name logged at fold start
 - **Parametric chunk duration**: `--chunk-duration` (default 10.0 s) for raw-EEG models; spectrogram models always use 10 s
 - **Train accuracy at best val epoch**: Tracked per fold as `train_acc_at_best` and included in CV results
-- **Deformer config building**: `train()` computes `num_time = chunk_duration × 250`, loads model defaults from `_DEFORMER_DEFAULT_CONFIGS`, applies CLI overrides via `dataclasses_replace()`
+- **Raw-EEG config building**: `train()` computes `num_time = chunk_duration × 250`, loads model defaults from `_RAW_EEG_DEFAULT_CONFIGS`, applies CLI overrides via `dataclasses_replace()`
+- **LGGNet CLI overrides**: `--lggnet-num-t`, `--lggnet-out-graph`, `--lggnet-pool`, `--lggnet-pool-step-rate`, `--lggnet-graph-type` (global/hemisphere/frontal)
+- **TSception CLI overrides**: `--tsception-num-t`, `--tsception-num-s`, `--tsception-hidden`
 
 **`train_cv_example.py`** - Clean reference implementation
 - Shows proper 10-fold cross-validation pattern
@@ -518,6 +531,11 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
   - Implemented in `thesis/deformer.py`; bypass spectrogram pipeline entirely
   - Configured via `DeformerConfig` / `DeformerSConfig` dataclasses in `thesis/model_factory.py`
   - CLI overrides via `--deformer-depth`, `--deformer-heads`, `--deformer-num-kernel`, `--deformer-mlp-dim`, `--deformer-dim-head`, `--deformer-temporal-kernel`
+- **LGGNet / LGGNetS + TSception / TSceptionS** (Apr 2026): Additional raw-EEG models from literature
+  - LGGNet (TNNLS 2023): graph-based spatial aggregation; `thesis/lggnet.py` (CBCR License)
+  - TSception (IJCNN 2020): multi-scale temporal + spatial CNNs; `thesis/tsception.py` (CBCR License)
+  - Both bypass spectrogram pipeline; added to `RAW_EEG_MODELS` frozenset
+  - Configured via `LGGNetConfig` / `LGGNetSConfig` / `TSceptionConfig` / `TSceptionSConfig`; CLI overrides via `--lggnet-*` / `--tsception-*` flags
 - **Parametric chunk duration** (Apr 2026): `--chunk-duration` (default 10.0 s) controls raw-EEG window size for Deformer/DeformerS; spectrogram models always use 10 s
 - **Cosine annealing LR extended to all models** (Apr 2026): Previously only for RAW_EEG_MODELS; now default for all architectures
   - Disable with `--no-cosine-lr` for constant-LR ablations
@@ -570,7 +588,7 @@ Use today's date and a short title derived from the task. Existing plans in that
 
 ## Vendored Third-Party Code (Licenses)
 
-This project vendors code from external repositories under CBCR License 1.0 (non-commercial). When adding any new vendored file:
+This project vendors code from external repositories under CBCR License 1.0 (non-commercial). Already vendored: `thesis/deformer.py`, `thesis/lggnet.py`, `thesis/tsception.py`. When adding any new vendored file:
 
 1. **Add the full license header** to the vendored file (see `thesis/deformer.py` for the exact format).
 2. **Add an entry to `LICENSE`** under the `THIRD-PARTY EXCEPTIONS` section, including:
@@ -584,6 +602,7 @@ The project's main license (MIT) is in `LICENSE`. All CBCR-licensed files are li
 ## Quick Reference Files
 - `docs/plans/` - Saved plan mode outputs, dated and titled
 - `EXPERIMENTS.md` - Log of experiment configurations and results
+- `.claude/commands/review-experiments.md` - `/review-experiments` slash command: reads EXPERIMENTS.md + experiment dirs, generates actionable insights
 - `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, IDUNDataset, AX_MALIKDataset, SpectrogramDataset)
 - `thesis/data_preparation.py` - Dataset preparation functions (prepare_mdd_dataset, prepare_cane_dataset, prepare_idun_dataset, prepare_ax_malik_dataset)
 - `thesis/inference.py` - Shared inference pipeline (preprocess, infer, aggregate) for CLI and API
