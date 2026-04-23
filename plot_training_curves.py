@@ -181,7 +181,12 @@ def plot_axes(
     ax1.set_xlabel("Epoch", fontsize=fontsize_label)
     ax1.set_ylabel("Loss", fontsize=fontsize_label)
     ax1.plot(
-        train_epochs, train_losses, label="Train Loss", linewidth=linewidth, alpha=0.8, color="blue"
+        train_epochs,
+        train_losses,
+        label="Train Loss (L1 incl.)",
+        linewidth=linewidth,
+        alpha=0.8,
+        color="blue",
     )
     ax1.plot(
         eval_epochs,
