@@ -43,7 +43,7 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         "or 'in-ear' for in-ear EEG. When 'in-ear' is selected, CANE is replaced with real "
         "IDUN in-ear recordings; MDD and SAD use synthetic bipolar derivation T8-T7. "
         "Includes 50%% sign flip augmentation. "
-        "When 'all' is selected, model receives 8-channel spectrograms.",
+        "When 'all' is selected, model receives 8-channel data.",
     )
     preproc_group.add_argument(
         "--class-mode",
@@ -75,10 +75,7 @@ def add_model_args(parser: argparse.ArgumentParser) -> None:
         type=str,
         default="CNN_LSTM_DepCap",
         choices=MODEL_REGISTRY.keys(),
-        help="Model architecture to use: 'CNN_LSTM_DepCap' (default, full model), "
-        "'Smaller' (reduced LSTM model), 'SmallerAll' (multi-channel LSTM), "
-        "'SmallerAttn' (reduced model with self-attention), "
-        "or 'SmallerAllAttn' (multi-channel with self-attention)",
+        help="Model architecture to use",
     )
 
 
@@ -142,7 +139,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     train_parser.add_argument(
         "--focal-loss",
         action="store_true",
-        help="Use Focal Loss instead of cross-entropy. Class weights computed per fold "
+        help="Use Focal Loss instead of pure cross-entropy. Class weights computed per fold "
         "are passed as alpha. Compatible with WeightedRandomSampler.",
     )
     train_parser.add_argument(
@@ -184,23 +181,29 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     # Transfer learning arguments
-    train_parser.add_argument(
+    transfer_group = train_parser.add_argument_group(
+        "Transfer learning",
+        description="Load a pretrained checkpoint and optionally freeze parts of the network. "
+        "--freeze-cnn/--freeze-lstm are only meaningful for CNN_LSTM-family models "
+        "(CNN_LSTM_DepCap, Smaller, SmallerAll, SmallerAllV2, SmallerAllV2Attn, SmallerAllV3); "
+        "they are silently ignored for raw-EEG models (Deformer, LGGNet, TSception, …).",
+    )
+    transfer_group.add_argument(
         "--pretrained-checkpoint",
         type=str,
         default=None,
         help="Path to pretrained model checkpoint (.pth) for transfer learning. "
         "Must use same --model architecture as pretrained model.",
     )
-    train_parser.add_argument(
+    transfer_group.add_argument(
         "--freeze-cnn",
         action="store_true",
-        help="Freeze CNN layers (conv1, conv2) during training. "
-        "Can be used alone or with --freeze-lstm.",
+        help="Freeze CNN layers (conv1, conv2) during training (CNN_LSTM-family only).",
     )
-    train_parser.add_argument(
+    transfer_group.add_argument(
         "--freeze-lstm",
         action="store_true",
-        help="Freeze LSTM layer during training. Can be used alone or with --freeze-cnn.",
+        help="Freeze LSTM/GRU layer during training (CNN_LSTM-family only).",
     )
 
     # Deformer hyperparameters (ignored for non-Deformer models)
