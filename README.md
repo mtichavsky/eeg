@@ -371,20 +371,19 @@ File server: `davs://sc-nas.fit.vutbr.cz:5006/`
 ml Python/3.12.3-GCCcore-13.3.0
 ml CUDA/12.6.0
 
-# Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate
+# Install poetry through pip and add poetry into the path
 
-# Install Poetry and project dependencies
-pip install poetry
+poetry env use python3.12
 poetry install
+poetry env activate # Execute the command this returns to load env
+
 
 # Check GPU and select matching PyTorch wheel
 nvidia-smi                                                    # verify GPU is available
 nvidia-smi --query-gpu=name,compute_cap --format=csv,noheader # get compute capability
 
 # Install PyTorch with CUDA support (adjust URL for your CUDA version)
-pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu126
+# pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu126
 
 # Point datasets to your data directory (default: /home/milan/Documents/diplomka/)
 export EEG_DATA_DIR=/home/xticha09/
