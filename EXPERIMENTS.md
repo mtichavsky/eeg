@@ -14,18 +14,16 @@
 | binary, 8-ch, V2Attn+FL d2           | 76.99% ± 5.16% × 76.75% ± 6.61%     | 80.84% ± 7.26% | 70.80% ± 9.98%     | all3-020-all-binary-smallerAllV2Attn-focal-d2                                    |
 | **binary, 8-ch, V3+FL**              | 78.84% ± 6.39% × 80.22% ± 6.94%     | 83.74% ±11.02% | 70.18% ±13.38%     | all3-021-all-binary-smallerAllV3-focal                                           |
 | binary, 8-ch, V3+FL+CAR (028)        | 77.73% ± 3.97% × 77.61% ± 5.37%     | 84.86% ± 6.09% | 66.96% ± 7.70%     | all3-028-all-binary-smallerAllV3-focal_jjr; **10 fold**                          |
-| binary, 8-ch, V3+FL (run 2)          | 78.56% ± 3.54% × 79.39% ± 6.35%     | 86.68% ± 6.10% | 66.56% ± 9.59%     | all3-022-all-binary-smallerAllV3-focal                                           |
+| binary, 8-ch, V3+FL (run 2)          | 78.56% ± 3.54% × 79.39% ± 6.35%   | 86.68% ± 6.10% | 66.56% ± 9.59%     | all3-022-all-binary-smallerAllV3-focal                                           |
 | binary, 8-ch, AllTransformerV4       | 76.53% ± 2.48% × 74.27% ± 3.00%     | 87.22% ± 7.80% | 59.53% ±10.55%     | all3-024-all-2class-V4-weighted-sampler; **6 fold**                              |
 | binary, 8-ch, V4, lr=5e-4            | 77.58% ± 3.41% × 77.54% ± 6.69%     | 87.92% ± 4.58% | 61.50% ± 7.10%     | all3-024-all-2class-V4-LR; **6 fold**                                            |
 | binary, 8-ch, DeformerS, d=0.3       | 64.85% ± 8.27% × 65.10% ± 8.78%     | 66.87% ±24.36% | 63.15% ±17.13%     | all3-023-all-2class-DeformerS-weighted-sampler-30drop                            |
 | binary, 8-ch, **DeformerS-head**     | 75.71% ± 4.30% × 74.13% ± 7.91%     | 85.79% ± 6.29% | 59.59% ±14.57%     | all3-024-all-2class-DeformerS-head; **6 fold**                                   |
-| binary, 8-ch, DeformerS-head+CAR     | 74.96% ± 5.60% × 75.41% ± 6.28%     | 77.00% ±11.46% | **71.18% ± 5.64%** | all3-028-all-2class-DeformerS-head_ucb; **6 fold**                               |
+| **binary, 8-ch, DeformerS-head+CAR** | 74.96% ± 5.60% × 75.41% ± 6.28%     | 77.00% ±11.46% | **71.18% ± 5.64%** | all3-028-all-2class-DeformerS-head_ucb; **6 fold**                               |
 | binary, 8-ch, DeformerS-head+CAR     | **76.02% ± 8.05% × 75.58% ±10.63%** | 80.24% ±11.07% | 69.60% ±12.05%     | all3-028-all-2class-DeformerS-head-10fold_dzf; **10 fold**                       |
 | 4-class, 8-ch, SmallerAll            | 63.46% ± 9.60% × 64.57% ±11.36%     |                |                    | all3-018-all-4class-smallerAll-weighted-sampler                                  |
 | 4-class, 8-ch, Attn                  | 64.76% ± 8.05% × 66.09% ± 8.23%     |                |                    | all3-018-all-4class-smallerAllAttn-weighted-sampler                              |
 | **4-class, 8-ch, V2Attn**            | 65.91% ± 6.63% × 68.49% ± 6.68%     |                |                    | all3-020-all-4class-smallerAllV2Attn-weighted-sampler                            |
-| binary, 8-ch, LGGNet (026, NaN bug)  | failed (NaN loss)                   | —              | —                  | all3-026-all-binary-lggnet; **bug fixed, re-run needed**                         |
-| binary, 8-ch, LGGNetS (026, NaN bug) | failed (NaN loss)                   | —              | —                  | all3-026-all-binary-lggnet-s; **bug fixed, re-run needed**                       |
 | binary, 8-ch, LGGNet (hem)           | —                                   | —              | —                  | all3-027-all-binary-lggnet; **planned**                                          |
 | binary, 8-ch, LGGNetS (hem)          | 73.35% ± 4.66% × 74.42% ± 6.99%     | 85.25% ± 8.30% | 54.85% ± 8.47%     | all3-027-all-binary-lggnet-s; **10 fold**                                        |
 | binary, 8-ch, LGGNetS out_graph=16   | 72.80% ± 3.96% × 74.38% ± 4.83%     | 81.92% ± 7.07% | 58.15% ±10.04%     | all3-027-all-binary-lggnet-s-out16_byh; **10 fold**                              |
