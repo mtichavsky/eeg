@@ -57,7 +57,6 @@ TODO double check normals count for MDD
 | `CNN_LSTM_DepCap`    | 798 K   | 1                                                   | LSTM                                                    | 100                   |
 | `Smaller`            | 257 K   | 1                                                   | LSTM                                                    | 64                    |
 | `SmallerAttn`        | 265 K   | 1                                                   | Self-attention (Transformer)                            | 128                   |
-| `SmallerAllV2`       | 346 K   | 8 (per-channel shared CNN + cross-channel attn)     | LSTM                                                    | 64                    |
 | `CNNAttn`            | 354 K   | 8 (per-channel shared CNN + cross-channel attn)     | Self-attention (Transformer)                            | 128                   |
 | `CNNCatLSTM`         | 1.00 M  | 8 (per-channel shared CNN + full concat projection) | LSTM                                                    | 100 (default)         |
 | `Deformer`           | 1.78 M  | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4)                         | heads=16, dim_head=16 |

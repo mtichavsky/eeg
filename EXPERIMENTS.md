@@ -8,19 +8,6 @@
 | **binary, in-ear, Attn+FL**          | 77.76% ± 4.64% × 78.74% ± 7.50%     | 84.21% ± 6.97% | 68.78% ± 6.26%     | all3-019-inear-binary-smallerAttn-focal                                          |
 | binary, in-ear, Attn+FL, lr=1e-3     | 76.66% ± 2.36% × 76.61% ± 5.78%     | 86.91% ± 6.63% | 62.71% ±10.22%     | all3-024-inear-binary-smallerAttn-focal; **6 fold**                              |
 | 4-class, in-ear, 3 dts.              | 63.62% ± 4.45%                      |                |                    | all3-016-inear-4class-smaller; **6 fold only**                                   |
-| **4-class, in-ear, Attn+FL**         | 66.51% ± 7.32% × 67.10% ± 9.13%     |                |                    | all3-019-inear-4class-smallerAttn-focal                                          |
-| binary, 8-ch, 3 dts.                 | 76.83% ± 2.12%                      | 88.72% ± 2.86% | 58.25% ± 6.44%     | all3-017-all-binary-smallerall-weighted-sampler                                  |
-| **binary, 8-ch, V2Attn**             | 79.10% ± 4.90% × 79.83% ± 5.98%     | 89.43% ± 6.78% | 63.42% ±11.22%     | all3-020-all-binary-smallerAllV2Attn-weighted-sampler                            |
-| binary, 8-ch, V2Attn+FL d2           | 76.99% ± 5.16% × 76.75% ± 6.61%     | 80.84% ± 7.26% | 70.80% ± 9.98%     | all3-020-all-binary-smallerAllV2Attn-focal-d2                                    |
-| **binary, 8-ch, V3+FL**              | 78.84% ± 6.39% × 80.22% ± 6.94%     | 83.74% ±11.02% | 70.18% ±13.38%     | all3-021-all-binary-smallerAllV3-focal                                           |
-| binary, 8-ch, V3+FL+CAR (028)        | 77.73% ± 3.97% × 77.61% ± 5.37%     | 84.86% ± 6.09% | 66.96% ± 7.70%     | all3-028-all-binary-smallerAllV3-focal_jjr; **10 fold**                          |
-| binary, 8-ch, V3+FL (run 2)          | 78.56% ± 3.54% × 79.39% ± 6.35%   | 86.68% ± 6.10% | 66.56% ± 9.59%     | all3-022-all-binary-smallerAllV3-focal                                           |
-| binary, 8-ch, AllTransformerV4       | 76.53% ± 2.48% × 74.27% ± 3.00%     | 87.22% ± 7.80% | 59.53% ±10.55%     | all3-024-all-2class-V4-weighted-sampler; **6 fold**                              |
-| binary, 8-ch, V4, lr=5e-4            | 77.58% ± 3.41% × 77.54% ± 6.69%     | 87.92% ± 4.58% | 61.50% ± 7.10%     | all3-024-all-2class-V4-LR; **6 fold**                                            |
-| binary, 8-ch, DeformerS, d=0.3       | 64.85% ± 8.27% × 65.10% ± 8.78%     | 66.87% ±24.36% | 63.15% ±17.13%     | all3-023-all-2class-DeformerS-weighted-sampler-30drop                            |
-| binary, 8-ch, **DeformerS-head**     | 75.71% ± 4.30% × 74.13% ± 7.91%     | 85.79% ± 6.29% | 59.59% ±14.57%     | all3-024-all-2class-DeformerS-head; **6 fold**                                   |
-| **binary, 8-ch, DeformerS-head+CAR** | 74.96% ± 5.60% × 75.41% ± 6.28%     | 77.00% ±11.46% | **71.18% ± 5.64%** | all3-028-all-2class-DeformerS-head_ucb; **6 fold**                               |
-| binary, 8-ch, DeformerS-head+CAR     | **76.02% ± 8.05% × 75.58% ±10.63%** | 80.24% ±11.07% | 69.60% ±12.05%     | all3-028-all-2class-DeformerS-head-10fold_dzf; **10 fold**                       |
 | 4-class, 8-ch, SmallerAll            | 63.46% ± 9.60% × 64.57% ±11.36%     |                |                    | all3-018-all-4class-smallerAll-weighted-sampler                                  |
 | 4-class, 8-ch, Attn                  | 64.76% ± 8.05% × 66.09% ± 8.23%     |                |                    | all3-018-all-4class-smallerAllAttn-weighted-sampler                              |
 | **4-class, 8-ch, V2Attn**            | 65.91% ± 6.63% × 68.49% ± 6.68%     |                |                    | all3-020-all-4class-smallerAllV2Attn-weighted-sampler                            |
@@ -55,22 +42,22 @@ normalisation sequence.  For `--channel in-ear`, CAR is skipped (meaningless wit
 detrend is still applied to T7/T8 before the bipolar derivation.
 
 Two baseline models were re-run with the updated preprocessing:
-- **SmallerAllV3 + focal loss** (028 _jjr, 10-fold) — replicate of 022
+- **CNNCatLSTM + focal loss** (028 _jjr, 10-fold) — replicate of 022
 - **DeformerS-head** (028 _ucb 6-fold + 028 _dzf 10-fold) — replicate of 024-DeformerS-head
 
 #### all3-028-all-binary-smallerAllV3-focal_jjr
 
-- Model: SmallerAllV3 (~1M params, 4b concat), binary, 8-channel, **CAR+detrend preprocessing**, ec+eo, **10-fold**, focal loss (gamma=2.0)
+- Model: CNNCatLSTM (~1M params, 4b concat), binary, 8-channel, **CAR+detrend preprocessing**, ec+eo, **10-fold**, focal loss (gamma=2.0)
 - Hyperparams: lr=1e-4, dropout=0.1, wd=1e-4 (identical to 022)
 - Chunk accuracy: 77.73% ± 3.97% | Subject accuracy: 77.61% ± 5.37%
 - Chunk sensitivity: 84.86% ± 6.09% | Chunk specificity: 66.96% ± 7.70%
 - Train acc at best val: 79.80% ± 15.37% — very high variance (folds 5, 8, 10 stop at epoch 1–2)
 - Per-dataset chunk accuracy: CANE 72.93% (spec 53.29%), MDD 87.44% (spec 86.36%), SAD 64.64% (spec 63.88%)
 - vs 022 baseline (no CAR): −0.83pp chunk, −1.78pp subject. Sens/spec nearly unchanged (+0.40pp spec).
-- **Result: preprocessing change has a small negative effect on SmallerAllV3+FL.** CAR/detrend does not help the
+- **Result: preprocessing change has a small negative effect on CNNCatLSTM+FL.** CAR/detrend does not help the
   spectrogram-based pipeline; the STFT log-magnitude representation already discards DC offsets, so the extra
   normalisation adds noise without benefit. Performance is within 1pp and within noise, but consistently lower.
-- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec+eo --n-folds 10 --lr 1e-4 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-028-all-binary-smallerAllV3-focal_jjr`
+- Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model CNNCatLSTM --condition ec+eo --n-folds 10 --lr 1e-4 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-028-all-binary-smallerAllV3-focal_jjr`
 
 #### all3-028-all-2class-DeformerS-head_ucb
 
@@ -95,7 +82,7 @@ Two baseline models were re-run with the updated preprocessing:
   MDD specificity goes from ~60% to 83–88%, and SAD specificity improves by ~9–10pp. The raw-EEG pipeline benefits
   from explicit DC removal that the spectrogram pipeline gets "for free" via the log transform. The CANE specificity
   (41–42%) remains the main bottleneck — CAR helps MDD/SAD but not CANE bias.
-- **Decision guidance:** Keep the preprocessing change. It does not hurt accuracy for SmallerAllV3 (−0.83pp, within
+- **Decision guidance:** Keep the preprocessing change. It does not hurt accuracy for CNNCatLSTM (−0.83pp, within
   noise) and produces a meaningfully more balanced model for DeformerS without losing accuracy. More importantly,
   harmonising the pipeline across all four datasets is scientifically correct: models trained on combined data
   should not receive differently-normalised inputs per dataset.
@@ -191,7 +178,7 @@ overfit, so dropout=0.5 matches the paper's regularization strategy.
 - High training variance (train acc 62–99%): folds 6,7 stop at epoch 1 with train acc ~62–65%,
   while folds 2,4,9 overfit to 99%+ before stopping. Points to LR sensitivity.
 - vs LGGNetS (no focal, 027-s): +1.20pp chunk (74.55% vs 73.35%), +2.09pp subject (76.51% vs 74.42%)
-- vs best 8-ch binary (SmallerAllV2Attn 027, 79.10%): −4.55pp chunk — still behind CNN-LSTM baseline
+- vs best 8-ch binary (CNNAttn 027, 79.10%): −4.55pp chunk — still behind CNN-LSTM baseline
 - Command: `CUDA_VISIBLE_DEVICES=3 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model LGGNet --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.5 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-027-all-binary-lggnet-focal`
 
 #### all3-027-all-binary-lggnet-s-focal-5e-4
@@ -239,7 +226,7 @@ overfit, so dropout=0.5 matches the paper's regularization strategy.
 - **Result: marginal improvement.** +0.7pp chunk vs 10s TSceptionS; overfit gap 24pp vs 27pp. Cutting the
   flat feature 2.6× moved the needle only 0.7pp — the architecture plateaus regardless of input length.
   CANE specificity remains at ~30%, confirming this is a task-fit problem, not an input-size problem.
-- vs SmallerAllV2Attn (79.10%): −7.6pp. Conclusion: TSception does not transfer competitively to this task.
+- vs CNNAttn (79.10%): −7.6pp. Conclusion: TSception does not transfer competitively to this task.
 - Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --chunk-duration 4 --checkpoint-dir=experiments/all3-026-all-binary-tsceptions-ch4_rpr`
 
 ### all3-026-all-binary-tsception-s
@@ -254,7 +241,7 @@ overfit, so dropout=0.5 matches the paper's regularization strategy.
 - **TSceptionS beats TSception** (+1.96pp chunk, +1.93pp subject): forcing hidden=32 prevents FC from memorising
   the training set as effectively; the inception+spatial feature extractor is the same in both models
 - 99% of parameters still in FC (261,504 of 264,281); same structural problem, just smaller
-- vs SmallerAllV2Attn (79.10%): −8.30pp. Better than TSception but still well below CNN-LSTM baseline
+- vs CNNAttn (79.10%): −8.30pp. Better than TSception but still well below CNN-LSTM baseline
 - Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSceptionS --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception-s`
 
 ### all3-026-all-binary-tsception
@@ -269,7 +256,7 @@ overfit, so dropout=0.5 matches the paper's regularization strategy.
 - Root cause: **99.7% of model parameters are in the FC layer** (8172×128 = 1,046,016 of 1,049,081 total).
   Original paper used 4ch × 1024-sample inputs → FC input ~3200. Our 8ch × 2500-sample input grows it to 8172
   (2.5×), making the FC layer the entire model rather than a classifier on learned features
-- vs SmallerAllV2Attn (79.10%): −10.26pp. FC-dominated architecture cannot generalise
+- vs CNNAttn (79.10%): −10.26pp. FC-dominated architecture cannot generalise
 - Command: `CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 128 --dataset all --model TSception --condition ec+eo --n-folds 6 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --checkpoint-dir=experiments/all3-026-all-binary-tsception`
 
 ### all3-026-all-binary-lggnet-s
@@ -306,7 +293,7 @@ capture left–right EEG asymmetry. Unlike CNN-LSTM models, it uses a flat→FC 
 making it particularly fast and easy to regularise.
 
 Two variants:
-- **TSception** (~1.05M params, hidden=128): paper's original configuration; comparable to SmallerAllV3
+- **TSception** (~1.05M params, hidden=128): paper's original configuration; comparable to CNNCatLSTM
 - **TSceptionS** (~264K params, hidden=32): paper's own cross-dataset recommendation; comparable to SmallerAll
 
 **Rationale for lr=1e-3, dropout=0.3, wd=0, l1=1e-6, batch=128:**
@@ -356,7 +343,7 @@ lr=1e-4 (DeformerS) recovered at lr=1e-3, consistent with the paper's choice.
 - Train acc at best val: 91.35% ± 6.19% — still overfit but at higher LR the model finds usable solutions faster
 - Best epochs: early (1-5 for 4 folds, 19 and 30 for 2 folds) — aggressive LR+WD pushes early convergence
 - vs DeformerS-30drop (lr=1e-4): **+10.86pp chunk** — dramatically better. The key was lr=1e-3 not the head modification.
-- vs SmallerAllV2Attn best (79.10%): −3.39pp. DeformerS still trails CNN-LSTM baselines.
+- vs CNNAttn best (79.10%): −3.39pp. DeformerS still trails CNN-LSTM baselines.
 - SAD still at 58%, same bottleneck as all other models
 
 ### all3-024-all-2class-V4-LR
@@ -392,7 +379,7 @@ lr=1e-4 (DeformerS) recovered at lr=1e-3, consistent with the paper's choice.
 - Per-dataset chunk accuracy: CANE 70.78%, MDD 87.27%, SAD 63.67%
 - Train acc at best val: 73.77% ± 10.51% — high variance fold-to-fold (range 55-88%)
 - Best epochs: very inconsistent (1, 10, 42, 45, 2, 12) — fold 3 stops at epoch 1, fold 4 at epoch 45; architecture is sensitive to fold composition
-- vs SmallerAllV2Attn 020 (79.10%): −2.57pp. V4 (token transformer) underperforms the CNN+LSTM baseline; likely under-regularized
+- vs CNNAttn 020 (79.10%): −2.57pp. V4 (token transformer) underperforms the CNN+LSTM baseline; likely under-regularized
 - Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model AllTransformerV4 --condition ec+eo --n-folds 6 --dropout 0.1 --class-mode 2 --lr 1e-4 --weight-decay 1e-4 --val-every 1 --checkpoint-dir=experiments/all3-024-all-2class-V4-weighted-sampler`
 
 ### all3-024-inear-binary-smallerAttn-focal
@@ -444,22 +431,22 @@ lr=1e-4 (DeformerS) recovered at lr=1e-3, consistent with the paper's choice.
 - Massive overfitting: train acc reaches 97-99% by epoch 3-5; best val occurs at epoch 2-18 then degrades sharply
 - Val loss spiky and increasing from epoch 5+; model memorizes training set almost immediately
 - Pattern: 10-fold folds with fewer pathological samples (fold 4, 9) collapse to ~65%; lucky folds reach ~80%
-- **Conclusion**: Full Deformer is far too large for this dataset (~330 subjects). Not competitive with SmallerAllV2Attn/V3 despite more parameters.
+- **Conclusion**: Full Deformer is far too large for this dataset (~330 subjects). Not competitive with CNNAttn/V3 despite more parameters.
 
 ### all3-022-all-binary-smallerAllV3-focal
 
-- Model: SmallerAllV3 (4b, concat) — **first run of the concat architecture**; 021 turned out to use the old 3a design
+- Model: CNNCatLSTM (4b, concat) — **first run of the concat architecture**; 021 turned out to use the old 3a design
 - Config: binary, 8-channel, ec+eo, 10-fold, focal loss (gamma=2.0), dropout=0.1, rnn_hidden=100, chan_d_model=128
 - Chunk accuracy: 78.56% ± 3.54% | Subject accuracy: 79.39% ± 6.35%
 - Chunk sensitivity: 86.68% ± 6.10% | Chunk specificity: 66.56% ± 9.59% | Balanced acc: 76.62%
 - Per-dataset chunk accuracy: CANE 72.19%, MDD 89.62%, SAD 66.49%
 - vs 021 (3a design): −0.28pp chunk, within noise. Different architecture so not a clean comparison.
 - Loss curves: epoch-1/2 best in ~3 folds, train/val divergence from epoch 3+. Overfitting pattern consistent with 021 despite different architecture.
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec+eo --n-folds 10 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-022-all-binary-smallerAllV3-focal`
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model CNNCatLSTM --condition ec+eo --n-folds 10 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-022-all-binary-smallerAllV3-focal`
 
 ### all3-021-all-binary-smallerAllV3-focal
 
-- Model: SmallerAllV3 (4a, per-frame attention) — confirmed via `nhead=8, rnn_hidden=330` in training log
+- Model: CNNCatLSTM (4a, per-frame attention) — confirmed via `nhead=8, rnn_hidden=330` in training log
 - Config: binary, 8-channel, ec+eo, 10-fold, focal loss (gamma=2.0), dropout=0.1, rnn_hidden=330, chan_d_model=128
 - Chunk accuracy: 78.84% ± 6.39% | Subject accuracy: 80.22% ± 6.94%
 - Chunk sensitivity: 83.74% ± 11.02% | Chunk specificity: 70.18% ± 13.38% | Balanced acc: 76.96%
@@ -467,40 +454,40 @@ lr=1e-4 (DeformerS) recovered at lr=1e-3, consistent with the paper's choice.
 - Best balanced accuracy of all experiments (76.96%). SAD accuracy improved significantly vs 020 (+4.94pp).
 - Loss curves: epoch-1/2 best in folds 1, 5, 10. Val loss spiky throughout. Train loss decreasing steadily. Classic overfitting from oversized chan_proj layer (~885K params of ~1M total).
 - Key takeaway: V3 4a (per-frame attention) matches V2Attn in accuracy. The 4b concat design was not tested until 022.
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec+eo --n-folds 10 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal`
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model CNNCatLSTM --condition ec+eo --n-folds 10 --dropout 0.1 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal`
 
 ### all3-021-all-binary-smallerAllV3-focal_hsf
 
-- Model: SmallerAllV3 (3a design — rnn_hidden=330, chan_d_model=128) — V3 with oversized LSTM
+- Model: CNNCatLSTM (3a design — rnn_hidden=330, chan_d_model=128) — V3 with oversized LSTM
 - Config: binary, 8-channel, EC only (4217 chunks vs 8444 for ec+eo), focal loss, dropout=0.2
 - Chunk accuracy: 78.68% ± 4.98% | Subject accuracy: 79.24% ± 8.41%
 - Chunk sensitivity: 85.15% ± 8.56% | Chunk specificity: 68.62% ± 13.35% | Balanced acc: 76.89%
 - Note: trained on EC condition only (half the data). High variance in subject accuracy (±8.4%) reflects smaller val sets per fold.
 - vs 021 (V3 3b, ec+eo): nearly identical despite 3a design and half the data. Confirms the concat approach (3b) offers no systematic advantage once overfitting dominates both.
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model SmallerAllV3 --condition ec --n-folds 10 --dropout 0.2 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal_hsf`
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model CNNCatLSTM --condition ec --n-folds 10 --dropout 0.2 --weight-decay 1e-4 --val-every 1 --focal-loss --checkpoint-dir=experiments/all3-021-all-binary-smallerAllV3-focal_hsf`
 
 ### all3-020-all-binary-smallerAllV2Attn-weighted-sampler
 
-- Model: SmallerAllV2Attn (per-channel shared CNN + cross-channel self-attention + temporal attention), binary, 8-channel, ec+eo, 10-fold, weighted sampler
+- Model: CNNAttn (per-channel shared CNN + cross-channel self-attention + temporal attention), binary, 8-channel, ec+eo, 10-fold, weighted sampler
 - Chunk accuracy: 79.10% ± 4.90% | Subject accuracy: 79.83% ± 5.98%
 - Chunk sensitivity: 89.43% ± 6.78% | Chunk specificity: 63.42% ± 11.22%
 - Per-dataset chunk accuracy: CANE 72.55%, MDD 90.20%, SAD 68.08%
 - vs SmallerAllAttn (018, 8ch binary): no direct baseline but matches in-ear SmallerAttn (78.26% chunk) — 8 channels provide no gain over 1 channel
-- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-binary-smallerAllV2Attn-weighted-sampler`
+- Command: `CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model CNNAttn --condition ec+eo   --n-folds 10   --dropout 0.1  --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-binary-smallerAllV2Attn-weighted-sampler`
 
 ### all3-020-all-4class-smallerAllV2Attn-weighted-sampler
 
-- Model: SmallerAllV2Attn (per-channel shared CNN + cross-channel self-attention + temporal attention), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
+- Model: CNNAttn (per-channel shared CNN + cross-channel self-attention + temporal attention), 4-class, 8-channel, ec+eo, 10-fold, weighted sampler
 - Chunk accuracy: 65.91% ± 6.63% | Subject accuracy: 68.49% ± 6.68%
 - Chunk recall: Healthy 55.87%, Anxiety 42.18%, Depression 90.35%, Comorbid 79.63%
 - Per-dataset chunk accuracy: CANE 46.30%, MDD 86.59%, SAD 69.14%
 - vs SmallerAllAttn (018): +1.15pp chunk, +2.40pp subject — marginal improvement; CANE still at ~46%
 - Architecture: per-channel CNN (shared weights) preserves channel identity longer than Conv3D, but cross-channel attention still provides no measurable gain over single-channel models
-- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model SmallerAllV2Attn --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-4class-smallerAllV2Attn-weighted-sampler`
+- Command: `CUDA_VISIBLE_DEVICES=2 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel all   --batch-size 64   --dataset all   --model CNNAttn --condition ec+eo   --n-folds 10   --dropout 0.1  --class-mode 4 --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-020-all-4class-smallerAllV2Attn-weighted-sampler`
 
 ### all3-020-all-binary-smallerAllV2Attn-focal-d3
 
-- Model: SmallerAllV2Attn, binary, 8-channel, ec+eo, 10-fold, focal loss, dropout=0.3
+- Model: CNNAttn, binary, 8-channel, ec+eo, 10-fold, focal loss, dropout=0.3
 - Incomplete run — no results.txt. Abandoned (higher dropout found not to help for V2Attn).
 
 ### all3-020-inear-binary-smallerAttn-focal-d3
