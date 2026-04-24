@@ -193,8 +193,6 @@ class Smaller(nn.Module):
 
         # Calculate RNN input size by doing a dummy forward pass through conv layers
         with torch.no_grad():
-            # For 3D CNN (SmallerAll): input is (B, C=1, D=in_channels, H, W)
-            # For 2D CNN (Smaller): input is (B, C=in_channels, H, W)
             if isinstance(self.conv1, nn.Conv3d):
                 # 3D case: channels become depth dimension
                 dummy_input = torch.zeros(1, 1, in_channels, *input_shape)
@@ -312,66 +310,6 @@ class Smaller(nn.Module):
         return logits
 
 
-class SmallerAll(Smaller):
-    Pool1 = nn.AdaptiveMaxPool3d((1, None, None))
-    Dropout1 = nn.Dropout3d
-
-    @classmethod
-    def Conv1(cls, in_channels: int) -> nn.Module:
-        """
-        Create the first convolutional layer (3D version).
-
-        Takes 1 input channel with depth=in_channels (8 EEG channels).
-        Kernel spans all channels in depth so it processes all EEG channels
-        simultaneously in a single convolution operation.
-
-        :param int in_channels: Number of EEG channels (becomes depth dimension).
-        :return: Configured Conv3d layer for 3D spectrograms.
-        :rtype: nn.Module
-        """
-        return nn.Conv3d(
-            1,  # Input channels = 1 (depth dimension holds the 8 EEG channels)
-            32,  # Output channels
-            kernel_size=(in_channels, 10, 10),  # Depth=in_channels to span all EEG channels
-            stride=(1, 2, 2),  # No stride in depth, stride 2 in H and W
-            padding=0,
-        )
-
-    def forward(self, x):
-        """
-        Forward pass through the network with 3D CNN.
-
-        :param torch.Tensor x: Input tensor of shape (B, C, H, W) where B=batch size,
-                               C=channels (8 for multi-channel EEG),
-                               H=height (frequency bins), W=width (time frames).
-        :return: Class probabilities of shape (B, num_classes) after softmax.
-        :rtype: torch.Tensor
-        """
-        # Reshape for 3D conv: (B, 8, H, W) → (B, 1, 8, H, W)
-        # This makes the 8 channels become the depth dimension
-        x = x.unsqueeze(1)  # (B, 1, 8, H, W)
-
-        # Call parent's forward method which expects 4D output from conv layers
-        return super().forward(x)
-
-    def _forward_conv_layers(self, x):
-        """
-        Pass input through convolutional layers (3D→2D transition).
-
-        :param torch.Tensor x: Input tensor of shape (B, C, D, H, W) for 3D input.
-        :return: Output tensor after convolution and pooling (2D).
-        :rtype: torch.Tensor
-        """
-        x = self.relu(self.conv1(x))
-        x = self.pool1(x)
-        x = self.dropout1(x)
-        x = x.squeeze(2)  # Remove depth dimension: (B, C, 1, H, W) → (B, C, H, W)
-        x = self.relu(self.conv2(x))
-        x = self.pool2(x)
-        x = self.dropout2d_2(x)
-        return x
-
-
 class SmallerAttn(Smaller):
     """Smaller model with self-attention replacing LSTM.
 
@@ -393,42 +331,6 @@ class SmallerAttn(Smaller):
 
         :param tuple input_shape: Tuple of (height, width) for the input spectrogram.
         :param int in_channels: Number of input channels (default=1).
-        :param str rnn_type: Ignored; always forces "attention".
-        :param int rnn_hidden: d_model for the attention layer (default=128).
-        :param float dropout: Dropout probability.
-        :param int num_classes: Number of output classes.
-        """
-        super().__init__(
-            input_shape,
-            in_channels,
-            rnn_type="attention",
-            rnn_hidden=rnn_hidden,
-            dropout=dropout,
-            num_classes=num_classes,
-        )
-
-
-class SmallerAllAttn(SmallerAll):
-    """SmallerAll model (8-channel Conv3d backbone) with self-attention replacing LSTM.
-
-    Identical to SmallerAttn but uses the 3D CNN backbone from SmallerAll
-    for multi-channel EEG input.
-    """
-
-    def __init__(
-        self,
-        input_shape: tuple[int, int],
-        in_channels: int = 8,
-        rnn_type: str = "attention",
-        rnn_hidden: int = 128,
-        dropout: float = 0.3,
-        num_classes: int = 2,
-    ):
-        """
-        Initialize SmallerAll with self-attention temporal aggregation.
-
-        :param tuple input_shape: Tuple of (height, width) for the input spectrogram.
-        :param int in_channels: Number of EEG channels (default=8).
         :param str rnn_type: Ignored; always forces "attention".
         :param int rnn_hidden: d_model for the attention layer (default=128).
         :param float dropout: Dropout probability.
@@ -555,7 +457,7 @@ class SmallerAllV2(Smaller):
         return self.out(x)
 
 
-class SmallerAllV2Attn(SmallerAllV2):
+class CNNAttn(SmallerAllV2):
     """
     SmallerAllV2 with temporal self-attention replacing LSTM.
 
@@ -596,7 +498,7 @@ class SmallerAllV2Attn(SmallerAllV2):
         )
 
 
-class SmallerAllV3(Smaller):
+class CNNCatLSTM(Smaller):
     """
     Multi-channel EEG model: per-channel weight-shared CNN + full-channel concat
     projection + temporal LSTM.
@@ -636,7 +538,7 @@ class SmallerAllV3(Smaller):
         chan_d_model: int = 128,
     ) -> None:
         """
-        Initialize SmallerAllV3.
+        Initialize CNNCatLSTM.
 
         :param tuple input_shape: Spectrogram shape (H, W).
         :param int in_channels: Number of EEG channels (default 8).
@@ -699,7 +601,7 @@ class SmallerAllV3(Smaller):
             self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1)
 
         logger.info(
-            f"SmallerAllV3: n_eeg_channels={in_channels}, C_feat={C_feat}, "
+            f"CNNCatLSTM: n_eeg_channels={in_channels}, C_feat={C_feat}, "
             f"H_prime={H_prime}, W_prime={W_prime}, concat_dim={concat_dim}, "
             f"chan_d_model={chan_d_model}, rnn_hidden={rnn_hidden}"
         )
@@ -754,8 +656,8 @@ class AllTransformerV4(Smaller):
     then 2 TransformerEncoder layers learn inter-channel and inter-frame relationships.
     Mean pooling over all 80 tokens feeds the classifier.
 
-    Compared to SmallerAllV3: eliminates the 885K-param bottleneck projection.
-    Parameter count: ~142K (d_model=64) vs ~1M for SmallerAllV3.
+    Compared to CNNCatLSTM: eliminates the 885K-param bottleneck projection.
+    Parameter count: ~142K (d_model=64) vs ~1M for CNNCatLSTM.
 
     Architecture::
 
@@ -897,12 +799,10 @@ RAW_EEG_MODELS: frozenset[str] = frozenset({"Deformer", "DeformerS", "LGGNet", "
 MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int | None]] = {
     "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
     "Smaller": (Smaller, 64),
-    "SmallerAll": (SmallerAll, 64),
     "SmallerAttn": (SmallerAttn, 128),
-    "SmallerAllAttn": (SmallerAllAttn, 128),
     "SmallerAllV2": (SmallerAllV2, 64),
-    "SmallerAllV2Attn": (SmallerAllV2Attn, 128),
-    "SmallerAllV3": (SmallerAllV3, 100),
+    "CNNAttn": (CNNAttn, 128),
+    "CNNCatLSTM": (CNNCatLSTM, 100),
     "AllTransformerV4": (AllTransformerV4, 64),
     "Deformer": (Deformer, None),
     "DeformerS": (Deformer, None),

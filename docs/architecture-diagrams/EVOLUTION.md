@@ -1,10 +1,10 @@
 # Model Architecture & Training Evolution
 
-This document traces the full design progression: model architectures from the Sharma et al. baseline through SmallerAllV3, and training techniques from plain cross-entropy to focal loss. It is the source of truth for Chapter 4.3 of the thesis.
+This document traces the full design progression: model architectures from the Sharma et al. baseline through CNNCatLSTM, and training techniques from plain cross-entropy to focal loss. It is the source of truth for Chapter 4.3 of the thesis.
 
 **Last updated:** 2026-03-25
-**Current best binary model:** SmallerAllV3 (3b) + focal loss (021) — 78.84% chunk, 80.22% subject
-**Current best balanced model:** SmallerAllV2Attn + focal loss d=0.2 (020) — 76.99% chunk, spec 70.80%
+**Current best binary model:** CNNCatLSTM (3b) + focal loss (021) — 78.84% chunk, 80.22% subject
+**Current best balanced model:** CNNAttn + focal loss d=0.2 (020) — 76.99% chunk, spec 70.80%
 
 ---
 
@@ -112,7 +112,7 @@ spectra.
 
 ---
 
-### Generation 3 — `SmallerAllV2` / `SmallerAllV2Attn`
+### Generation 3 — `SmallerAllV2` / `CNNAttn`
 
 **Core idea:** Decouple spectral feature extraction from spatial channel mixing using a
 weight-shared per-channel CNN followed by learned cross-channel attention.
@@ -154,7 +154,7 @@ model has no per-frame awareness.
 
 ---
 
-### Generation 4a — `SmallerAllV3` (initial design, superseded)
+### Generation 4a — `CNNCatLSTM` (initial design, superseded)
 
 > **Status: superseded.** Used in experiments `all3-021-all-binary-smallerAllV3-focal`
 > and `all3-021-all-binary-smallerAllV3-focal_hsf` (both rnn_hidden=330, confirmed via
@@ -196,7 +196,7 @@ they all converged to channel selection, not channel combination. The oversized 
 
 ---
 
-### Generation 4b — `SmallerAllV3` (current design)
+### Generation 4b — `CNNCatLSTM` (current design)
 
 > **Used in experiment `all3-022-all-binary-smallerAllV3-focal`** (rnn_hidden=100, confirmed
 > via `concat_dim=6912` in training log — the distinguishing marker from the 3a design).
@@ -247,9 +247,9 @@ config, replicate run)
 | `SmallerAll` | Conv3d depth kernel (rigid) | 1 (merged at conv) | 283,266 | superseded |
 | `SmallerAllAttn` | Same as SmallerAll + temporal attn | 1 | 289,794 | superseded |
 | `SmallerAllV2` | Per-channel CNN + global attn (static) | 1 (weighted sum) | 345,667 | superseded |
-| `SmallerAllV2Attn` | Same as V2 + temporal attn | 1 (weighted sum) | 354,115 | superseded |
-| `SmallerAllV3` (4a) | Per-channel CNN + per-frame attn (select) | 1 (weighted sum) | 1,531,442 | superseded |
-| `SmallerAllV3` **(4b)** | Per-channel CNN + full concat + projection | **8** | **1,001,522** | **current** |
+| `CNNAttn` | Same as V2 + temporal attn | 1 (weighted sum) | 354,115 | superseded |
+| `CNNCatLSTM` (4a) | Per-channel CNN + per-frame attn (select) | 1 (weighted sum) | 1,531,442 | superseded |
+| `CNNCatLSTM` **(4b)** | Per-channel CNN + full concat + projection | **8** | **1,001,522** | **current** |
 
 ---
 

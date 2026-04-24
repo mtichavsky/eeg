@@ -270,13 +270,10 @@ Run with: `poetry run jupyter notebook`
      - LSTM/GRU layer (hidden=100) treating spectrograms as time sequences
      - Dense classifier (64 → 32 → num_classes) with standard dropout
    - `Smaller`: Reduced model (~50% fewer parameters) for faster experimentation
-   - `SmallerAll`: Multi-channel variant using Conv3d to process all 8 EEG channels simultaneously
-     - Conv3D kernel spans all channels for spatial feature learning
-     - Enables learning cross-channel correlations
    - `SmallerAllV2`: Multi-channel model with per-channel weight-shared CNN + cross-channel self-attention + LSTM
      - TransformerEncoder computes soft channel weights before temporal merging
-   - `SmallerAllV2Attn`: SmallerAllV2 variant replacing LSTM with temporal self-attention
-   - `SmallerAllV3`: Multi-channel model concatenating all channel features at each time step
+   - `CNNAttn`: SmallerAllV2 variant replacing LSTM with temporal self-attention
+   - `CNNCatLSTM`: Multi-channel model concatenating all channel features at each time step
      - Feeds concatenated (8×features) vectors to LSTM directly (no soft gating)
    - `Deformer`: EEG-Deformer (J-BHI 2024) — raw EEG transformer with shallow CNN + hierarchical transformer layers
      - Accepts raw EEG `(batch, channels, time)` instead of spectrograms
@@ -372,7 +369,7 @@ The `MDDDataset` supports two modes:
 - Single channel (CNN_LSTM_DepCap, Smaller): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
 - In-ear channel: Same as single channel `(batch_size, 1, H, W)` with 50% sign flip augmentation per chunk
   - IDUN or synthetic in-ear depending on dataset
-- Multi-channel (SmallerAll/V2/V3): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
+- Multi-channel (SmallerAllV2, CNNAttn, CNNCatLSTM): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
 - Current default: `(129, 41)` with nperseg=256, noverlap=192
 - Paper target: `(254, 342)` (may require parameter tuning)
 - Created via STFT in `SpectrogramDataset` or preprocessing
@@ -502,7 +499,6 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
   - 50% sign flip augmentation per chunk to handle polarity ambiguity
   - Based on research: "Estimating cognitive workload using a commercial in-ear EEG headset"
 - **Multi-channel EEG support** (Jan 2026): Can use all 8 channels (`--channel all`) or single channel
-  - New `SmallerAll` model with Conv3d for multi-channel spatial feature learning
   - Channel standardization: T3→T7, T4→T8 mapping for cross-dataset compatibility
   - Canonical 8-channel ordering: Fp1, Fp2, T7, T8, C3, C4, Cz, Oz
 - **4-class classification** (Jan 2026): `--class-mode 4` for normal/anxiety/depression/comorbid classification
@@ -524,8 +520,8 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - **Spatial Dropout**: Added `nn.Dropout2d` after CNN pooling layers for better feature map regularization
 - **L2 Regularization**: Added weight decay parameter (default 1e-4) for L2 penalty on weights
 - **Training visualization**: Added `plot_training_curves.py` for analyzing fold performance
-- **SmallerAllV2 / SmallerAllV2Attn** (Apr 2026): Multi-channel models with per-channel weight-shared CNN + cross-channel TransformerEncoder soft gating; V2Attn replaces LSTM with temporal self-attention
-- **SmallerAllV3** (Apr 2026): Redesigned from soft gating to full channel concatenation before LSTM; simpler and often stronger
+- **SmallerAllV2 / CNNAttn** (Apr 2026): Multi-channel models with per-channel weight-shared CNN + cross-channel TransformerEncoder soft gating; V2Attn replaces LSTM with temporal self-attention
+- **CNNCatLSTM** (Apr 2026): Redesigned from soft gating to full channel concatenation before LSTM; simpler and often stronger
 - **EEG-Deformer / DeformerS** (Apr 2026): Raw-EEG transformer models from J-BHI 2024 paper
   - `Deformer`: full model (~1.78M params); `DeformerS`: reduced variant (~588k params)
   - Implemented in `thesis/deformer.py`; bypass spectrogram pipeline entirely
@@ -544,7 +540,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - **EDF channel auto-detection in inference** (Apr 2026): `_detect_edf_channel_config()` tries known layouts (MDD, SAD) before falling back with a warning; removes hardcoded assumptions
 - **API: `classification_task` renamed** (Apr 2026): `"2class"` → `"binary"` throughout API and model manager
 - **API: rate limit raised** (Apr 2026): 10 → 50 requests per 10 seconds
-- **API: model keys updated** (Apr 2026): `model_in_ear_2class` → `model_in_ear_binary`; `model_8channel_2class` → `model_8channel_binary`; default models upgraded (in-ear: `CNN_LSTM_DepCap` → `Smaller`; 8-channel: `SmallerAll` → `SmallerAllV2Attn`)
+- **API: model keys updated** (Apr 2026): `model_in_ear_2class` → `model_in_ear_binary`; `model_8channel_2class` → `model_8channel_binary`; default models upgraded (in-ear: `CNN_LSTM_DepCap` → `Smaller`; 8-channel: `CNNAttn`)
 
 **Deprecated Patterns:**
 - ~~Direct use of `MDDDataset` for training~~ → Use `prepare_mdd_dataset()`

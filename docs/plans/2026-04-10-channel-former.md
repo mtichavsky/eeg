@@ -4,11 +4,11 @@
 
 ## Context
 
-`SmallerAllV3` (~1M params) is dominated by a single bottleneck: `Linear(6912→128)` which projects concatenated per-channel CNN features into a manageable vector before the LSTM. This 885K-param layer is added precisely because concatenating 8×16×54=6912 features is expensive. The result is a model that likely overfits before it learns generalizable cross-channel patterns.
+`CNNCatLSTM` (~1M params) is dominated by a single bottleneck: `Linear(6912→128)` which projects concatenated per-channel CNN features into a manageable vector before the LSTM. This 885K-param layer is added precisely because concatenating 8×16×54=6912 features is expensive. The result is a model that likely overfits before it learns generalizable cross-channel patterns.
 
 The fix: instead of flattening all channels at each time step into one huge vector, treat every **(channel, timestep)** pair as an independent token of dim 864 (=16×54). A shared `Linear(864→64)` projects all 80 tokens to `d_model`, separate spatial and temporal embeddings encode position, and a 2-layer `TransformerEncoder` lets inter-channel attention emerge naturally — matching the approach already proven to work in `SmallerAttn` for single channels.
 
-**Estimated params**: ~142K (7× reduction from SmallerAllV3 ~1M).
+**Estimated params**: ~142K (7× reduction from CNNCatLSTM ~1M).
 
 ## Architecture: `ChannelFormer`
 
@@ -63,7 +63,7 @@ We then:
 
 | File | Change |
 |------|--------|
-| `thesis/model.py` | Add `ChannelFormer` class after `SmallerAllV3` (~90 lines) |
+| `thesis/model.py` | Add `ChannelFormer` class after `CNNCatLSTM` (~90 lines) |
 | `thesis/model.py` | Add `"ChannelFormer": (ChannelFormer, 64)` to `MODEL_REGISTRY` |
 
 No changes needed to `model_factory.py`, `main.py`, or data pipeline.
@@ -82,8 +82,8 @@ class ChannelFormer(Smaller):
     then 2 TransformerEncoder layers learn inter-channel and inter-frame relationships.
     Mean pooling over all 80 tokens feeds the classifier.
 
-    Compared to SmallerAllV3: eliminates the 885K-param bottleneck projection.
-    Parameter count: ~142K (d_model=64) vs ~1M for SmallerAllV3.
+    Compared to CNNCatLSTM: eliminates the 885K-param bottleneck projection.
+    Parameter count: ~142K (d_model=64) vs ~1M for CNNCatLSTM.
 
     Architecture::
 
@@ -208,7 +208,7 @@ class ChannelFormer(Smaller):
 ### 2. Register in MODEL_REGISTRY (thesis/model.py, line 755)
 
 ```python
-    "SmallerAllV3": (SmallerAllV3, 100),
+    "CNNCatLSTM": (CNNCatLSTM, 100),
     "ChannelFormer": (ChannelFormer, 64),   # ← add this line
 ```
 
@@ -226,7 +226,7 @@ poetry run python main.py train \
   --n-folds 2 \
   --checkpoint-dir experiments/all3-channelformer-smoke
 
-# Full binary run (compare against SmallerAllV3 all3-022 baseline: 78.56% chunk)
+# Full binary run (compare against CNNCatLSTM all3-022 baseline: 78.56% chunk)
 poetry run python main.py train \
   --model ChannelFormer \
   --channel all \
