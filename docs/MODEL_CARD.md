@@ -52,24 +52,22 @@ TODO double check normals count for MDD
 
 ## Parameter Counts
 
-| Model                  | Params   | Input channels                                      | Temporal aggregation                                   | RNN hidden / d\_model |
-|------------------------|----------|-----------------------------------------------------|--------------------------------------------------------|-----------------------|
-| `CNN_LSTM_DepCap`      | 798 K    | 1                                                   | LSTM                                                   | 100                   |
-| `Smaller`              | 257 K    | 1                                                   | LSTM                                                   | 64                    |
-| `SmallerAttn`          | 265 K    | 1                                                   | Self-attention (Transformer)                           | 128                   |
-| `SmallerAll`           | 283 K    | 8 (Conv3d)                                          | LSTM                                                   | 64                    |
-| `SmallerAllAttn`       | 290 K    | 8 (Conv3d)                                          | Self-attention (Transformer)                           | 128                   |
-| `SmallerAllV2`         | 346 K    | 8 (per-channel shared CNN + cross-channel attn)     | LSTM                                                   | 64                    |
-| `SmallerAllV2Attn`     | 354 K    | 8 (per-channel shared CNN + cross-channel attn)     | Self-attention (Transformer)                           | 128                   |
-| `SmallerAllV3`         | 1.00 M   | 8 (per-channel shared CNN + full concat projection) | LSTM                                                   | 100 (default)         |
-| `Deformer`             | 1.78 M   | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4)                        | heads=16, dim_head=16 |
-| `DeformerS`            | 588 K    | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3)                        | heads=4,  dim_head=16 |
-| `DeformerS` (5 s)      | 390 K    | 8 (raw EEG, 1250 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3)                        | heads=4,  dim_head=16 |
-| `TSception`            | ~1.05 M  | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                    |
-| `TSceptionS`           | ~264 K   | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                    |
-| `TSceptionS` (4 s) †   | ~102 K   | 8 (raw EEG, 1000 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                    |
-| `LGGNet`               | 1.17 M   | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere) | out_graph=32         |
-| `LGGNetS`              | 585 K    | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere) | out_graph=32         |
+| Model                | Params  | Input channels                                      | Temporal aggregation                                    | RNN hidden / d\_model |
+|----------------------|---------|-----------------------------------------------------|---------------------------------------------------------|-----------------------|
+| `CNN_LSTM_DepCap`    | 798 K   | 1                                                   | LSTM                                                    | 100                   |
+| `Smaller`            | 257 K   | 1                                                   | LSTM                                                    | 64                    |
+| `SmallerAttn`        | 265 K   | 1                                                   | Self-attention (Transformer)                            | 128                   |
+| `SmallerAllV2`       | 346 K   | 8 (per-channel shared CNN + cross-channel attn)     | LSTM                                                    | 64                    |
+| `CNNAttn`            | 354 K   | 8 (per-channel shared CNN + cross-channel attn)     | Self-attention (Transformer)                            | 128                   |
+| `CNNCatLSTM`         | 1.00 M  | 8 (per-channel shared CNN + full concat projection) | LSTM                                                    | 100 (default)         |
+| `Deformer`           | 1.78 M  | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=4)                         | heads=16, dim_head=16 |
+| `DeformerS`          | 588 K   | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3)                         | heads=4,  dim_head=16 |
+| `DeformerS` (5 s)    | 390 K   | 8 (raw EEG, 1250 samples @ 250 Hz)                  | Dense CNN-Transformer (depth=3)                         | heads=4,  dim_head=16 |
+| `TSception`          | ~1.05 M | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                     |
+| `TSceptionS`         | ~264 K  | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                     |
+| `TSceptionS` (4 s) † | ~102 K  | 8 (raw EEG, 1000 samples @ 250 Hz)                  | Multi-scale temporal inception + asymmetric spatial CNN | —                     |
+| `LGGNet`             | 1.17 M  | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere)  | out_graph=32          |
+| `LGGNetS`            | 585 K   | 8 (raw EEG, 2500 samples @ 250 Hz)                  | Multi-scale Tception → local filter → GCN (hemisphere)  | out_graph=32          |
 
 † The paper (TAFFC 2022) downsampled DEAP from 512 Hz to **128 Hz**, giving 4 s × 128 Hz = **512 samples**.
 MAHNOB-HCI (the paper's second dataset) was recorded at **256 Hz** and was not explicitly downsampled.
@@ -95,23 +93,16 @@ Reduced version of `CNN_LSTM_DepCap` (~68% fewer parameters).
 ### `SmallerAttn`
 `Smaller` with temporal self-attention (TransformerEncoder) instead of LSTM.
 
-### `SmallerAll`
-Multi-channel (8-channel) variant of `Smaller` using a 3D convolution to process all EEG
-channels simultaneously. Conv3d kernel spans the full channel depth before collapsing to 2D.
-
-### `SmallerAllAttn`
-`SmallerAll` with temporal self-attention instead of LSTM.
-
 ### `SmallerAllV2`
 Per-channel weight-shared CNN + cross-channel self-attention + LSTM.
 Each EEG channel is processed independently through the `Smaller` CNN (shared weights).
 A TransformerEncoder then computes soft channel-importance weights before merging into the
 LSTM path. `chan_d_model=64` by default.
 
-### `SmallerAllV2Attn`
+### `CNNAttn`
 `SmallerAllV2` with temporal self-attention replacing LSTM.
 
-### `SmallerAllV3`
+### `CNNCatLSTM`
 Per-channel weight-shared CNN + **full channel concatenation** + LSTM.
 
 Key difference from all previous multi-channel models: all 8 channels' CNN features are concatenated

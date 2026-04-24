@@ -165,7 +165,7 @@ class TSceptionConfig:
 @dataclass
 class TSceptionSConfig:
     """
-    Smaller TSception variant (~264 K params), matching SmallerAll in parameter count.
+    Smaller TSception variant (~264 K params).
 
     Uses hidden=32, following the paper's own cross-dataset recommendation:
     'We also suggest T=S=15 and hidden_node=32 when applying TSception to other datasets.'

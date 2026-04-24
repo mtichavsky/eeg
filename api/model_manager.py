@@ -47,13 +47,13 @@ class ModelManager:
             "key": "inear_4class",
         },
         ("8channel", "binary"): {
-            "model_name": "SmallerAllV2Attn",
+            "model_name": "CNNAttn",
             "num_classes": 2,
             "in_channels": 8,
             "key": "8channel_binary",
         },
         ("8channel", "4class"): {
-            "model_name": "SmallerAllV2Attn",
+            "model_name": "CNNAttn",
             "num_classes": 4,
             "in_channels": 8,
             "key": "8channel_4class",
