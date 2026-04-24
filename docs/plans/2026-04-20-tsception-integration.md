@@ -42,7 +42,7 @@ Flat feature size: num_S × 3 × 454 = 6 × 3 × 454 = **8172** (with 8 channels
 
 | Model | num_T | num_S | hidden | ~Params | Comparable to |
 |-------|-------|-------|--------|---------|---------------|
-| **TSception** | 9 | 6 | 128 | ~1.05 M | SmallerAllV3 (~1.0 M) |
+| **TSception** | 9 | 6 | 128 | ~1.05 M | CNNCatLSTM (~1.0 M) |
 | **TSceptionS** | 9 | 6 | 32 | ~264 k | SmallerAll (~283 k) |
 
 TSception hidden=128 matches the paper's `Train.py` defaults.  

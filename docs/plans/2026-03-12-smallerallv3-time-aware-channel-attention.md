@@ -1,4 +1,4 @@
-# SmallerAllV3: Time-Aware Cross-Channel Attention (~0.89M params)
+# CNNCatLSTM: Time-Aware Cross-Channel Attention (~0.89M params)
 
 ## Context
 
@@ -12,7 +12,7 @@ The fix: **preserve the time axis through the cross-channel attention step** so 
 
 ---
 
-## Architecture: `SmallerAllV3`
+## Architecture: `CNNCatLSTM`
 
 ```
 Input: (B, 8, 129, 41)
@@ -85,7 +85,7 @@ This gives `(B*10, 128)` — one 128-dim vector for each of the 10 time steps �
 
 **Key difference from SmallerAllV2:**
 
-| | SmallerAllV2 | SmallerAllV3 |
+| | SmallerAllV2 | CNNCatLSTM |
 |---|---|---|
 | Shape before channel attention | `(B, 8, 16, 54)` — time pooled away | `(B*10, 8, 864)` — time kept |
 | Channel weights | One set per clip | One set **per time frame** |
@@ -114,10 +114,10 @@ With `input_shape=(129,41)`, `in_channels=8`, `chan_d_model=128`, `rnn_hidden=33
 
 ### `thesis/model.py` — only file to modify
 
-**1. Add `SmallerAllV3` class** after `SmallerAllV2Attn` (before `MODEL_REGISTRY`):
+**1. Add `CNNCatLSTM` class** after `CNNAttn` (before `MODEL_REGISTRY`):
 
 ```python
-class SmallerAllV3(Smaller):
+class CNNCatLSTM(Smaller):
     """
     Multi-channel EEG model: per-channel weight-shared CNN + time-aware
     cross-channel self-attention + temporal LSTM.
@@ -206,7 +206,7 @@ class SmallerAllV3(Smaller):
         self._H_prime = H_prime
 
         logger.info(
-            f"SmallerAllV3: n_eeg_channels={in_channels}, C_feat={C_feat}, "
+            f"CNNCatLSTM: n_eeg_channels={in_channels}, C_feat={C_feat}, "
             f"H_prime={H_prime}, W_prime={W_prime}, chan_d_model={chan_d_model}, "
             f"nhead={nhead}, rnn_hidden={rnn_hidden}"
         )
@@ -258,7 +258,7 @@ class SmallerAllV3(Smaller):
 **2. Add to `MODEL_REGISTRY`:**
 
 ```python
-"SmallerAllV3": (SmallerAllV3, 330),
+"CNNCatLSTM": (CNNCatLSTM, 330),
 ```
 
 ### No other files need changes
@@ -272,23 +272,23 @@ class SmallerAllV3(Smaller):
 ```bash
 # Parameter count
 poetry run python -c "
-from thesis.model import SmallerAllV3
-m = SmallerAllV3((129, 41), in_channels=8)
+from thesis.model import CNNCatLSTM
+m = CNNCatLSTM((129, 41), in_channels=8)
 all_p, train_p = m.count_parameters()
 print(f'Total: {all_p:,}  Trainable: {train_p:,}')
 "
 
 # Forward pass shape
 poetry run python -c "
-import torch; from thesis.model import SmallerAllV3
-m = SmallerAllV3((129, 41), in_channels=8)
+import torch; from thesis.model import CNNCatLSTM
+m = CNNCatLSTM((129, 41), in_channels=8)
 print(m(torch.randn(4, 8, 129, 41)).shape)  # expect (4, 2)
 "
 
 # 4-class and attention variants
 poetry run python -c "
-import torch; from thesis.model import SmallerAllV3
-print(SmallerAllV3((129,41), num_classes=4)(torch.randn(4,8,129,41)).shape)
-print(SmallerAllV3((129,41), rnn_type='ATTENTION', rnn_hidden=128)(torch.randn(4,8,129,41)).shape)
+import torch; from thesis.model import CNNCatLSTM
+print(CNNCatLSTM((129,41), num_classes=4)(torch.randn(4,8,129,41)).shape)
+print(CNNCatLSTM((129,41), rnn_type='ATTENTION', rnn_hidden=128)(torch.randn(4,8,129,41)).shape)
 "
 ```
