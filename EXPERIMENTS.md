@@ -1,4 +1,6 @@
 # EXPERIMENTS
+CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model TSceptionS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --chunk-duration 4 --checkpoint-dir=experiments/all3-1.0-all-binary-tsceptions-ch4
+CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model TSceptionS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --chunk-duration 4 --checkpoint-dir=experiments/all3-1.0-all-binary-tsceptions-ch4-focal --focal-loss 
 
 | model                                | accuracy (chunk × subject)          | sensitivity    | specificity        | directory                                                                        |
 |--------------------------------------|-------------------------------------|----------------|--------------------|----------------------------------------------------------------------------------|
@@ -18,11 +20,6 @@
 | binary, 8-ch, LGGNet+FL              | 74.55% ± 4.02% × 76.51% ± 7.19%     | 85.79% ± 5.33% | 56.72% ± 8.43%     | all3-027-all-binary-lggnet-focal; **10 fold**                                    |
 | binary, 8-ch, LGGNetS+FL wd=5e-4     | 72.40% ± 3.23% × 72.44% ± 3.76%     | 79.27% ± 6.08% | 61.81% ±10.18%     | all3-027-all-binary-lggnet-s-focal-5e-4; **8 fold**                              |
 | 4-class, 8-ch, LGGNet+FL             | —                                   | —              | —                  | all3-027-all-4class-lggnet-focal; **planned**                                    |
-| binary, 8-ch, TSception              | 68.84% ± 5.65% × 71.00% ± 9.11%     | 77.82% ± 7.77% | 55.01% ± 4.67%     | all3-026-all-binary-tsception; **6 fold**                                        |
-| binary, 8-ch, TSceptionS             | 70.80% ± 4.60% × 72.93% ± 5.69%     | 78.08% ± 6.95% | 59.06% ± 5.18%     | all3-026-all-binary-tsception-s; **6 fold**                                      |
-| binary, 8-ch, TSceptionS 4s          | 71.52% ± 4.35% × 72.61% ± 8.00%     | 77.88% ± 5.95% | 61.30% ± 9.42%     | all3-026-all-binary-tsceptions-ch4_rpr; **10 fold, 4s @ 250 Hz (not resampled)** |
-| binary, 8-ch, TSception+FL           | —                                   | —              | —                  | all3-026-all-binary-tsception-focal; **6 fold, planned**                         |
-| binary, 8-ch, TSceptionS+FL          | —                                   | —              | —                  | all3-026-all-binary-tsception-s-focal; **6 fold, planned**                       |
 | 4-class, 8-ch, TSception+FL          | —                                   | —              | —                  | all3-026-all-4class-tsception-focal; **6 fold, planned**                         |
 
 > **Tip:** append `> /dev/null 2>&1 &` to any command to run it in the background and detach from the terminal.
