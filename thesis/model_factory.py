@@ -9,7 +9,7 @@ import argparse
 import logging
 from dataclasses import asdict, dataclass
 from dataclasses import replace as dataclasses_replace
-from typing import Any
+from typing import Any, cast
 
 import torch
 import torch.nn as nn
@@ -229,7 +229,15 @@ def _model_family(model_name: str) -> str:
 
 def build_raw_eeg_config(
     model_name: str, args: argparse.Namespace
-) -> DeformerConfig | DeformerSConfig | LGGNetConfig | LGGNetSConfig | TSceptionConfig | TSceptionSConfig | None:
+) -> (
+    DeformerConfig
+    | DeformerSConfig
+    | LGGNetConfig
+    | LGGNetSConfig
+    | TSceptionConfig
+    | TSceptionSConfig
+    | None
+):
     """
     Build the raw-EEG config for ``model_name`` from defaults plus non-None CLI overrides.
 
@@ -250,7 +258,15 @@ def build_raw_eeg_config(
         value = getattr(args, arg_name, None)
         if value is not None:
             overrides[field_name] = value
-    return dataclasses_replace(base, **overrides)
+    return cast(
+        DeformerConfig
+        | DeformerSConfig
+        | LGGNetConfig
+        | LGGNetSConfig
+        | TSceptionConfig
+        | TSceptionSConfig,
+        dataclasses_replace(base, **overrides),
+    )
 
 
 def create_model(
@@ -263,7 +279,13 @@ def create_model(
     pretrained_checkpoint: str | None = None,
     freeze_cnn: bool = False,
     freeze_lstm: bool = False,
-    raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig | None = None,
+    raw_eeg_config: DeformerConfig
+    | DeformerSConfig
+    | LGGNetConfig
+    | LGGNetSConfig
+    | TSceptionConfig
+    | TSceptionSConfig
+    | None = None,
 ) -> nn.Module:
     """
     Create and initialize a model, optionally loading pretrained weights.
@@ -290,7 +312,9 @@ def create_model(
 
     if model_name in RAW_EEG_MODELS:
         # Raw EEG models take (batch, channels, time) directly — bypass spectrogram pipeline
-        cfg = raw_eeg_config if raw_eeg_config is not None else RAW_EEG_DEFAULT_CONFIGS[model_name]()
+        cfg = (
+            raw_eeg_config if raw_eeg_config is not None else RAW_EEG_DEFAULT_CONFIGS[model_name]()
+        )
         model = model_class(
             num_chan=in_channels,
             num_classes=num_classes,
@@ -318,20 +342,20 @@ def create_model(
 
         if freeze_cnn:
             # Freeze CNN layers (conv1, conv2 and their dropout layers)
-            for param in model.conv1.parameters():
+            for param in cast(nn.Module, model.conv1).parameters():
                 param.requires_grad = False
-            for param in model.conv2.parameters():
+            for param in cast(nn.Module, model.conv2).parameters():
                 param.requires_grad = False
-            for param in model.dropout2d_1.parameters():
+            for param in cast(nn.Module, model.dropout2d_1).parameters():
                 param.requires_grad = False
-            for param in model.dropout2d_2.parameters():
+            for param in cast(nn.Module, model.dropout2d_2).parameters():
                 param.requires_grad = False
 
         # TODO: attention doesn't have to be freezed?
         if freeze_lstm:
             # Freeze RNN layer (guard against attention models that have no .rnn)
             if hasattr(model, "rnn"):
-                for param in model.rnn.parameters():
+                for param in cast(nn.Module, model.rnn).parameters():
                     param.requires_grad = False
             else:
                 logger.warning(
@@ -340,7 +364,7 @@ def create_model(
 
         # Log which layers are frozen
         if freeze_cnn or freeze_lstm:
-            all_params, trainable_params = model.count_parameters()
+            all_params, trainable_params = cast(Any, model).count_parameters()
             frozen_parts = []
             if freeze_cnn:
                 frozen_parts.append("CNN")

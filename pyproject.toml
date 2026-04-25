@@ -81,3 +81,13 @@ module = [
     "slowapi.*",
     "structlog.*",
 ]
+ignore_missing_imports = true
+
+# Vendored third-party files (CBCR License) — suppress all mypy errors
+[[tool.mypy.overrides]]
+module = [
+    "thesis.deformer",
+    "thesis.lggnet",
+    "thesis.tsception",
+]
+ignore_errors = true
