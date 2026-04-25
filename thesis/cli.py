@@ -228,15 +228,13 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--deformer-depth",
         type=int,
         default=None,
-        help="Number of transformer layers. Default: model-specific "
-        "(Deformer=4, DeformerS=3).",
+        help="Number of transformer layers. Default: model-specific (Deformer=4, DeformerS=3).",
     )
     deformer_group.add_argument(
         "--deformer-heads",
         type=int,
         default=None,
-        help="Number of attention heads. Default: model-specific "
-        "(Deformer=16, DeformerS=4).",
+        help="Number of attention heads. Default: model-specific (Deformer=16, DeformerS=4).",
     )
     deformer_group.add_argument(
         "--deformer-num-kernel",

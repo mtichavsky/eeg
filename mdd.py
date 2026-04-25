@@ -11,6 +11,7 @@ from scipy.signal import stft
 from thesis.dataset import (
     MDDDataset,
     SpectrogramDataset,
+    load_and_preprocess_edf_file,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -24,8 +25,14 @@ test_file = MDD_DIR / "MDD S5 EC.edf"
 
 logger.info(f"Testing MDD preprocessing with file: {test_file}")
 
-# Load and preprocess using the static method
-chunks = MDDDataset.load_and_preprocess_edf_file(test_file, channel="Fp1", fs=250)
+# Load and preprocess using the module-level function
+chunks = load_and_preprocess_edf_file(
+    test_file,
+    channel="Fp1",
+    fs=250,
+    channel_mapping=MDDDataset.CHANNEL_MAPPING,
+    channel_order=list(MDDDataset.CHANNEL_MAPPING.keys()),
+)
 
 
 logger.info(f"Chunks shape: {chunks.shape}")

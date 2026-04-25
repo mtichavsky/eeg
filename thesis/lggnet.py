@@ -157,8 +157,7 @@ class LGGNet(nn.Module):
 
         if graph_type not in GRAPH_TOPOLOGIES:
             raise ValueError(
-                f"Unknown graph_type '{graph_type}'. "
-                f"Choose from: {list(GRAPH_TOPOLOGIES.keys())}"
+                f"Unknown graph_type '{graph_type}'. Choose from: {list(GRAPH_TOPOLOGIES.keys())}"
             )
 
         topo = GRAPH_TOPOLOGIES[graph_type]

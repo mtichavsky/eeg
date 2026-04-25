@@ -422,7 +422,10 @@ def write_per_dataset_table(
         return
 
     writer("\nPer-Dataset Chunk Metrics (aggregated across folds):\n")
-    writer(f"  {'Dataset':<12} {'Accuracy':>10}  {'Sensitivity':>12}  {'Specificity':>12}  {'Chunks':>8}\n")
+    writer(
+        f"  {'Dataset':<12} {'Accuracy':>10}  {'Sensitivity':>12}"
+        f"  {'Specificity':>12}  {'Chunks':>8}\n"
+    )
     writer(f"  {'─' * 12}  {'─' * 10}  {'─' * 12}  {'─' * 12}  {'─' * 8}\n")
 
     grand_correct = 0
@@ -441,7 +444,10 @@ def write_per_dataset_table(
         acc = correct / total if total > 0 else 0.0
         sens = tp / (tp + fn) if (tp + fn) > 0 else 0.0
         spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-        writer(f"  {ds.upper():<12} {acc * 100:>9.2f}%  {sens * 100:>11.2f}%  {spec * 100:>11.2f}%  {total:>8}\n")
+        writer(
+            f"  {ds.upper():<12} {acc * 100:>9.2f}%  {sens * 100:>11.2f}%"
+            f"  {spec * 100:>11.2f}%  {total:>8}\n"
+        )
         grand_correct += correct
         grand_total += total
         grand_tp += tp
@@ -453,7 +459,11 @@ def write_per_dataset_table(
     grand_acc = grand_correct / grand_total if grand_total > 0 else 0.0
     grand_sens = grand_tp / (grand_tp + grand_fn) if (grand_tp + grand_fn) > 0 else 0.0
     grand_spec = grand_tn / (grand_tn + grand_fp) if (grand_tn + grand_fp) > 0 else 0.0
-    writer(f"  {'Total':<12} {grand_acc * 100:>9.2f}%  {grand_sens * 100:>11.2f}%  {grand_spec * 100:>11.2f}%  {grand_total:>8}\n")
+    total_row = (
+        f"  {'Total':<12} {grand_acc * 100:>9.2f}%  {grand_sens * 100:>11.2f}%"
+        f"  {grand_spec * 100:>11.2f}%  {grand_total:>8}\n"
+    )
+    writer(total_row)
 
 
 def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> None:

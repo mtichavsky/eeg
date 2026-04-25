@@ -1,9 +1,10 @@
 import logging
-from typing import Union
+from typing import Union, cast
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from thesis.deformer import Deformer
 from thesis.lggnet import LGGNet
 from thesis.tsception import TSceptionWrapper
@@ -424,24 +425,24 @@ class CNNLSTMAll(CNNLSTM):
 
         # 1. Per-channel CNN (shared weights)
         x_flat = x.reshape(B * n_ch, 1, H, W)
-        cnn_out = self._forward_conv_layers(x_flat)          # (B*8, 16, H', W')
+        cnn_out = self._forward_conv_layers(x_flat)  # (B*8, 16, H', W')
         _, C_feat, H_prime, W_prime = cnn_out.shape
         x_ch = cnn_out.reshape(B, n_ch, C_feat, H_prime, W_prime)
 
         # 2. Cross-channel self-attention
-        tokens = x_ch.mean(dim=4)                            # pool W': (B, 8, 16, H')
-        tokens = tokens.reshape(B, n_ch, C_feat * H_prime)   # (B, 8, 864)
-        tokens = self.chan_proj(tokens)                       # (B, 8, chan_d_model)
-        tokens = self.chan_transformer(tokens)                # (B, 8, chan_d_model)
+        tokens = x_ch.mean(dim=4)  # pool W': (B, 8, 16, H')
+        tokens = tokens.reshape(B, n_ch, C_feat * H_prime)  # (B, 8, 864)
+        tokens = self.chan_proj(tokens)  # (B, 8, chan_d_model)
+        tokens = self.chan_transformer(tokens)  # (B, 8, chan_d_model)
 
         # Soft channel weights, sum-to-1 over the 8 channels
-        weights = torch.softmax(self.chan_gate(tokens), dim=1)          # (B, 8, 1)
-        weights = weights.unsqueeze(-1).unsqueeze(-1)                   # (B, 8, 1, 1, 1)
-        merged = (x_ch * weights).sum(dim=1)                            # (B, 16, H', W')
+        weights = torch.softmax(self.chan_gate(tokens), dim=1)  # (B, 8, 1)
+        weights = weights.unsqueeze(-1).unsqueeze(-1)  # (B, 8, 1, 1, 1)
+        merged = (x_ch * weights).sum(dim=1)  # (B, 16, H', W')
 
         # 3. LSTM / Attention + Classifier (same as CNNLSTM.forward() tail)
-        seq = merged.permute(0, 3, 2, 1).contiguous()       # (B, W', H', C_feat)
-        seq = seq.view(B, W_prime, H_prime * C_feat)         # (B, W', rnn_input_size)
+        seq = merged.permute(0, 3, 2, 1).contiguous()  # (B, W', H', C_feat)
+        seq = seq.view(B, W_prime, H_prime * C_feat)  # (B, W', rnn_input_size)
 
         if self.rnn_type == "ATTENTION":
             seq = self.proj(seq) + self.pos_embed
@@ -454,7 +455,7 @@ class CNNLSTMAll(CNNLSTM):
         x = self.dropout(last_hidden)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.out(x)
+        return cast(torch.Tensor, self.out(x))
 
 
 class CNNAttnAll(CNNLSTMAll):
@@ -580,13 +581,9 @@ class CNNCatLSTM(CNNLSTM):
 
         # Override parent's RNN to accept chan_d_model as input size
         if rnn_type.upper() == "LSTM":
-            self.rnn = nn.LSTM(
-                input_size=chan_d_model, hidden_size=rnn_hidden, batch_first=True
-            )
+            self.rnn = nn.LSTM(input_size=chan_d_model, hidden_size=rnn_hidden, batch_first=True)
         elif rnn_type.upper() == "GRU":
-            self.rnn = nn.GRU(
-                input_size=chan_d_model, hidden_size=rnn_hidden, batch_first=True
-            )
+            self.rnn = nn.GRU(input_size=chan_d_model, hidden_size=rnn_hidden, batch_first=True)
         elif rnn_type.upper() == "ATTENTION":
             self.proj = nn.Linear(chan_d_model, rnn_hidden)
             self.pos_embed = nn.Parameter(torch.zeros(1, W_prime, rnn_hidden))
@@ -644,7 +641,7 @@ class CNNCatLSTM(CNNLSTM):
         x = self.dropout(last_hidden)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.out(x)
+        return cast(torch.Tensor, self.out(x))
 
 
 class AllTransformerV4(CNNLSTM):
@@ -786,21 +783,22 @@ class AllTransformerV4(CNNLSTM):
         pooled = tokens.mean(dim=1)  # (B, d_model)
         out = F.relu(self.fc1(pooled))
         out = F.relu(self.fc2(out))
-        return self.out(out)
-
+        return cast(torch.Tensor, self.out(out))
 
 
 # Models that consume raw EEG time-series (batch, channels, time) instead of spectrograms.
 # These bypass the STFT pipeline and use FlattenedRawEEGDataset.
-RAW_EEG_MODELS: frozenset[str] = frozenset({"Deformer", "DeformerS", "LGGNet", "LGGNetS", "TSception", "TSceptionS"})
+RAW_EEG_MODELS: frozenset[str] = frozenset(
+    {"Deformer", "DeformerS", "LGGNet", "LGGNetS", "TSception", "TSceptionS"}
+)
 
 # Model registry: maps model names to (model_class, default_rnn_hidden).
 # rnn_hidden is None for raw-EEG models that don't use an RNN.
 MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int | None]] = {
     "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
     "CNNLSTM": (CNNLSTM, 64),
-    "CNNAttn":    (CNNAttn,    128),
-    "CNNLSTMAll": (CNNLSTMAll,  64),
+    "CNNAttn": (CNNAttn, 128),
+    "CNNLSTMAll": (CNNLSTMAll, 64),
     "CNNAttnAll": (CNNAttnAll, 128),
     "CNNCatLSTM": (CNNCatLSTM, 100),
     "AllTransformerV4": (AllTransformerV4, 64),
