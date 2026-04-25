@@ -268,8 +268,8 @@ def plot_fold_losses(
         train_epochs, train_losses = zip(*train_data)
         train_acc_vals = None
     else:
-        train_epochs, train_losses, train_acc_vals = [], [], None
-    eval_epochs, eval_losses, eval_acc = zip(*eval_data) if eval_data else ([], [], [])
+        train_epochs, train_losses, train_acc_vals = (), (), None
+    eval_epochs, eval_losses, eval_acc = zip(*eval_data) if eval_data else ((), (), ())
 
     # Create figure with primary axis
     fig, ax1 = plt.subplots(figsize=(10, 6))
@@ -336,8 +336,8 @@ def plot_all_folds_combined(data: Dict[int, Dict[str, Any]], output_dir: Path) -
             train_epochs, train_losses = zip(*train_data)
             train_acc_vals = None
         else:
-            train_epochs, train_losses, train_acc_vals = [], [], None
-        eval_epochs, eval_losses, eval_acc = zip(*eval_data) if eval_data else ([], [], [])
+            train_epochs, train_losses, train_acc_vals = (), (), None
+        eval_epochs, eval_losses, eval_acc = zip(*eval_data) if eval_data else ((), (), ())
 
         # Plot using shared function with smaller fonts for subplot grid
         plot_axes(

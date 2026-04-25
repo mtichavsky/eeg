@@ -95,7 +95,9 @@ async def limit_upload_size(request: Request, call_next):
                     status_code=413,
                     content=ErrorResponse(
                         error="HTTP 413",
-                        message=f"Request too large: {size} bytes (max: {config.max_file_size_bytes})",
+                        message=(
+                            f"Request too large: {size} bytes (max: {config.max_file_size_bytes})"
+                        ),
                         detail=None,
                         request_id=None,
                     ).model_dump(),
@@ -162,9 +164,23 @@ async def health_check(request: Request) -> HealthResponse:
 async def predict(
     request: Request,
     eeg_recording: UploadFile = File(..., description="EEG recording file (.edf or .csv)"),
-    electrode_setup: Literal["in-ear", "8channel"] = Form(..., description="Electrode configuration: 'in-ear' for single in-ear channel, '8channel' for full 8-channel cap"),
-    classification_task: Literal["binary", "4class"] = Form(..., description="Classification mode: 'binary' (healthy vs pathological) or '4class' (normal/anxiety/depression/comorbid)"),
-    fs: int | None = Form(None, description="Sampling rate in Hz. Auto-detected from the file if omitted"),
+    electrode_setup: Literal["in-ear", "8channel"] = Form(
+        ...,
+        description=(
+            "Electrode configuration: 'in-ear' for single in-ear channel,"
+            " '8channel' for full 8-channel cap"
+        ),
+    ),
+    classification_task: Literal["binary", "4class"] = Form(
+        ...,
+        description=(
+            "Classification mode: 'binary' (healthy vs pathological)"
+            " or '4class' (normal/anxiety/depression/comorbid)"
+        ),
+    ),
+    fs: int | None = Form(
+        None, description="Sampling rate in Hz. Auto-detected from the file if omitted"
+    ),
     request_id: UUID = Form(..., description="Request identifier for tracing"),
     user_id: str = Form(..., description="User identifier for tracing"),
 ) -> PredictResponse:

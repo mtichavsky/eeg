@@ -6,12 +6,12 @@ to ensure identical preprocessing, inference, and aggregation logic.
 """
 
 import logging
-import mne
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
+import mne
 import torch
 import torch.nn as nn
 
@@ -64,6 +64,7 @@ def _detect_edf_channel_config(file_path: Path) -> tuple[dict[str, str], list[st
         sorted(edf_channels),
     )
     return {ch: ch for ch in edf_channels}, CANONICAL_CHANNEL_ORDER
+
 
 # STFT parameters tuned to produce (129, 41) spectrograms for each supported sampling rate.
 # nperseg=256 gives 129 frequency bins for all rates.
@@ -125,7 +126,7 @@ def detect_sampling_rate(file_path: Path, file_format: str) -> float:
         import mne  # lazy import — only needed here
 
         raw = mne.io.read_raw_edf(file_path, preload=False, verbose=False)
-        return round(raw.info["sfreq"])
+        return float(round(cast(float, raw.info["sfreq"])))
     elif file_format == ".csv":
         fmt = _detect_csv_format(file_path)
         return round(IDUNDataset.FS if fmt == "idun" else CANEDataset.FS)

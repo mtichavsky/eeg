@@ -18,7 +18,7 @@ def get_version() -> str:
     if pyproject.exists():
         with open(pyproject, "rb") as f:
             data = tomllib.load(f)
-        return data.get("tool", {}).get("poetry", {}).get("version", "0.0.0-dev")
+        return str(data.get("tool", {}).get("poetry", {}).get("version", "0.0.0-dev"))
     return "0.0.0-dev"
 
 

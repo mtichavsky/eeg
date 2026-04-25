@@ -1,6 +1,4 @@
 # EXPERIMENTS
-CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model TSceptionS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --chunk-duration 4 --checkpoint-dir=experiments/all3-1.0-all-binary-tsceptions-ch4
-CUDA_VISIBLE_DEVICES=1 EEG_DATA_DIR=/home/xticha09 python main.py train --channel all --batch-size 64 --dataset all --model TSceptionS --condition ec+eo --n-folds 10 --lr 1e-3 --dropout 0.3 --weight-decay 0 --l1-lambda 1e-6 --val-every 1 --epochs 200 --chunk-duration 4 --checkpoint-dir=experiments/all3-1.0-all-binary-tsceptions-ch4-focal --focal-loss 
 
 | model                                | accuracy (chunk × subject)          | sensitivity    | specificity        | directory                                                                        |
 |--------------------------------------|-------------------------------------|----------------|--------------------|----------------------------------------------------------------------------------|

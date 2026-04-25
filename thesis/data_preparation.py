@@ -2,15 +2,11 @@
 
 import logging
 from collections.abc import Callable
-from typing import Literal, NamedTuple, Optional
+from typing import Literal, NamedTuple, Optional, Sequence, cast
 
 import numpy as np
 import torch
 from torch.utils.data import ConcatDataset, Subset
-
-# Deformer always expects 250 Hz input; all datasets are resampled/truncated to this rate.
-# Use this constant for target_samples = int(chunk_duration * MODEL_FS).
-MODEL_FS: int = 250
 
 from thesis.dataset import (
     CHUNK_DURATION_SEC,
@@ -23,6 +19,10 @@ from thesis.dataset import (
     SpectrogramDataset,
 )
 from thesis.labels import LabelMapping
+
+# Deformer always expects 250 Hz input; all datasets are resampled/truncated to this rate.
+# Use this constant for target_samples = int(chunk_duration * MODEL_FS).
+MODEL_FS: int = 250
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +69,8 @@ def determine_num_classes(class_mode: str) -> tuple[int, Optional[dict[int, int]
 def _prepare_dataset_generic(
     dataset_class: type[MDDDataset] | type[SADDataset],
     dataset_label: str,
-    conditions: list[str],
-    channel: str,
+    conditions: Sequence[str],
+    channel: str | None,
     rng: np.random.RandomState,
     fs: float,
     augmentation: Callable | None = None,
@@ -100,7 +100,8 @@ def _prepare_dataset_generic(
            path (use_raw_eeg=True); the spectrogram path always uses CHUNK_DURATION_SEC to
            preserve the expected (129, 41) STFT shape.
     :return: Tuple of (flat_dataset, SubjectClasses).
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
+            SubjectClasses]
     """
     all_flat_datasets: list = []
     all_subjects = []
@@ -110,7 +111,7 @@ def _prepare_dataset_generic(
         effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         # Instantiate dataset
         dataset = dataset_class(
-            condition=condition,
+            condition=cast(Literal["EC", "EO", "TASK"], condition),
             channel=channel,
             test_mode=test_mode,
             chunk_duration=effective_chunk_duration,
@@ -119,7 +120,9 @@ def _prepare_dataset_generic(
         if use_raw_eeg:
             target_samples = int(chunk_duration * MODEL_FS)
             flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
-                FlattenedRawEEGDataset(dataset, target_samples=target_samples, label_mapping=label_mapping)
+                FlattenedRawEEGDataset(
+                    dataset, target_samples=target_samples, label_mapping=label_mapping
+                )
             )
         else:
             # Create spectrogram dataset
@@ -149,8 +152,8 @@ def _prepare_dataset_generic(
 
 
 def prepare_mdd_dataset(
-    conditions: list[Literal["EC", "EO", "TASK"]],
-    channel: str,
+    conditions: Sequence[str],
+    channel: str | None,
     rng: np.random.RandomState,
     augmentation: Callable | None = None,
     test_mode: bool = False,
@@ -178,7 +181,8 @@ def prepare_mdd_dataset(
     :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
     :return: Tuple of (flat_dataset, SubjectClasses).
              Note: anxiety and anxiety_depression are empty for MDD dataset.
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
+            SubjectClasses]
     """
     # In binary mode, apply CanonicalLabel → BinaryLabel mapping
     effective_label_mapping = label_mapping
@@ -201,8 +205,8 @@ def prepare_mdd_dataset(
 
 
 def prepare_cane_dataset(
-    conditions: list[Literal["ec", "eo"]],
-    channel: str,
+    conditions: Sequence[str],
+    channel: str | None,
     rng: np.random.RandomState,
     label_mapping: Optional[dict[int, int]] = None,
     skip_artifact_removal: bool = False,
@@ -227,7 +231,8 @@ def prepare_cane_dataset(
            downsamples 2:1 automatically.
     :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
     :return: Tuple of (flat_dataset, SubjectClasses).
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
+            SubjectClasses]
     """
     all_flat_datasets: list = []
     all_subjects = []
@@ -236,7 +241,7 @@ def prepare_cane_dataset(
         # For spectrogram models, always use default 10-s chunks to preserve (129, 41) shape.
         effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         cane_dataset = CANEDataset(
-            condition=condition,
+            condition=cast(Literal["ec", "eo"], condition),
             channel=channel,
             skip_extreme_artifacts=True,
             skip_artifact_removal=skip_artifact_removal,
@@ -283,8 +288,8 @@ def prepare_cane_dataset(
 
 
 def prepare_sad_dataset(
-    conditions: list[Literal["EC", "EO"]],
-    channel: str,
+    conditions: Sequence[str],
+    channel: str | None,
     rng: np.random.RandomState,
     augmentation: Callable | None = None,
     test_mode: bool = False,
@@ -306,7 +311,8 @@ def prepare_sad_dataset(
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
     :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
     :return: Tuple of (flat_dataset, SubjectClasses).
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
+            SubjectClasses]
     """
     return _prepare_dataset_generic(
         dataset_class=SADDataset,
@@ -324,8 +330,8 @@ def prepare_sad_dataset(
 
 
 def prepare_idun_dataset(
-    conditions: list[Literal["ec", "eo"]],
-    channel: str,
+    conditions: Sequence[str],
+    channel: str | None,
     rng: np.random.RandomState,
     label_mapping: Optional[dict[int, int]] = None,
     augmentation: Callable | None = None,
@@ -350,7 +356,8 @@ def prepare_idun_dataset(
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
     :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
     :return: Tuple of (flat_dataset, SubjectClasses).
-    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]
+    :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
+            SubjectClasses]
     """
     all_flat_datasets: list = []
     all_subjects = []
@@ -359,7 +366,7 @@ def prepare_idun_dataset(
         # For spectrogram models, always use default 10-s chunks to preserve (129, 41) shape.
         effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         idun_dataset = IDUNDataset(
-            condition=condition,
+            condition=cast(Literal["ec", "eo"], condition),
             quality_threshold=quality_threshold,
             test_mode=test_mode,
             chunk_duration=effective_chunk_duration,
@@ -568,10 +575,11 @@ def get_indices_from_dataset(
     all_indices: list[int] = []
     offset = 0
     for dataset in concat_dataset.datasets:
-        dataset_indices = dataset.get_indices_for_subjects(subject_list)
+        flat_ds = cast(FlattenedSpectrogramDataset | FlattenedRawEEGDataset, dataset)
+        dataset_indices = flat_ds.get_indices_for_subjects(subject_list)
         # Adjust indices by offset in concatenated dataset
         all_indices.extend([idx + offset for idx in dataset_indices])
-        offset += len(dataset)
+        offset += len(flat_ds)
     return all_indices
 
 
@@ -582,10 +590,10 @@ def get_datasets_for_fold(
     depression_folds: list[SubjectList],
     anxiety_depression_folds: list[SubjectList],
     dataset_type: str,
-    mdd_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
-    cane_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
-    sad_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
-    flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | None,
+    mdd_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset | None,
+    cane_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset | None,
+    sad_flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset | None,
+    flat_dataset: ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset | None,
 ) -> tuple[ConcatDataset | Subset, ConcatDataset | Subset, dict[str, str]]:
     """
     Get train and validation datasets for a specific fold.
@@ -679,8 +687,8 @@ def get_datasets_for_fold(
             train_chunk_counts["SAD"] = len(sad_train_indices)
             val_chunk_counts["SAD"] = len(sad_val_indices)
 
-        train_dataset = ConcatDataset(train_subsets)
-        val_dataset = ConcatDataset(val_subsets)
+        train_dataset: ConcatDataset | Subset = ConcatDataset(train_subsets)
+        val_dataset: ConcatDataset | Subset = ConcatDataset(val_subsets)
 
         # Log chunk counts
         train_count_str = ", ".join([f"{k}={v}" for k, v in train_chunk_counts.items()])

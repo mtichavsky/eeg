@@ -6,7 +6,7 @@ import subprocess
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, Sized, cast
 
 import numpy as np
 import torch
@@ -21,6 +21,7 @@ from thesis.augmentation import EEGAugmentation
 from thesis.cli import get_arg_parser
 from thesis.data_preparation import (
     EXPECTED_SPECTROGRAM_SHAPE,
+    SubjectList,
     create_balanced_folds,
     determine_num_classes,
     get_datasets_for_fold,
@@ -47,7 +48,9 @@ from thesis.metrics import (
 from thesis.model import RAW_EEG_MODELS
 from thesis.model_factory import (
     DeformerConfig,
+    DeformerSConfig,
     LGGNetConfig,
+    LGGNetSConfig,
     TSceptionConfig,
     TSceptionSConfig,
     build_raw_eeg_config,
@@ -144,7 +147,7 @@ def train_epoch(
     device: torch.device,
     num_classes: int = 2,
     l1_lambda: float = 0.0,
-) -> dict[str, float | int | np.ndarray]:
+) -> dict[str, Any]:
     """
     Train model for one epoch at chunk/spectrogram level.
 
@@ -153,8 +156,8 @@ def train_epoch(
     """
     model.train()
     running_loss = 0.0
-    all_preds = []
-    all_labels = []
+    all_preds: list[np.ndarray] = []
+    all_labels: list[np.ndarray] = []
     for batch in dataloader:
         # Unpack batch: collate_spectrograms returns (spectrograms_tensor,
         # labels_tensor, subjects_list)
@@ -174,11 +177,11 @@ def train_epoch(
         preds = logits.argmax(dim=1).detach().cpu().numpy()
         all_preds.extend(preds)
         all_labels.extend(yb.detach().cpu().numpy())
-    all_preds = np.array(all_preds)
-    all_labels = np.array(all_labels)
-    metrics = classification_metrics(all_labels, all_preds, num_classes=num_classes)
+    preds_arr = np.array(all_preds)
+    labels_arr = np.array(all_labels)
+    metrics = classification_metrics(labels_arr, preds_arr, num_classes=num_classes)
     # TODO corresponding line
-    avg_loss = running_loss / len(dataloader.dataset)
+    avg_loss = running_loss / len(cast(Sized, dataloader.dataset))
     metrics["loss"] = avg_loss
     return metrics
 
@@ -191,7 +194,7 @@ def eval_epoch(
     device: torch.device,
     num_classes: int = 2,
     subject_dataset_map: dict[str, str] | None = None,
-) -> dict[str, dict[str, float | int | np.ndarray] | float]:
+) -> dict[str, Any]:
     """
     Evaluate model for one epoch, computing both chunk-level and subject-level metrics.
 
@@ -207,9 +210,9 @@ def eval_epoch(
     """
     model.eval()
     running_loss = 0.0
-    all_preds = []
-    all_labels = []
-    all_subjects = []
+    all_preds: list[np.ndarray] = []
+    all_labels: list[np.ndarray] = []
+    all_subjects: list[str] = []
 
     with torch.no_grad():
         for batch in dataloader:
@@ -227,17 +230,17 @@ def eval_epoch(
             all_labels.extend(yb.detach().cpu().numpy())
             all_subjects.extend(subjects)  # subjects is a list of strings from the batch
 
-    all_preds = np.array(all_preds)
-    all_labels = np.array(all_labels)
+    preds_arr = np.array(all_preds)
+    labels_arr = np.array(all_labels)
 
     # Chunk-level metrics
-    chunk_metrics = classification_metrics(all_labels, all_preds, num_classes=num_classes)
+    chunk_metrics = classification_metrics(labels_arr, preds_arr, num_classes=num_classes)
     # TODO maybe double check this line - so that it's normalized properly
-    avg_loss = running_loss / len(dataloader.dataset)
+    avg_loss = running_loss / len(cast(Sized, dataloader.dataset))
 
     # Subject-level metrics (majority voting)
     subject_preds, subject_labels, subject_ids = aggregate_subject_predictions(
-        all_preds, all_labels, all_subjects
+        preds_arr, labels_arr, all_subjects
     )
     subject_metrics = classification_metrics(subject_labels, subject_preds, num_classes=num_classes)
 
@@ -257,7 +260,7 @@ def eval_epoch(
     per_dataset: dict[str, dict[str, float | int]] | None = None
     if subject_dataset_map is not None:
         per_dataset = compute_per_dataset_metrics(
-            all_preds, all_labels, all_subjects, subject_dataset_map
+            preds_arr, labels_arr, all_subjects, subject_dataset_map
         )
 
     return {
@@ -323,7 +326,7 @@ def train_one_fold(
     best_chunk_confusion_matrix: np.ndarray = np.zeros((num_classes, num_classes), dtype=int)
     best_per_dataset_metrics: dict[str, dict[str, float | int]] | None = None
 
-    fold_history = {
+    fold_history: dict[str, list[Any]] = {
         "train_loss": [],
         "train_acc": [],
         "val_loss": [],
@@ -480,7 +483,7 @@ def compute_class_weights(
     class_counts = torch.zeros(num_classes, dtype=torch.float)
 
     # Count chunks for each class
-    for idx in range(len(dataset)):
+    for idx in range(len(cast(Sized, dataset))):
         _, label, _ = dataset[idx]
         class_counts[label] += 1
 
@@ -519,7 +522,13 @@ def train_cross_validation(
     focal_loss: bool = False,
     focal_gamma: float = 2.0,
     cosine_lr: bool = True,
-    raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig | None = None,
+    raw_eeg_config: DeformerConfig
+    | DeformerSConfig
+    | LGGNetConfig
+    | LGGNetSConfig
+    | TSceptionConfig
+    | TSceptionSConfig
+    | None = None,
     chunk_duration: float = 10.0,
     l1_lambda: float = 0.0,
 ) -> dict:
@@ -774,7 +783,7 @@ def train_cross_validation(
         )
     else:
         # Single dataset: some classes may be empty
-        empty_folds = [[] for _ in range(n_folds)]
+        empty_folds: list[SubjectList] = [[] for _ in range(n_folds)]
         normal_folds = split_into_folds(normal, n_folds)
         anxiety_folds = split_into_folds(anxiety, n_folds) if anxiety else empty_folds
         depression_folds = split_into_folds(depression, n_folds) if depression else empty_folds
@@ -801,7 +810,7 @@ def train_cross_validation(
             flat_dataset,
         )
 
-        # Compute class weights for balanced loss (CPU only used for sampler, otherwise use `device` as value)
+        # Compute class weights for balanced loss (CPU only; `device` is for model/tensors)
         class_weights = compute_class_weights(train_dataset, num_classes, device="cpu")
         logger.info(f"Fold {fold + 1} | Class weights | {class_weights}")
 
@@ -963,9 +972,15 @@ def train(args: argparse.Namespace) -> None:
         logger.info(f"  {key}: {val}")
 
     # Resolve raw-EEG config from defaults + CLI overrides (None for spectrogram models).
-    raw_eeg_config: DeformerConfig | LGGNetConfig | TSceptionConfig | TSceptionSConfig | None = (
-        build_raw_eeg_config(args.model, args)
-    )
+    raw_eeg_config: (
+        DeformerConfig
+        | DeformerSConfig
+        | LGGNetConfig
+        | LGGNetSConfig
+        | TSceptionConfig
+        | TSceptionSConfig
+        | None
+    ) = build_raw_eeg_config(args.model, args)
     if raw_eeg_config is not None:
         logger.info(
             f"{args.model} config: {raw_eeg_config} (chunk_duration={args.chunk_duration}s)"

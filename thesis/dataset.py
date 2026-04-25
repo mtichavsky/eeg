@@ -5,9 +5,7 @@ import warnings
 from collections import Counter
 from functools import lru_cache, partial
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional
-
-DEFAULT_CACHE_SIZE: int = 100
+from typing import Any, Callable, Literal, Optional, cast
 
 import mne
 import numpy as np
@@ -18,6 +16,8 @@ from scipy.stats import zscore
 from torch.utils.data import Dataset
 
 from thesis.labels import CanonicalLabel
+
+DEFAULT_CACHE_SIZE: int = 100
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ def load_and_preprocess_edf_file(
     channel_mapping: dict[str, str],
     channel_order: list[str],
     *,
-    chunk_samples: int,
+    chunk_samples: int = int(CHUNK_DURATION_SEC * 250),
 ) -> torch.Tensor:
     """
     Load an EDF file from disk, preprocess it, and return chunks.
@@ -177,7 +177,7 @@ class MDDDataset(Dataset):
         labels: Optional[list[str]] = None,
         cache_size: Optional[int] = DEFAULT_CACHE_SIZE,
         transform: Optional[Callable] = None,
-        channel: str = "all",
+        channel: Optional[str] = "all",
         test_mode: bool = False,
         chunk_duration: float = CHUNK_DURATION_SEC,
     ):
@@ -206,7 +206,9 @@ class MDDDataset(Dataset):
         self.test_mode = test_mode
         self.chunk_samples = int(chunk_duration * self.FS)
         self.files = self._discover_files(
-            condition.upper() if condition is not None else None, subjects, labels
+            cast(Literal["EC", "EO", "TASK"], condition.upper()) if condition is not None else None,
+            subjects,
+            labels,
         )
 
         # Handle channel selection
@@ -459,6 +461,7 @@ class CANEDataset(Dataset):
 
         self.files = self._discover_files(condition, subjects, labels)
 
+        self._load_and_preprocess_cane_raw_file: Any
         if cache_size:
             self._load_and_preprocess_cane_raw_file = lru_cache(maxsize=cache_size)(
                 CANEDataset.load_and_preprocess_cane_raw_file
@@ -719,7 +722,7 @@ class CANEDataset(Dataset):
         # Process each channel through the preprocessing pipeline
         processed_channels = []
         for ch in channels_to_use:
-            signal = df[ch].values.astype(float)
+            signal = cast(np.ndarray, df[ch].values.astype(float))
             processed_signal = CANEDataset._process_single_channel(
                 signal,
                 ch,
@@ -887,11 +890,11 @@ class SADDataset(MDDDataset):
     def __init__(
         self,
         data_dir: Path = SAD_DIR,
-        condition: Optional[Literal["EC", "EO"]] = None,
+        condition: Optional[Literal["EC", "EO", "TASK"]] = None,
         subjects: Optional[list[str]] = None,
         cache_size: Optional[int] = DEFAULT_CACHE_SIZE,
         transform: Optional[Callable] = None,
-        channel: str = "all",
+        channel: Optional[str] = "all",
         test_mode: bool = False,
         chunk_duration: float = CHUNK_DURATION_SEC,
     ):
@@ -899,7 +902,7 @@ class SADDataset(MDDDataset):
         Initialize the SAD EEG dataset.
 
         :param Path data_dir: Path to directory containing class subdirectories.
-        :param Optional[Literal["EC", "EO"]] condition: Filter by condition or None for all.
+        :param Optional[Literal["EC", "EO", "TASK"]] condition: Filter by condition or None for all.
         :param Optional[list[str]] subjects: List of subject IDs to include. None = all.
         :param int cache_size: Number of preprocessed files to cache in memory.
         :param Optional[Callable] transform: Optional transform function to apply to EEG data.
@@ -913,7 +916,7 @@ class SADDataset(MDDDataset):
         self.test_mode = test_mode
         self.chunk_samples = int(chunk_duration * self.FS)
         self.files = self._discover_files(
-            condition.upper() if condition is not None else None,
+            cast(Literal["EC", "EO", "TASK"], condition.upper()) if condition is not None else None,
             subjects,
             None,  # labels parameter ignored
         )
@@ -937,6 +940,7 @@ class SADDataset(MDDDataset):
         )
 
         # Set up caching (same pattern as MDDDataset)
+        self._load_and_preprocess_edf_raw_file_cached: Any
         if cache_size:
             self._load_and_preprocess_edf_raw_file_cached = lru_cache(maxsize=cache_size)(
                 preprocess_func
@@ -946,7 +950,7 @@ class SADDataset(MDDDataset):
 
     def _discover_files(
         self,
-        condition: Optional[Literal["EC", "EO"]],
+        condition: Optional[Literal["EC", "EO", "TASK"]],
         subjects: Optional[list[str]],
         labels: Optional[list[str]],  # Ignored - class determined by directory
     ) -> list[dict[str, Any]]:
@@ -1224,7 +1228,7 @@ class IDUNDataset(Dataset):
         :rtype: torch.Tensor
         """
         df = pd.read_csv(file_path)
-        signal = df["ch1"].values.astype(np.float64)
+        signal = cast(np.ndarray, df["ch1"].values.astype(np.float64))
         timestamps = df["timestamp"].values
 
         # Verify sampling rate
@@ -1242,8 +1246,8 @@ class IDUNDataset(Dataset):
         if quality_path is not None:
             try:
                 qdf = pd.read_csv(quality_path)
-                quality_timestamps = qdf["timestamp"].values
-                quality_values = qdf["signalQuality"].values
+                quality_timestamps = cast(np.ndarray, qdf["timestamp"].values)
+                quality_values = cast(np.ndarray, qdf["signalQuality"].values)
                 logger.info(
                     f"Quality stats for {file_path.name}: "
                     f"mean={quality_values.mean():.1f}, "
@@ -1399,7 +1403,7 @@ class SpectrogramDataset(Dataset):
         window: str = "hamming",
         cache_size: int = DEFAULT_CACHE_SIZE,
         augmentation: Optional[Callable] = None,
-        channel: str = "all",
+        channel: Optional[str] = "all",
     ):
         """
         Initialize the SpectrogramDataset.
@@ -1413,8 +1417,9 @@ class SpectrogramDataset(Dataset):
         :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
                before spectrogram conversion. When enabled, caching is disabled to ensure
                fresh augmentations on each access.
-        :param str channel: Channel mode. When "in-ear", applies 50%% sign flip augmentation
-               per chunk to handle polarity ambiguity (always enabled regardless of augmentation).
+        :param Optional[str] channel: Channel mode. When "in-ear", applies 50%% sign flip
+               augmentation per chunk to handle polarity ambiguity (always enabled regardless
+               of augmentation).
         """
         self.dataset = dataset
         self.fs = fs
@@ -1545,7 +1550,7 @@ class SpectrogramDataset(Dataset):
         :return: Tuple of (list of spectrograms, label, subject).
         :rtype: tuple[list[torch.Tensor], int, str]
         """
-        return self._get_item_cached(idx)
+        return cast(tuple[list[torch.Tensor], int, str], self._get_item_cached(idx))
 
     def get_indices_for_subjects(self, subject_list: list[str]) -> list[int]:
         """
@@ -1733,7 +1738,7 @@ class FlattenedRawEEGDataset(Dataset):
         """
         file_idx, chunk_idx = self.index[idx]
         item = self.dataset[file_idx]
-        eeg: torch.Tensor = item["eeg"]   # (num_chunks, num_channels, samples)
+        eeg: torch.Tensor = item["eeg"]  # (num_chunks, num_channels, samples)
         label: int = item["label"]
         subject: str = item["subject"]
 
