@@ -188,7 +188,7 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 
 - **IDUN replacement**: When using `--channel in-ear` with `--dataset cane` or `--dataset all`, CANE is automatically replaced with IDUN real in-ear data. Logs may report "CANE" due to internal fold labeling, but IDUN data is actually used.
 - Channel selection: Use `--channel all` (default) for 8 channels or specify single channel (Fp1, T7, etc.)
-- Multi-channel mode uses per-channel shared CNN with cross-channel attention (SmallerAllV2, CNNAttn, CNNCatLSTM)
+- Multi-channel mode uses per-channel shared CNN with cross-channel attention (CNNLSTMAll, CNNAttnAll, CNNCatLSTM)
 - 4-class mode requires `--dataset all` (normal/anxiety/depression/comorbid)
 - Channel naming standardized: T3→T7, T4→T8 for cross-dataset compatibility
 - STFT parameters: `nperseg=256`, `noverlap=192` → output shape (129, 41)
@@ -221,8 +221,8 @@ naming convention:
 |-----------------------------|-----------------|----------------------------------------------|-----------------|
 | `model_inear_binary.pth`    | in-ear          | Binary (healthy vs pathological)             | CNN_LSTM_DepCap |
 | `model_inear_4class.pth`    | in-ear          | 4-class (normal/anxiety/depression/comorbid) | CNN_LSTM_DepCap |
-| `model_8channel_binary.pth` | All 8 channels  | Binary                                       | CNNAttn         |
-| `model_8channel_4class.pth` | All 8 channels  | 4-class                                      | CNNAttn         |
+| `model_8channel_binary.pth` | All 8 channels  | Binary                                       | CNNAttnAll      |
+| `model_8channel_4class.pth` | All 8 channels  | 4-class                                      | CNNAttnAll      |
 
 Copy the best fold checkpoint from your experiment directory:
 

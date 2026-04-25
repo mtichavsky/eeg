@@ -541,7 +541,7 @@ def train_cross_validation(
     :param Path checkpoint_dir: Directory to save checkpoints.
     :param torch.device device: Device to train on.
     :param str | None channel: Single channel to use (e.g., "Fp1"). If None, uses all channels.
-    :param str model_name: Model architecture to use ("CNN_LSTM_DepCap" or "Smaller").
+    :param str model_name: Model architecture to use ("CNN_LSTM_DepCap" or "CNNLSTM").
     :param bool skip_artifact_removal: If True, skip artifact interpolation/clipping in CANE.
     :param str | None pretrained_checkpoint: Path to pretrained model checkpoint for transfer
         learning. Must use same model architecture as pretrained model.
