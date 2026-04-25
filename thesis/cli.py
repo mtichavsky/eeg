@@ -185,7 +185,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "Transfer learning",
         description="Load a pretrained checkpoint and optionally freeze parts of the network. "
         "--freeze-cnn/--freeze-lstm are only meaningful for CNN_LSTM-family models "
-        "(CNN_LSTM_DepCap, Smaller, SmallerAllV2, CNNAttn, CNNCatLSTM); "
+        "(CNN_LSTM_DepCap, CNNLSTM, CNNLSTMAll, CNNAttnAll, CNNCatLSTM); "
         "they are silently ignored for raw-EEG models (Deformer, LGGNet, TSception, …).",
     )
     transfer_group.add_argument(
