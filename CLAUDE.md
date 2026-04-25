@@ -269,10 +269,11 @@ Run with: `poetry run jupyter notebook`
      - Spatial Dropout (nn.Dropout2d) after each pooling layer for better CNN regularization
      - LSTM/GRU layer (hidden=100) treating spectrograms as time sequences
      - Dense classifier (64 → 32 → num_classes) with standard dropout
-   - `Smaller`: Reduced model (~50% fewer parameters) for faster experimentation
-   - `SmallerAllV2`: Multi-channel model with per-channel weight-shared CNN + cross-channel self-attention + LSTM
+   - `CNNLSTM`: Reduced model (~50% fewer parameters) for faster experimentation
+   - `CNNLSTMAll`: Multi-channel model with per-channel weight-shared CNN + cross-channel self-attention + LSTM
      - TransformerEncoder computes soft channel weights before temporal merging
-   - `CNNAttn`: SmallerAllV2 variant replacing LSTM with temporal self-attention
+   - `CNNAttn`: CNNLSTM variant replacing LSTM with temporal self-attention (single-channel)
+   - `CNNAttnAll`: CNNLSTMAll variant replacing LSTM with temporal self-attention (8-channel)
    - `CNNCatLSTM`: Multi-channel model concatenating all channel features at each time step
      - Feeds concatenated (8×features) vectors to LSTM directly (no soft gating)
    - `Deformer`: EEG-Deformer (J-BHI 2024) — raw EEG transformer with shallow CNN + hierarchical transformer layers
@@ -366,10 +367,10 @@ The `MDDDataset` supports two modes:
 - **Deformer/DeformerS** consume raw EEG directly `(batch, channels, num_time)` where `num_time = chunk_duration × 250`; they bypass `SpectrogramDataset`
 
 **Spectrogram Input:**
-- Single channel (CNN_LSTM_DepCap, Smaller): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
+- Single channel (CNN_LSTM_DepCap, CNNLSTM): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
 - In-ear channel: Same as single channel `(batch_size, 1, H, W)` with 50% sign flip augmentation per chunk
   - IDUN or synthetic in-ear depending on dataset
-- Multi-channel (SmallerAllV2, CNNAttn, CNNCatLSTM): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
+- Multi-channel (CNNLSTMAll, CNNAttnAll, CNNCatLSTM): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
 - Current default: `(129, 41)` with nperseg=256, noverlap=192
 - Paper target: `(254, 342)` (may require parameter tuning)
 - Created via STFT in `SpectrogramDataset` or preprocessing
@@ -520,7 +521,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - **Spatial Dropout**: Added `nn.Dropout2d` after CNN pooling layers for better feature map regularization
 - **L2 Regularization**: Added weight decay parameter (default 1e-4) for L2 penalty on weights
 - **Training visualization**: Added `plot_training_curves.py` for analyzing fold performance
-- **SmallerAllV2 / CNNAttn** (Apr 2026): Multi-channel models with per-channel weight-shared CNN + cross-channel TransformerEncoder soft gating; V2Attn replaces LSTM with temporal self-attention
+- **CNNLSTMAll / CNNAttnAll** (Apr 2026): Multi-channel models with per-channel weight-shared CNN + cross-channel TransformerEncoder soft gating; CNNAttnAll replaces LSTM with temporal self-attention
 - **CNNCatLSTM** (Apr 2026): Redesigned from soft gating to full channel concatenation before LSTM; simpler and often stronger
 - **EEG-Deformer / DeformerS** (Apr 2026): Raw-EEG transformer models from J-BHI 2024 paper
   - `Deformer`: full model (~1.78M params); `DeformerS`: reduced variant (~588k params)
@@ -540,7 +541,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - **EDF channel auto-detection in inference** (Apr 2026): `_detect_edf_channel_config()` tries known layouts (MDD, SAD) before falling back with a warning; removes hardcoded assumptions
 - **API: `classification_task` renamed** (Apr 2026): `"2class"` → `"binary"` throughout API and model manager
 - **API: rate limit raised** (Apr 2026): 10 → 50 requests per 10 seconds
-- **API: model keys updated** (Apr 2026): `model_in_ear_2class` → `model_in_ear_binary`; `model_8channel_2class` → `model_8channel_binary`; default models upgraded (in-ear: `CNN_LSTM_DepCap` → `Smaller`; 8-channel: `CNNAttn`)
+- **API: model keys updated** (Apr 2026): `model_in_ear_2class` → `model_in_ear_binary`; `model_8channel_2class` → `model_8channel_binary`; default models upgraded (in-ear: `CNN_LSTM_DepCap` → `CNNLSTM`; 8-channel: `CNNAttnAll`)
 
 **Deprecated Patterns:**
 - ~~Direct use of `MDDDataset` for training~~ → Use `prepare_mdd_dataset()`

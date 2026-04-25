@@ -139,7 +139,7 @@ class CNN_LSTM_DepCap(nn.Module):
         return logits
 
 
-class Smaller(nn.Module):
+class CNNLSTM(nn.Module):
     Pool1 = nn.MaxPool2d(kernel_size=2, stride=1)
     Dropout1 = nn.Dropout2d
 
@@ -310,8 +310,8 @@ class Smaller(nn.Module):
         return logits
 
 
-class SmallerAttn(Smaller):
-    """Smaller model with self-attention replacing LSTM.
+class CNNAttn(CNNLSTM):
+    """CNNLSTM model with self-attention replacing LSTM (single-channel).
 
     Uses a TransformerEncoder with learned positional embeddings over the
     CNN-produced time frames. d_model is controlled via rnn_hidden (default 128).
@@ -327,7 +327,7 @@ class SmallerAttn(Smaller):
         num_classes: int = 2,
     ):
         """
-        Initialize Smaller with self-attention temporal aggregation.
+        Initialize CNNAttn with self-attention temporal aggregation.
 
         :param tuple input_shape: Tuple of (height, width) for the input spectrogram.
         :param int in_channels: Number of input channels (default=1).
@@ -346,12 +346,12 @@ class SmallerAttn(Smaller):
         )
 
 
-class SmallerAllV2(Smaller):
+class CNNLSTMAll(CNNLSTM):
     """
     Multi-channel EEG model: per-channel weight-shared CNN + cross-channel
     self-attention + temporal LSTM.
 
-    Processes each EEG channel independently through the Smaller CNN (shared
+    Processes each EEG channel independently through the CNNLSTM CNN (shared
     weights), then uses self-attention across the 8 channel tokens to produce
     soft channel-importance weights before merging into the LSTM path.
 
@@ -408,7 +408,7 @@ class SmallerAllV2(Smaller):
         self.chan_gate = nn.Linear(chan_d_model, 1)
 
         logger.info(
-            f"SmallerAllV2: n_eeg_channels={in_channels}, C_feat={C_feat}, "
+            f"CNNLSTMAll: n_eeg_channels={in_channels}, C_feat={C_feat}, "
             f"H_prime={H_prime}, chan_d_model={chan_d_model}, nhead={nhead}"
         )
 
@@ -439,7 +439,7 @@ class SmallerAllV2(Smaller):
         weights = weights.unsqueeze(-1).unsqueeze(-1)                   # (B, 8, 1, 1, 1)
         merged = (x_ch * weights).sum(dim=1)                            # (B, 16, H', W')
 
-        # 3. LSTM / Attention + Classifier (same as Smaller.forward() tail)
+        # 3. LSTM / Attention + Classifier (same as CNNLSTM.forward() tail)
         seq = merged.permute(0, 3, 2, 1).contiguous()       # (B, W', H', C_feat)
         seq = seq.view(B, W_prime, H_prime * C_feat)         # (B, W', rnn_input_size)
 
@@ -457,9 +457,9 @@ class SmallerAllV2(Smaller):
         return self.out(x)
 
 
-class CNNAttn(SmallerAllV2):
+class CNNAttnAll(CNNLSTMAll):
     """
-    SmallerAllV2 with temporal self-attention replacing LSTM.
+    CNNLSTMAll with temporal self-attention replacing LSTM (8-channel).
 
     Cross-channel attention is unchanged. After channel merging, temporal
     aggregation uses a TransformerEncoder instead of LSTM/GRU.
@@ -477,7 +477,7 @@ class CNNAttn(SmallerAllV2):
         chan_d_model: int = 64,
     ) -> None:
         """
-        Initialize SmallerAllV2 with temporal self-attention.
+        Initialize CNNAttnAll with temporal self-attention.
 
         :param tuple input_shape: Spectrogram shape (H, W).
         :param int in_channels: Number of EEG channels (default 8).
@@ -498,7 +498,7 @@ class CNNAttn(SmallerAllV2):
         )
 
 
-class CNNCatLSTM(Smaller):
+class CNNCatLSTM(CNNLSTM):
     """
     Multi-channel EEG model: per-channel weight-shared CNN + full-channel concat
     projection + temporal LSTM.
@@ -556,7 +556,7 @@ class CNNCatLSTM(Smaller):
             dropout=dropout,
             num_classes=num_classes,
         )
-        # Override Smaller's classifier head
+        # Override CNNLSTM's classifier head
         self.fc1 = nn.Linear(rnn_hidden, 64)
         self.fc2 = nn.Linear(64, 32)
         self.out = nn.Linear(32, num_classes)
@@ -647,7 +647,7 @@ class CNNCatLSTM(Smaller):
         return self.out(x)
 
 
-class AllTransformerV4(Smaller):
+class AllTransformerV4(CNNLSTM):
     """
     8-channel EEG classifier: shared per-channel CNN → (channel×time) token Transformer.
 
@@ -657,7 +657,7 @@ class AllTransformerV4(Smaller):
     Mean pooling over all 80 tokens feeds the classifier.
 
     Compared to CNNCatLSTM: eliminates the 885K-param bottleneck projection.
-    Parameter count: ~142K (d_model=64) vs ~1M for CNNCatLSTM.
+    Parameter count: 142,146 (d_model=64) vs ~1M for CNNCatLSTM.
 
     Architecture::
 
@@ -699,7 +699,7 @@ class AllTransformerV4(Smaller):
         :param int rnn_hidden: Transformer d_model (default 64).
         :param int num_layers: Number of TransformerEncoder layers (default 2).
         """
-        # Inherit CNN backbone + proj + classifier from Smaller's ATTENTION branch.
+        # Inherit CNN backbone + proj + classifier from CNNLSTM's ATTENTION branch.
         # in_channels=1: CNN processes one EEG channel at a time (shared weights).
         # self.proj = Linear(C_feat*H', rnn_hidden) is reused as the token projection.
         super().__init__(
@@ -729,7 +729,7 @@ class AllTransformerV4(Smaller):
         self.chan_embedding = nn.Embedding(in_channels, d_model)
         self.time_embedding = nn.Embedding(W_prime, d_model)
 
-        # Replace 1-layer transformer (from Smaller) with num_layers version.
+        # Replace 1-layer transformer (from CNNLSTM) with num_layers version.
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=max(1, d_model // 16),
@@ -766,7 +766,7 @@ class AllTransformerV4(Smaller):
         tokens = tokens.permute(0, 1, 4, 2, 3).contiguous()  # (B, n_ch, W', C_feat, H')
         tokens = tokens.reshape(B, n_ch, W_prime, C_feat * H_prime)  # (B, n_ch, W', 864)
 
-        # 3. Project to d_model (self.proj from Smaller's ATTENTION branch).
+        # 3. Project to d_model (self.proj from CNNLSTM's ATTENTION branch).
         tokens = self.proj(tokens)  # (B, n_ch, W', d_model)
 
         # 4. Add 2D positional embeddings.
@@ -798,10 +798,10 @@ RAW_EEG_MODELS: frozenset[str] = frozenset({"Deformer", "DeformerS", "LGGNet", "
 # rnn_hidden is None for raw-EEG models that don't use an RNN.
 MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int | None]] = {
     "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
-    "Smaller": (Smaller, 64),
-    "SmallerAttn": (SmallerAttn, 128),
-    "SmallerAllV2": (SmallerAllV2, 64),
-    "CNNAttn": (CNNAttn, 128),
+    "CNNLSTM": (CNNLSTM, 64),
+    "CNNAttn":    (CNNAttn,    128),
+    "CNNLSTMAll": (CNNLSTMAll,  64),
+    "CNNAttnAll": (CNNAttnAll, 128),
     "CNNCatLSTM": (CNNCatLSTM, 100),
     "AllTransformerV4": (AllTransformerV4, 64),
     "Deformer": (Deformer, None),
