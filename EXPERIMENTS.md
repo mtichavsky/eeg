@@ -1,12 +1,8 @@
 # EXPERIMENTS
 
+
 | model                                | accuracy (chunk × subject)          | sensitivity    | specificity        | directory                                                                        |
 |--------------------------------------|-------------------------------------|----------------|--------------------|----------------------------------------------------------------------------------|
-| binary, in-ear, 3 dts.               | 76.86% ± 2.84% × 77.79% ± 2.74%     | 86.23% ± 4.29% | 63.90% ± 4.66%     | all3-016-inear-binary-smaller; **6 fold only**                                   |
-| binary, in-ear, LSTM                 | 77.44% ± 4.64% × 75.87% ± 6.78%     | 88.87% ± 7.11% | 61.96% ± 8.59%     | all3-018-inear-binary-smaller-weighted-sampler                                   |
-| binary, in-ear, Attn                 | 78.26% ± 4.92% × 77.39% ± 7.05%     | 89.41% ± 7.02% | 63.11% ± 8.76%     | all3-018-inear-binary-smallerAttn                                                |
-| **binary, in-ear, Attn+FL**          | 77.76% ± 4.64% × 78.74% ± 7.50%     | 84.21% ± 6.97% | 68.78% ± 6.26%     | all3-019-inear-binary-smallerAttn-focal                                          |
-| binary, in-ear, Attn+FL, lr=1e-3     | 76.66% ± 2.36% × 76.61% ± 5.78%     | 86.91% ± 6.63% | 62.71% ±10.22%     | all3-024-inear-binary-smallerAttn-focal; **6 fold**                              |
 | 4-class, in-ear, 3 dts.              | 63.62% ± 4.45%                      |                |                    | all3-016-inear-4class-smaller; **6 fold only**                                   |
 | 4-class, 8-ch, SmallerAll            | 63.46% ± 9.60% × 64.57% ±11.36%     |                |                    | all3-018-all-4class-smallerAll-weighted-sampler                                  |
 | 4-class, 8-ch, Attn                  | 64.76% ± 8.05% × 66.09% ± 8.23%     |                |                    | all3-018-all-4class-smallerAllAttn-weighted-sampler                              |
@@ -21,6 +17,7 @@
 | 4-class, 8-ch, TSception+FL          | —                                   | —              | —                  | all3-026-all-4class-tsception-focal; **6 fold, planned**                         |
 
 > **Tip:** append `> /dev/null 2>&1 &` to any command to run it in the background and detach from the terminal.
+> To check running jobs, use `jobs -l` command.
 
 ---
 
