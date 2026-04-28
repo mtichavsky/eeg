@@ -55,8 +55,8 @@ TODO double check normals count for MDD
 | Model                | Params  | Input channels                                      | Temporal aggregation                                    | RNN hidden / d\_model |
 |----------------------|---------|-----------------------------------------------------|---------------------------------------------------------|-----------------------|
 | `CNN_LSTM_DepCap`    | 798 K   | 1                                                   | LSTM                                                    | 100                   |
-| `CNNLSTM`            | 257 K   | 1                                                   | LSTM                                                    | 64                    |
-| `CNNAttn`            | 265 K   | 1                                                   | Self-attention (Transformer)                            | 128                   |
+| `CNNLSTM`            | 256.8 K | 1                                                   | LSTM                                                    | 64                    |
+| `CNNAttn`            | 265.2 K | 1                                                   | Self-attention (Transformer)                            | 128                   |
 | `CNNLSTMAll`         | 346 K   | 8 (per-channel shared CNN + cross-channel attn)     | LSTM                                                    | 64                    |
 | `CNNAttnAll`         | 354 K   | 8 (per-channel shared CNN + cross-channel attn)     | Self-attention (Transformer)                            | 128                   |
 | `CNNCatLSTM`         | 1.00 M  | 8 (per-channel shared CNN + full concat projection) | LSTM                                                    | 100 (default)         |
