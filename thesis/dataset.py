@@ -66,7 +66,7 @@ def load_and_preprocess_edf_file(
     :param Path file_path: Path to the EDF file to preprocess.
     :param str channel: Channel to use: specific channel name (e.g., "Fp1") or
            "all" for all 8 channels.
-    :param float fs: Sampling frequency in Hz (e.g., 250 for MDD, 256 for AX_MALIK).
+    :param float fs: Sampling frequency in Hz (e.g., 250 for MDD, 256 for SAD).
     :param dict[str, str] channel_mapping: Mapping from raw channel names to canonical names
            (e.g., {"EEG Fp1-LE": "Fp1"}).
     :param list[str] channel_order: Canonical channel order for "all" channel mode
@@ -1475,10 +1475,6 @@ class SpectrogramDataset(Dataset):
             for ch_idx in range(num_channels):
                 channel_data = chunk_data[ch_idx].numpy()
 
-                # Sign flip for in-ear: 50% probability per chunk, handles polarity ambiguity
-                # if is_inear and np.random.random() < 0.5:
-                #    channel_data = -channel_data
-
                 # Apply augmentation to raw EEG before STFT
                 if augmentation is not None:
                     channel_data = augmentation(channel_data)
@@ -1687,7 +1683,7 @@ class FlattenedRawEEGDataset(Dataset):
     Resampling strategy (target_samples=2500, i.e. 10 s @ 250 Hz):
       - 2500 samples (MDD, IDUN): used as-is.
       - 5000 samples (CANE, 500 Hz): downsampled 2:1 via scipy.signal.resample.
-      - 2560 samples (AX_MALIK, 256 Hz): truncated to 2500 (last 60 samples dropped).
+      - 2560 samples (SAD, 256 Hz): truncated to 2500 (last 60 samples dropped).
       - Any other length > target_samples * 1.5: resampled.
       - Any other length > target_samples: truncated.
     """
@@ -1756,7 +1752,7 @@ class FlattenedRawEEGDataset(Dataset):
                 chunk_np = resample(chunk.numpy(), self.target_samples, axis=-1)
                 chunk = torch.from_numpy(chunk_np).float()
             elif n_samples > self.target_samples:
-                # Small excess (e.g. AX_MALIK 2560 → 2500): truncate
+                # Small excess (e.g. SAD 2560 → 2500): truncate
                 chunk = chunk[..., : self.target_samples]
             else:
                 # chunk shorter than target — pad with zeros (edge case)

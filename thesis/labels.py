@@ -120,7 +120,7 @@ class LabelMapping:
         Since datasets now return CanonicalLabel instances directly, this function
         only handles binary mode mapping (CanonicalLabel → BinaryLabel).
 
-        :param str dataset_name: Name of dataset ("mdd", "cane", "idun", "sad", "ax_malik")
+        :param str dataset_name: Name of dataset ("mdd", "cane", "idun", "sad")
         :param int num_classes: Number of classes (2 or 4)
         :param Optional[dict[int, int]] explicit_mapping: Optional explicit mapping
             (overrides all defaults)
@@ -223,12 +223,7 @@ class LabelUtils:
                     raise ValueError(
                         f"SAD should only have labels {expected_int}, but found: {labels}"
                     )
-            elif dataset_name == "ax_malik":
-                expected_int = {int(CanonicalLabel.ANXIETY_ONLY)}
-                if not labels.issubset(expected_int):
-                    raise ValueError(
-                        f"AX_MALIK should only have label {expected_int}, but found: {labels}"
-                    )
+
 
 
 # Display names for API/CLI output and metrics

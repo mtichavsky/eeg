@@ -72,7 +72,7 @@ poetry run python main.py train \
   --val-every 1
 
 # In-ear EEG training
-# - MDD/AX_MALIK: synthetic bipolar derivation T8-T7
+# - MDD/SAD: synthetic bipolar derivation T8-T7
 # - CANE: real IDUN in-ear recordings (automatic replacement)
 poetry run python main.py train \
   --channel in-ear \
@@ -101,14 +101,17 @@ checkpoints/
 └── cv_results.json          # Cross-validation results summary
 ```
 
+> **Tip:** append `> /dev/null 2>&1 &` to any command to run it in the background and detach from the terminal.
+> To check running jobs, use `jobs -l` command.
+
 ### Multi-Dataset Training
 
 - `--dataset mdd`: MDD only (2 classes: normal vs depressed)
 - `--dataset cane`: CANE only (2 classes: normal vs anxious)
     - **With `--channel in-ear`**: Automatically uses IDUN real in-ear data instead
-- `--dataset ax_malik`: AX_MALIK only (anxiety subjects only - no healthy controls in this dataset)
+- `--dataset sad`: SAD only (2 classes: normal vs anxious)
 - `--dataset all`: Combined (supports 2-class and 4-class modes)
-    - **With `--channel in-ear`**: Uses MDD (synthetic T8-T7) + IDUN (real in-ear) + AX_MALIK (synthetic T8-T7)
+    - **With `--channel in-ear`**: Uses MDD (synthetic T8-T7) + IDUN (real in-ear) + SAD (synthetic T8-T7)
 
 ### Classification Modes
 
@@ -148,9 +151,9 @@ More info about model is present in [docs/MODEL_CARD.md](docs/MODEL_CARD.md). Se
 - **Single channel** (e.g., `--channel Fp1`): Use a specific EEG electrode
 - **Multi-channel** (`--channel all`): Use all 8 electrodes for spatial feature learning
 - **In-ear EEG** (`--channel in-ear`): In-ear EEG recordings
-  - **MDD/AX_MALIK**: Synthetic bipolar derivation T8 - T7
+  - **MDD/SAD**: Synthetic bipolar derivation T8 - T7
   - **CANE**: Real IDUN in-ear recordings (automatic replacement)
-  - **All datasets**: MDD (synthetic) + IDUN (real) + AX_MALIK (synthetic)
+  - **All datasets**: MDD (synthetic) + IDUN (real) + SAD (synthetic)
   - Based on research: "Estimating cognitive workload using a commercial in-ear EEG headset"
   - Applies 50% sign flip augmentation per chunk to handle polarity ambiguity
 

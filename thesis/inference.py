@@ -71,7 +71,7 @@ def _detect_edf_channel_config(file_path: Path) -> tuple[dict[str, str], list[st
 # noverlap is chosen so that a 10-second window yields exactly 41 time frames.
 _STFT_PARAMS_BY_FS: dict[int, dict[str, int | str]] = {
     250: {"nperseg": 256, "noverlap": 192, "window": "hamming"},  # MDD, IDUN
-    256: {"nperseg": 256, "noverlap": 192, "window": "hamming"},  # AX_MALIK
+    256: {"nperseg": 256, "noverlap": 192, "window": "hamming"},  # SAD
     500: {"nperseg": 256, "noverlap": 131, "window": "hamming"},  # CANE
 }
 
