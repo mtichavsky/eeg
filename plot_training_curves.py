@@ -233,10 +233,18 @@ def plot_axes(
             label=f"Best Model (epoch {best_epoch})",
         )
 
-    # Combine legends from both axes
+    # Combine legends from both axes in desired order:
+    # train loss, train acc, val loss, val acc, best model
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, fontsize=fontsize_legend, loc="best")
+    label_map = {lbl: hdl for hdl, lbl in zip(lines1 + lines2, labels1 + labels2)}
+    desired_order = ["Train Loss (L1 incl.)", "Train Accuracy", "Eval Loss", "Eval Accuracy"]
+    best_label = next((l for l in labels1 if l.startswith("Best Model")), None)
+    if best_label:
+        desired_order.append(best_label)
+    ordered_handles = [label_map[l] for l in desired_order if l in label_map]
+    ordered_labels = [l for l in desired_order if l in label_map]
+    ax1.legend(ordered_handles, ordered_labels, fontsize=fontsize_legend, loc="best")
 
     return ax1, ax2
 
