@@ -95,11 +95,16 @@ poetry install --with dev,api
 make venv
 ```
 
-### Code Formatting
+### Code Formatting and Type Checking
+
+After every implementation, run both:
 
 ```bash
-make format
+make format    # ruff format + ruff check --fix
+make typecheck # mypy thesis/ *.py
 ```
+
+These must pass (or show only pre-existing errors) before considering work complete.
 
 ### Running Training
 ```bash
