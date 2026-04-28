@@ -121,7 +121,10 @@ def _prepare_dataset_generic(
             target_samples = int(chunk_duration * MODEL_FS)
             flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(
-                    dataset, target_samples=target_samples, label_mapping=label_mapping
+                    dataset,
+                    target_samples=target_samples,
+                    label_mapping=label_mapping,
+                    is_inear=(channel == "in-ear"),
                 )
             )
         else:
@@ -253,7 +256,10 @@ def prepare_cane_dataset(
             target_samples = int(chunk_duration * MODEL_FS)
             cane_flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(
-                    cane_dataset, target_samples=target_samples, label_mapping=label_mapping
+                    cane_dataset,
+                    target_samples=target_samples,
+                    label_mapping=label_mapping,
+                    is_inear=(channel == "in-ear"),
                 )
             )
         else:
@@ -376,7 +382,10 @@ def prepare_idun_dataset(
             target_samples = int(chunk_duration * MODEL_FS)
             idun_flat_dataset: FlattenedSpectrogramDataset | FlattenedRawEEGDataset = (
                 FlattenedRawEEGDataset(
-                    idun_dataset, target_samples=target_samples, label_mapping=label_mapping
+                    idun_dataset,
+                    target_samples=target_samples,
+                    label_mapping=label_mapping,
+                    is_inear=True,
                 )
             )
         else:

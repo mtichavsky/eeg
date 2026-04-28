@@ -1697,6 +1697,7 @@ class FlattenedRawEEGDataset(Dataset):
         dataset: MDDDataset | CANEDataset | IDUNDataset,
         target_samples: int = 2500,
         label_mapping: Optional[dict[int, int]] = None,
+        is_inear: bool = False,
     ) -> None:
         """
         Initialize the dataset and build the flat chunk index.
@@ -1705,10 +1706,13 @@ class FlattenedRawEEGDataset(Dataset):
         :param int target_samples: Target number of time samples per chunk (default 2500).
         :param Optional[dict[int, int]] label_mapping: Optional label remapping dict,
                e.g. {0: 0, 1: 1, 2: 1, 3: 1} for binary collapse.
+        :param bool is_inear: If True, applies 50%% sign flip per chunk to handle in-ear
+               polarity ambiguity (electrode orientation is arbitrary).
         """
         self.dataset = dataset
         self.target_samples = target_samples
         self.label_mapping = label_mapping
+        self.is_inear = is_inear
 
         # Build flat index: (file_idx, chunk_idx), and map file_idx → subject
         self.index: list[tuple[int, int]] = []
@@ -1765,6 +1769,10 @@ class FlattenedRawEEGDataset(Dataset):
         mean = chunk.mean(dim=-1, keepdim=True)
         std = chunk.std(dim=-1, keepdim=True).clamp(min=1e-8)
         chunk = (chunk - mean) / std
+
+        # 50% sign flip for in-ear: electrode polarity is arbitrary, so train invariance
+        if self.is_inear and np.random.random() < 0.5:
+            chunk = -chunk
 
         if self.label_mapping is not None:
             label = self.label_mapping.get(label, label)
