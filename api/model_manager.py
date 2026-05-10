@@ -35,25 +35,25 @@ class ModelManager:
     # Model selection table
     MODEL_CONFIG = {
         ("in-ear", "binary"): {
-            "model_name": "CNNLSTM",
+            "model_name": "CNNAttn",
             "num_classes": 2,
             "in_channels": 1,
             "key": "inear_binary",
         },
         ("in-ear", "4class"): {
-            "model_name": "CNNLSTM",
+            "model_name": "CNNAttn",
             "num_classes": 4,
             "in_channels": 1,
             "key": "inear_4class",
         },
         ("8channel", "binary"): {
-            "model_name": "CNNAttnAll",
+            "model_name": "AllTransformerV4",
             "num_classes": 2,
             "in_channels": 8,
             "key": "8channel_binary",
         },
         ("8channel", "4class"): {
-            "model_name": "CNNAttnAll",
+            "model_name": "AllTransformerV4",
             "num_classes": 4,
             "in_channels": 8,
             "key": "8channel_4class",
