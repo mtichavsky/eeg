@@ -60,4 +60,3 @@ class ErrorResponse(BaseModel):
     message: str = Field(..., description="Human-readable error message")
     detail: str | None = Field(None, description="Additional error details")
     request_id: UUID | None = Field(None, description="Request ID if available")
-    # TODO possibly userId too

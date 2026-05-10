@@ -138,7 +138,6 @@ def setup_logging(checkpoint_dir: Path, condition: str, channel: str | None = No
     return log_path
 
 
-# TODO
 def train_epoch(
     model: nn.Module,
     dataloader: DataLoader,
@@ -172,7 +171,6 @@ def train_epoch(
             loss = loss + l1_reg
         loss.backward()
         optimizer.step()
-        # TODO also this calculation
         running_loss += float(loss.item()) * xb.size(0)
         preds = logits.argmax(dim=1).detach().cpu().numpy()
         all_preds.extend(preds)
@@ -180,13 +178,11 @@ def train_epoch(
     preds_arr = np.array(all_preds)
     labels_arr = np.array(all_labels)
     metrics = classification_metrics(labels_arr, preds_arr, num_classes=num_classes)
-    # TODO corresponding line
     avg_loss = running_loss / len(cast(Sized, dataloader.dataset))
     metrics["loss"] = avg_loss
     return metrics
 
 
-# TODO
 def eval_epoch(
     model: nn.Module,
     dataloader: DataLoader,
@@ -235,7 +231,6 @@ def eval_epoch(
 
     # Chunk-level metrics
     chunk_metrics = classification_metrics(labels_arr, preds_arr, num_classes=num_classes)
-    # TODO maybe double check this line - so that it's normalized properly
     avg_loss = running_loss / len(cast(Sized, dataloader.dataset))
 
     # Subject-level metrics (majority voting)
