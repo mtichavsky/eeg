@@ -119,7 +119,6 @@ class CNN_LSTM_DepCap(nn.Module):
         # Pass through convolutional layers
         x = self._forward_conv_layers(x)  # -> (B, 32, H', W')
 
-        # TODO check the reshape
         # Reshape into sequence: treat width (time) as sequence dimension
         # Each time step contains all features from height and channels
         B, C, H, W = x.shape
@@ -287,7 +286,6 @@ class CNNLSTM(nn.Module):
         # Pass through convolutional layers
         x = self._forward_conv_layers(x)  # -> (B, 32, H', W')
 
-        # TODO check the reshape
         # Reshape into sequence: treat width (time) as sequence dimension
         # Each time step contains all features from height and channels
         B, C, H, W = x.shape

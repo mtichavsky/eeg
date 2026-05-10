@@ -351,7 +351,6 @@ def create_model(
             for param in cast(nn.Module, model.dropout2d_2).parameters():
                 param.requires_grad = False
 
-        # TODO: attention doesn't have to be freezed?
         if freeze_lstm:
             # Freeze RNN layer (guard against attention models that have no .rnn)
             if hasattr(model, "rnn"):

@@ -54,19 +54,6 @@ class APIConfig(BaseSettings):
     log_level: str = "INFO"
     json_pretty_print: bool = False
 
-    # STFT parameters (must match training configuration)
-    # TODO: calculate based on input FS to normalize spectrogram size
-    stft_nperseg: int = 256
-    stft_noverlap: int = 192
-    stft_fs: int = 250  # Default sampling frequency for spectrograms
-
-    # EEG preprocessing parameters
-    # TODO some shared config with the rest of the app - this very depends on the training
-    chunk_duration_sec: int = 10
-    bandpass_low: float = 1.0
-    bandpass_high: float = 70.0
-    notch_freq: float = 50.0
-
     def get_device(self) -> torch.device:
         """
         Get the PyTorch device based on configuration.

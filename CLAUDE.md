@@ -372,7 +372,7 @@ The `MDDDataset` supports two modes:
 
 **Spectrogram Input:**
 - Single channel (CNN_LSTM_DepCap, CNNLSTM): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
-- In-ear channel: Same as single channel `(batch_size, 1, H, W)` with 50% sign flip augmentation per chunk
+- In-ear channel: Same as single channel `(batch_size, 1, H, W)` — **no** sign flip augmentation for spectrogram models
   - IDUN or synthetic in-ear depending on dataset
 - Multi-channel (CNNLSTMAll, CNNAttnAll, CNNCatLSTM): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
 - Current default: `(129, 41)` with nperseg=256, noverlap=192
@@ -425,7 +425,7 @@ Applied to each MDD/SAD .edf file (`load_and_preprocess_edf_file`):
    - Synthetic in-ear: pick T7+T8, detrend (no CAR — meaningless with 2 electrodes), compute T8-T7
 8. Chunk into 10-second segments
 9. Per-chunk z-score normalization
-10. For in-ear: Apply 50% sign flip augmentation per chunk during training (in `SpectrogramDataset`)
+10. For in-ear **raw-EEG models only**: Apply 50% sign flip augmentation per chunk during training (in `FlattenedRawEEGDataset.__getitem__`). Spectrogram-based in-ear models do **not** receive sign flip — `SpectrogramDataset` accepts `is_inear` but does not apply the flip.
 
 **Note:** Preprocessing is now more flexible - artifact removal can be skipped for faster iteration. The model can learn to handle artifacts directly from the data.
 
@@ -501,7 +501,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - **In-ear EEG channel** (Feb 2026): Added `--channel in-ear` option
   - MDD/SAD: Synthetic bipolar derivation T8 - T7
   - CANE: Real IDUN in-ear recordings (automatic replacement)
-  - 50% sign flip augmentation per chunk to handle polarity ambiguity
+  - 50% sign flip augmentation per chunk to handle polarity ambiguity — **raw-EEG models only** (`FlattenedRawEEGDataset`); spectrogram models do not receive sign flip
   - Based on research: "Estimating cognitive workload using a commercial in-ear EEG headset"
 - **Multi-channel EEG support** (Jan 2026): Can use all 8 channels (`--channel all`) or single channel
   - Channel standardization: T3→T7, T4→T8 mapping for cross-dataset compatibility

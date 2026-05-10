@@ -89,7 +89,8 @@ def load_and_preprocess_edf_file(
 
     if channel == "in-ear":
         # Bipolar derivation: only T7 and T8 are needed; CAR over two electrodes is meaningless.
-        # Sign flip augmentation is applied later in SpectrogramDataset (per-epoch).
+        # Sign flip augmentation is applied in FlattenedRawEEGDataset (raw-EEG models only).
+        # Spectrogram models need no sign flip: log-magnitude STFT is polarity-invariant.
         raw = raw.pick(["T7", "T8"])
         pair_data = raw.get_data()  # (2, n_samples) — T7 at [0], T8 at [1]
         pair_data = detrend(pair_data, axis=1, type="linear")
@@ -706,7 +707,8 @@ class CANEDataset(Dataset):
         # Determine which channels to use
         if channel == "in-ear":
             # Bipolar derivation: process T7 and T8 individually (preserves filter integrity),
-            # then subtract. Sign flip augmentation is applied in SpectrogramDataset (per-epoch).
+            # then subtract. Sign flip augmentation is applied in FlattenedRawEEGDataset (raw-EEG models only).
+            # Spectrogram models need no sign flip: log-magnitude STFT is polarity-invariant.
             channels_to_use = ["T7", "T8"]
             logger.info("Computing in-ear bipolar derivation (T8 - T7)")
         elif channel == "all":

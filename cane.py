@@ -1,4 +1,4 @@
-"""Test script for CANE preprocessing and spectrogram generation."""
+"""Test script for CANE preprocessing and spectrogram generation. Used during prototyping."""
 
 import logging
 from pathlib import Path
