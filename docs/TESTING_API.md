@@ -11,10 +11,16 @@ poetry run uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
 Commands to test:
 
 ```bash
-python main.py run models/model_inear_binary.pth ../IDUN_IN_EAR/comorbid/0018/eeg_0018EC.csv --model CNNLSTM --channel in-ear --class 2
-python main.py run models/model_inear_4class.pth ../MDD/MDD\ S1\ EO.edf --model CNNLSTM --channel in-ear --class 4
-python main.py run models/model_8channel_binary.pth ../SAD/anxious/ec/C1.edf --model CNNAttnAll --channel all --class 2
-python main.py run models/model_8channel_4class.pth ../CANE/normals/ec/0015_EC.csv --model CNNAttnAll --channel all --class 4
+python main.py run models/model_inear_binary.pth ../IDUN_IN_EAR/comorbid/0018/eeg_0018EC.csv --model CNNAttn --channel in-ear --class 2
+python main.py run models/model_inear_4class.pth ../MDD/MDD\ S1\ EO.edf --model CNNAttn --channel in-ear --class 4
+python main.py run models/model_8channel_binary.pth ../SAD/anxious/ec/C1.edf --model AllTransformerV4 --channel all --class 2
+python main.py run models/model_8channel_4class.pth ../CANE/normals/ec/0015_EC.csv --model AllTransformerV4 --channel all --class 4
+```
+
+To test Raw-EEG model:
+
+```bash
+python main.py run ../experiments/all3-1.0-all-binary-lggnet-s/fold_2_best.pth ../MDD/H\ S20\ EC.edf  --model LGGNetS
 ```
 
 ## Test inference API:
@@ -22,7 +28,6 @@ python main.py run models/model_8channel_4class.pth ../CANE/normals/ec/0015_EC.c
 ```bash
 podman run \
     --name eeg-api \
-    -p 8000:8000 \
     -v ./models:/app/models:ro,Z \
     -e DEVICE=cpu \
     --network host \
