@@ -73,7 +73,7 @@ def add_model_args(parser: argparse.ArgumentParser) -> None:
         "--model",
         "-m",
         type=str,
-        default="CNN_LSTM_DepCap",
+        required=True,
         choices=MODEL_REGISTRY.keys(),
         help="Model architecture to use",
     )
@@ -351,6 +351,14 @@ def get_arg_parser() -> argparse.ArgumentParser:
         default=None,
         dest="fs",
         help="Sampling rate in Hz (auto-detected from file if omitted)",
+    )
+    run_parser.add_argument(
+        "--chunk-duration",
+        type=float,
+        default=10.0,
+        dest="chunk_duration",
+        help="EEG chunk duration in seconds (default: 10.0). "
+        "Used to compute num_time for raw-EEG models (Deformer, LGGNet, TSception).",
     )
     run_parser.add_argument(
         "--device",

@@ -228,3 +228,18 @@ class ModelManager:
         :rtype: int
         """
         return self._get_model_config(electrode_setup, classification_task)["num_classes"]
+
+    def get_model_name(
+        self,
+        electrode_setup: Literal["in-ear", "8channel"],
+        classification_task: Literal["binary", "4class"],
+    ) -> str:
+        """
+        Get model architecture name for given configuration.
+
+        :param Literal["in-ear", "8channel"] electrode_setup: Electrode configuration.
+        :param Literal["binary", "4class"] classification_task: Classification task.
+        :return: Model architecture name (e.g. ``"CNNAttn"``, ``"Deformer"``).
+        :rtype: str
+        """
+        return self._get_model_config(electrode_setup, classification_task)["model_name"]

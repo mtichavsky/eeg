@@ -1,7 +1,6 @@
 """Box plot comparing chunk accuracy across architectures, one box per dataset."""
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 # ── Data ──────────────────────────────────────────────────────────────────────
 # Aggregate per-dataset chunk accuracy from results.txt (6 models × 3 datasets)
@@ -19,8 +18,8 @@ categories = ["Spectrogram"] * 3 + ["Raw-EEG"] * 3
 # [model_idx] for each dataset
 acc = {
     "CANE\n(Anxiety+Depression)": [74.62, 72.75, 71.83, 67.73, 66.96, 62.81],
-    "MDD\n(Depression)":          [90.44, 88.44, 85.51, 87.42, 88.41, 84.84],
-    "SAD\n(Anxiety)":             [71.60, 70.90, 69.14, 65.61, 57.58, 57.19],
+    "MDD\n(Depression)": [90.44, 88.44, 85.51, 87.42, 88.41, 84.84],
+    "SAD\n(Anxiety)": [71.60, 70.90, 69.14, 65.61, 57.58, 57.19],
 }
 
 
@@ -51,7 +50,12 @@ for patch, color in zip(bp["boxes"], box_colors):
 ax.set_xticks(range(n_datasets))
 ax.set_xticklabels(dataset_keys, fontsize=11)
 ax.set_ylabel("Chunk Accuracy (%)", fontsize=11)
-ax.set_title("Per-Dataset Chunk Accuracy across 8-channel Binary Classification", fontsize=12, fontweight="bold", pad=10)
+ax.set_title(
+    "Per-Dataset Chunk Accuracy across 8-channel Binary Classification",
+    fontsize=12,
+    fontweight="bold",
+    pad=10,
+)
 ax.set_ylim(55, 95)
 ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
 ax.grid(axis="y", alpha=0.3, linewidth=0.5)

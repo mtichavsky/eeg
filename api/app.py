@@ -244,6 +244,7 @@ async def predict(
         try:
             model = model_manager.select_model(electrode_setup, classification_task)
             num_classes = model_manager.get_num_classes(electrode_setup, classification_task)
+            model_name = model_manager.get_model_name(electrode_setup, classification_task)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
@@ -260,6 +261,7 @@ async def predict(
                 file_format=file_ext,
                 num_classes=num_classes,
                 sampling_rate=fs,
+                model_name=model_name,
             )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))

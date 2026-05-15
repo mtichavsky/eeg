@@ -27,6 +27,7 @@ from thesis.dataset import (
     load_and_preprocess_edf_file,
 )
 from thesis.labels import get_display_names
+from thesis.model import RAW_EEG_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -209,16 +210,20 @@ def preprocess_file(
 
 def run_chunk_inference(
     model: nn.Module,
-    spectrograms: list[torch.Tensor],
+    inputs: list[torch.Tensor],
     device: torch.device,
     num_classes: int,
 ) -> list[ChunkResult]:
     """
-    Run inference on a list of spectrogram tensors.
+    Run inference on a list of input tensors.
+
+    Accepts both spectrogram tensors ``(num_channels, H, W)`` for CNN/LSTM models and raw EEG
+    tensors ``(num_channels, T)`` for raw-EEG models. In both cases each tensor is unsqueezed to
+    add a batch dimension before being passed to the model.
 
     :param nn.Module model: Trained model in eval mode.
-    :param list[torch.Tensor] spectrograms: List of spectrogram tensors,
-        each with shape (num_channels, H, W).
+    :param list[torch.Tensor] inputs: List of input tensors, each with shape
+        ``(num_channels, H, W)`` (spectrogram) or ``(num_channels, T)`` (raw EEG).
     :param torch.device device: Device for inference.
     :param int num_classes: Number of output classes (2 or 4).
     :return: Per-chunk inference results.
@@ -229,9 +234,9 @@ def run_chunk_inference(
 
     model.eval()
     with torch.no_grad():
-        for chunk_idx, spec in enumerate(spectrograms):
-            spec_batch = spec.unsqueeze(0).to(device)  # (1, C, H, W)
-            logits = model(spec_batch)
+        for chunk_idx, inp in enumerate(inputs):
+            batch = inp.unsqueeze(0).to(device)  # (1, C, H, W) or (1, C, T)
+            logits = model(batch)
             pred = logits.argmax(dim=1).item()
 
             results.append(
@@ -290,15 +295,19 @@ def preprocess_and_infer(
     sampling_rate: int | None = None,
     stft_params: dict[str, int | str] | None = None,
     skip_artifact_removal: bool = True,
+    model_name: str = "",
 ) -> InferenceResult:
     """
-    High-level convenience: preprocess → spectrograms → inference → aggregation.
+    High-level convenience: preprocess → (spectrograms or raw EEG) → inference → aggregation.
+
+    Raw-EEG models (those in :data:`thesis.model.RAW_EEG_MODELS`) skip STFT conversion and
+    receive the raw EEG chunks directly. All other models follow the spectrogram path.
 
     Sampling rate and STFT parameters are auto-detected from the file if not provided:
 
     - ``sampling_rate=None``: inferred via :func:`detect_sampling_rate`.
     - ``stft_params=None``: derived from the (possibly inferred) sampling rate via
-      :func:`get_stft_params_for_fs`.
+      :func:`get_stft_params_for_fs` (only for spectrogram models).
 
     :param Path file_path: Path to the EEG file (.edf or .csv).
     :param nn.Module model: Trained model.
@@ -309,8 +318,10 @@ def preprocess_and_infer(
     :param float | None sampling_rate: Sampling rate in Hz. Auto-detected from the file if None.
     :param dict | None stft_params: STFT parameters (``nperseg``, ``noverlap``, ``window``).
         If None, derived from the sampling rate via :func:`get_stft_params_for_fs`.
-        ``fs`` is always taken from the resolved ``sampling_rate``.
+        ``fs`` is always taken from the resolved ``sampling_rate``. Ignored for raw-EEG models.
     :param bool skip_artifact_removal: Skip artifact removal for CANE CSV files.
+    :param str model_name: Model architecture name (e.g. ``"Deformer"``). Used to determine
+        whether to skip STFT. Defaults to ``""`` (spectrogram path).
     :return: Aggregated inference result.
     :rtype: InferenceResult
     """
@@ -319,31 +330,36 @@ def preprocess_and_infer(
     )
     logger.info(f"Using sampling rate: {fs} Hz")
 
-    params = get_stft_params_for_fs(fs)
-
-    # Preprocess file into EEG chunks
+    # Preprocess file into EEG chunks: (num_chunks, num_channels, samples)
     chunks = preprocess_file(file_path, channel, file_format, fs, skip_artifact_removal)
     logger.info(f"Extracted {len(chunks)} chunks from {file_path.name}")
 
     if len(chunks) == 0:
         raise RuntimeError(f"No valid chunks extracted from {file_path}")
 
-    # Convert to spectrograms
-    spectrograms = SpectrogramDataset.convert_to_spectrograms(
-        chunks,
-        nperseg=int(params["nperseg"]),
-        fs=fs,  # Always use the actual input sampling rate
-        noverlap=int(params["noverlap"]),
-        window=str(params.get("window", "hamming")),
-    )
+    if model_name in RAW_EEG_MODELS:
+        # Raw-EEG models consume (batch, channels, time) directly — skip STFT
+        logger.info(f"Raw-EEG model '{model_name}': skipping spectrogram conversion")
+        inputs: list[torch.Tensor] = [chunks[i] for i in range(len(chunks))]
+    else:
+        # Spectrogram models: convert chunks to log-magnitude STFT tensors
+        params = get_stft_params_for_fs(fs)
+        spectrograms = SpectrogramDataset.convert_to_spectrograms(
+            chunks,
+            nperseg=int(params["nperseg"]),
+            fs=fs,
+            noverlap=int(params["noverlap"]),
+            window=str(params.get("window", "hamming")),
+        )
 
-    if not spectrograms:
-        raise RuntimeError("No valid spectrograms generated")
+        if not spectrograms:
+            raise RuntimeError("No valid spectrograms generated")
 
-    logger.info(f"Generated {len(spectrograms)} spectrograms")
+        logger.info(f"Generated {len(spectrograms)} spectrograms")
+        inputs = spectrograms
 
     # Run inference
-    chunk_results = run_chunk_inference(model, spectrograms, device, num_classes)
+    chunk_results = run_chunk_inference(model, inputs, device, num_classes)
     logger.info(f"Inference complete: {len(chunk_results)} predictions")
 
     # Aggregate
