@@ -1086,6 +1086,9 @@ def run(args: argparse.Namespace) -> None:
 
     # Load model via create_model with pretrained_checkpoint (handles weight loading)
     logger.info("Loading model checkpoint...")
+    raw_eeg_config = (
+        build_raw_eeg_config(args.model, args) if args.model in RAW_EEG_MODELS else None
+    )
     model = create_model(
         model_name=args.model,
         spec_shape=EXPECTED_SPECTROGRAM_SHAPE,
@@ -1094,6 +1097,7 @@ def run(args: argparse.Namespace) -> None:
         device=device,
         in_channels=in_channels,
         pretrained_checkpoint=str(model_path),
+        raw_eeg_config=raw_eeg_config,
     )
     model.eval()
     logger.info("Model loaded successfully")
@@ -1108,6 +1112,7 @@ def run(args: argparse.Namespace) -> None:
         file_format=file_format,
         num_classes=num_classes,
         sampling_rate=args.fs,
+        model_name=args.model,
     )
 
     # Log per-chunk results

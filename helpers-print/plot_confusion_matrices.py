@@ -74,7 +74,7 @@ def add_colorbar(fig: plt.Figure, axes: list[plt.Axes]) -> None:
 
 # ── Figure 1: Binary ──────────────────────────────────────────────────────────
 fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.4))
-plot_cm(ax1, bin_cm_v4,   bin_labels, "AllTransformerV4\n(all channels)", annot_size=11)
+plot_cm(ax1, bin_cm_v4, bin_labels, "AllTransformerV4\n(all channels)", annot_size=11)
 plot_cm(ax2, bin_cm_attn, bin_labels, "CNNAttn\n(in-ear channel)", annot_size=11)
 add_colorbar(fig1, [ax1, ax2])
 fig1.savefig("docs/confusion_matrix_binary.png", bbox_inches="tight", dpi=600)
@@ -83,7 +83,7 @@ plt.close(fig1)
 
 # ── Figure 2: 4-class ─────────────────────────────────────────────────────────
 fig2, (ax3, ax4) = plt.subplots(1, 2, figsize=(12, 5.2))
-plot_cm(ax3, four_cm_v4,   four_labels, "AllTransformerV4\n(all channels)", annot_size=9)
+plot_cm(ax3, four_cm_v4, four_labels, "AllTransformerV4\n(all channels)", annot_size=9)
 plot_cm(ax4, four_cm_attn, four_labels, "CNNAttn\n(in-ear channel)", annot_size=9)
 add_colorbar(fig2, [ax3, ax4])
 fig2.savefig("docs/confusion_matrix_4class.png", bbox_inches="tight", dpi=600)

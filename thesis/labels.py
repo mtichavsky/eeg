@@ -225,7 +225,6 @@ class LabelUtils:
                     )
 
 
-
 # Display names for API/CLI output and metrics
 BINARY_DISPLAY_NAMES: dict[int, str] = {
     BinaryLabel.HEALTHY: "Healthy",
