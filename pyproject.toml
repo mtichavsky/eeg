@@ -24,13 +24,14 @@ mne-icalabel = "*"
 librosa = "*"
 einops = "*"
 pip-tools = "^7.5.3"
+structlog = "^25.5.0"
 
 [tool.poetry.group.api]
 optional = true
 
 [tool.poetry.group.api.dependencies]
 fastapi = "^0.109.0"
-uvicorn = {extras = ["standard"], version = "^0.27.0"}
+uvicorn = {extras = ["standard"], version = ">=0.27.0"}
 python-multipart = "*"
 pydantic = "*"
 pydantic-settings = "*"

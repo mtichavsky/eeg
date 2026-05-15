@@ -2,11 +2,6 @@
 
 ## Test inference CLI:
 
-Run the server:
-
-```
-poetry run uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
-```
 
 Commands to test:
 
@@ -73,3 +68,13 @@ curl -X POST http://localhost:8000/predict \
 
 # Test training
 CUDA_VISIBLE_DEVICES=0 EEG_DATA_DIR=/home/xticha09 python main.py train   --channel in-ear   --batch-size 64   --dataset all   --model CNNLSTMAttn   --condition ec+eo   --n-folds 10   --dropout 0.1   --weight-decay 1e-4   --val-every 1   --checkpoint-dir=experiments/all3-018-inear-binary-smallerAttn
+
+
+## Only development, deps not bundled
+
+Run the server:
+
+```
+poetry install --with dev,api
+poetry run uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
+```
