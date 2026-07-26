@@ -798,6 +798,7 @@ MODEL_REGISTRY: dict[str, tuple[type[nn.Module], int | None]] = {
     "CNN_LSTM_DepCap": (CNN_LSTM_DepCap, 100),
     "CNNLSTM": (CNNLSTM, 64),
     "CNNAttn": (CNNAttn, 128),
+    "CNNAttnS": (CNNAttn, 64),
     "CNNLSTMAll": (CNNLSTMAll, 64),
     "CNNAttnAll": (CNNAttnAll, 128),
     "CNNCatLSTM": (CNNCatLSTM, 100),
