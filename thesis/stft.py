@@ -3,18 +3,11 @@ Canonical spectrogram configuration shared by training and inference.
 
 Every dataset is resampled to :data:`MODEL_FS` **before** the STFT, so that a given row of a
 spectrogram always means the same frequency regardless of the source dataset's native sampling
-rate. Previously each dataset used its own ``nperseg``/``noverlap`` pair chosen only to make the
-output *shape* match (129, 41); because the bin width is ``true_fs / nperseg``, CANE (500 Hz)
-ended up with 1.953 Hz bins spanning 0-250 Hz while MDD (250 Hz) had 0.977 Hz bins spanning
-0-125 Hz. Alpha-band energy therefore landed at roughly half the row index for CANE, and the
-position of the band-pass dead zone acted as a dataset fingerprint.
+rate. The bin width is ``fs / nperseg``, so without the resample a 500 Hz dataset and a 250 Hz
+one would put the same frequency on different rows.
 
 Rows above :data:`FREQ_CUTOFF_HZ` are dropped: the preprocessing band-pass is 1-70 Hz, so those
-bins carry only filter roll-off and numerical noise. This shrinks the model input from
-(129, 41) to (72, 41).
-
-This module is a leaf — it imports nothing from :mod:`thesis` — so both :mod:`thesis.dataset`
-(training) and :mod:`thesis.inference` (serving) can depend on it without a cycle.
+bins carry only filter roll-off and numerical noise.
 """
 
 import numpy as np
@@ -79,13 +72,30 @@ NUM_TIME_FRAMES: int = stft_time_frames(CHUNK_SAMPLES)
 EXPECTED_SPECTROGRAM_SHAPE: tuple[int, int] = (NUM_FREQ_BINS, NUM_TIME_FRAMES)
 
 
+def resample_to_length(signal: np.ndarray, target_samples: int, axis: int = -1) -> np.ndarray:
+    """
+    Resample a signal along ``axis`` to an exact number of samples.
+
+    Uses FFT-based :func:`scipy.signal.resample`. Safe against aliasing for EEG here because the
+    signal has already been band-passed to 1-70 Hz, well below the 125 Hz Nyquist of
+    :data:`MODEL_FS`. Returns the input untouched when it already has the target length.
+
+    :param np.ndarray signal: Input signal.
+    :param int target_samples: Desired number of samples along ``axis``.
+    :param int axis: Axis to resample along (default: last).
+    :return: Signal with ``target_samples`` samples along ``axis``.
+    :rtype: np.ndarray
+    """
+    if signal.shape[axis] == target_samples:
+        return signal
+
+    return np.asarray(resample(signal, target_samples, axis=axis))
+
+
 def resample_to_model_fs(signal: np.ndarray, source_fs: float) -> np.ndarray:
     """
     Resample a 1-D signal from its native rate to :data:`MODEL_FS`.
 
-    Uses FFT-based :func:`scipy.signal.resample`, matching the raw-EEG path in
-    :class:`~thesis.dataset.FlattenedRawEEGDataset`. Safe against aliasing here because the
-    signal has already been band-passed to 1-70 Hz, well below the 125 Hz target Nyquist.
     Returns the input untouched when it is already at :data:`MODEL_FS`.
 
     :param np.ndarray signal: 1-D EEG signal at ``source_fs``.
@@ -96,8 +106,7 @@ def resample_to_model_fs(signal: np.ndarray, source_fs: float) -> np.ndarray:
     if round(source_fs) == MODEL_FS:
         return signal
 
-    target_samples = int(round(len(signal) * MODEL_FS / source_fs))
-    return np.asarray(resample(signal, target_samples))
+    return resample_to_length(signal, int(round(len(signal) * MODEL_FS / source_fs)))
 
 
 def compute_log_spectrogram(signal: np.ndarray, source_fs: float) -> np.ndarray:
@@ -114,7 +123,7 @@ def compute_log_spectrogram(signal: np.ndarray, source_fs: float) -> np.ndarray:
     """
     resampled = resample_to_model_fs(signal, source_fs)
 
-    _, _, Zxx = stft(
+    freqs, _, Zxx = stft(
         resampled,
         fs=MODEL_FS,
         nperseg=STFT_NPERSEG,
@@ -122,4 +131,4 @@ def compute_log_spectrogram(signal: np.ndarray, source_fs: float) -> np.ndarray:
         window=STFT_WINDOW,
     )
 
-    return np.asarray(np.log1p(np.abs(Zxx))[:NUM_FREQ_BINS])
+    return np.asarray(np.log1p(np.abs(Zxx))[freqs <= FREQ_CUTOFF_HZ])
