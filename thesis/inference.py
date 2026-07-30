@@ -160,9 +160,6 @@ def preprocess_file(
     if file_format == ".edf":
         fs = sampling_rate if sampling_rate is not None else detect_sampling_rate(file_path, ".edf")
         channel_mapping, channel_order = _detect_edf_channel_config(file_path)
-        # Chunk at the file's own rate so a chunk is CHUNK_DURATION_SEC of wall-clock time.
-        # Using a fixed sample count here would make a 256 Hz recording yield 9.77 s chunks,
-        # which survive the STFT with one time frame too few instead of failing loudly.
         return load_and_preprocess_edf_file(
             file_path,
             channel=channel,
