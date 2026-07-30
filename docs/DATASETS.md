@@ -7,8 +7,8 @@ Expected location at `../MDD/`. Files follow the naming pattern: `{H|MDD} S{N} {
 - **MDD** = Major Depressive Disorder subjects
 - **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
 - **Channels**: 8 channels used (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) with standardized 10-20 naming, plus synthetic in-ear option
-- **Sampling Rate**: 250 Hz (SFREQ = 1000/4)
-- **Segments**: 10-second chunks (2,500 samples each)
+- **Sampling Rate**: 256 Hz native (verified against all 181 EDF headers), resampled to 250 Hz before the STFT
+- **Segments**: 10-second chunks (2,560 samples each at the native rate)
 
 ### CANE Dataset
 

@@ -20,13 +20,11 @@ from thesis.dataset import (
 )
 from thesis.labels import LabelMapping
 
-# Deformer always expects 250 Hz input; all datasets are resampled/truncated to this rate.
-# Use this constant for target_samples = int(chunk_duration * MODEL_FS).
-MODEL_FS: int = 250
+# Canonical sampling rate and spectrogram geometry live in thesis.stft, the single source of
+# truth shared by the training and inference paths. Re-exported here for existing importers.
+from thesis.stft import EXPECTED_SPECTROGRAM_SHAPE, MODEL_FS
 
 logger = logging.getLogger(__name__)
-
-EXPECTED_SPECTROGRAM_SHAPE = (129, 41)  # Expected spectrogram shape from training
 
 SubjectList = list[tuple[str, str]]  # Single dataset: (dataset_label, subject_id) tuples
 MultiDatasetSubjectList = list[SubjectList]  # Multiple datasets: list of subject lists
@@ -98,7 +96,7 @@ def _prepare_dataset_generic(
            for use with raw-EEG models such as Deformer.
     :param float chunk_duration: EEG chunk duration in seconds. Applied only on the raw EEG
            path (use_raw_eeg=True); the spectrogram path always uses CHUNK_DURATION_SEC to
-           preserve the expected (129, 41) STFT shape.
+           preserve the expected STFT shape (EXPECTED_SPECTROGRAM_SHAPE).
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
             SubjectClasses]
@@ -107,7 +105,7 @@ def _prepare_dataset_generic(
     all_subjects = []
 
     for condition in conditions:
-        # For spectrogram models, always use default 10-s chunks to preserve (129, 41) shape.
+        # For spectrogram models, always use default 10-s chunks to preserve the expected shape.
         effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         # Instantiate dataset
         dataset = dataset_class(
@@ -130,14 +128,14 @@ def _prepare_dataset_generic(
         else:
             # Create spectrogram dataset
             spec_dataset = SpectrogramDataset(
-                dataset, fs=fs, augmentation=augmentation, channel=channel
+                dataset, source_fs=fs, augmentation=augmentation, channel=channel
             )
             flat_dataset = FlattenedSpectrogramDataset(spec_dataset, label_mapping=label_mapping)
 
             # Validate shape
             spec_shape = flat_dataset[0][0].shape[1:]
             assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-                f"Expected (129, 41), got {spec_shape}. "
+                f"Expected {EXPECTED_SPECTROGRAM_SHAPE}, got {spec_shape}. "
                 f"The neural net was designed using this assumption."
             )
 
@@ -241,7 +239,7 @@ def prepare_cane_dataset(
     all_subjects = []
 
     for condition in conditions:
-        # For spectrogram models, always use default 10-s chunks to preserve (129, 41) shape.
+        # For spectrogram models, always use default 10-s chunks to preserve the expected shape.
         effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         cane_dataset = CANEDataset(
             condition=cast(Literal["ec", "eo"], condition),
@@ -265,9 +263,7 @@ def prepare_cane_dataset(
         else:
             cane_spec_dataset = SpectrogramDataset(
                 cane_dataset,
-                fs=CANEDataset.FS,
-                nperseg=CANEDataset.STFT_NPERSEG,
-                noverlap=CANEDataset.STFT_NOVERLAP,
+                source_fs=CANEDataset.FS,
                 augmentation=augmentation,
                 channel=channel,
             )
@@ -276,7 +272,7 @@ def prepare_cane_dataset(
             )
             spec_shape = cane_flat_dataset[0][0].shape[1:]
             assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-                f"Expected (129, 41), got {spec_shape}. "
+                f"Expected {EXPECTED_SPECTROGRAM_SHAPE}, got {spec_shape}. "
                 f"The neural net was designed using this assumption."
             )
 
@@ -369,7 +365,7 @@ def prepare_idun_dataset(
     all_subjects = []
 
     for condition in conditions:
-        # For spectrogram models, always use default 10-s chunks to preserve (129, 41) shape.
+        # For spectrogram models, always use default 10-s chunks to preserve the expected shape.
         effective_chunk_duration = chunk_duration if use_raw_eeg else CHUNK_DURATION_SEC
         idun_dataset = IDUNDataset(
             condition=cast(Literal["ec", "eo"], condition),
@@ -391,9 +387,7 @@ def prepare_idun_dataset(
         else:
             idun_spec_dataset = SpectrogramDataset(
                 idun_dataset,
-                fs=IDUNDataset.FS,
-                nperseg=256,
-                noverlap=192,
+                source_fs=IDUNDataset.FS,
                 augmentation=augmentation,
                 channel=channel,
             )
@@ -402,7 +396,7 @@ def prepare_idun_dataset(
             )
             spec_shape = idun_flat_dataset[0][0].shape[1:]
             assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-                f"Expected (129, 41), got {spec_shape}. "
+                f"Expected {EXPECTED_SPECTROGRAM_SHAPE}, got {spec_shape}. "
                 f"The neural net was designed using this assumption."
             )
 

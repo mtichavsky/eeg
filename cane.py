@@ -11,6 +11,12 @@ from thesis.dataset import (
     CANEDataset,
     SpectrogramDataset,
 )
+from thesis.stft import (
+    EXPECTED_SPECTROGRAM_SHAPE,
+    MODEL_FS,
+    STFT_NOVERLAP,
+    STFT_NPERSEG,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,43 +39,33 @@ chunk_duration = chunks.shape[2] / fs
 # Convert to spectrograms using SpectrogramDataset.convert_to_spectrograms
 if chunks.shape[0] > 0:
     logger.info("\nConverting to spectrograms using SpectrogramDataset.convert_to_spectrograms")
-    logger.info(f"  nperseg: {CANEDataset.STFT_NPERSEG}")
-    logger.info(f"  noverlap: {CANEDataset.STFT_NOVERLAP}")
-    logger.info(f"  fs: {fs:.2f}")
+    logger.info(f"  nperseg: {STFT_NPERSEG}")
+    logger.info(f"  noverlap: {STFT_NOVERLAP}")
+    logger.info(f"  source fs: {fs:.2f} (resampled to {MODEL_FS} Hz before STFT)")
 
-    spectrograms = SpectrogramDataset.convert_to_spectrograms(
-        chunks,
-        nperseg=CANEDataset.STFT_NPERSEG,
-        fs=fs,
-        noverlap=CANEDataset.STFT_NOVERLAP,
-        window="hamming",
-    )
+    spectrograms = SpectrogramDataset.convert_to_spectrograms(chunks, source_fs=fs)
 
     logger.info(f"\nNumber of spectrograms created: {len(spectrograms)}")
 
     if len(spectrograms) > 0:
         first_spec = spectrograms[0]
         logger.info(f"First spectrogram shape: {first_spec.shape}")
-        logger.info("Expected shape: (1, 129, 41)")
+        logger.info(
+            f"Expected shape: (1, {EXPECTED_SPECTROGRAM_SHAPE[0]}, {EXPECTED_SPECTROGRAM_SHAPE[1]})"
+        )
 
         # Print details
         spec_shape = first_spec.shape[1:]  # Remove channel dimension
-        logger.info(f"Frequency bins: {spec_shape[0]} (expected 129)")
-        logger.info(f"Time frames: {spec_shape[1]} (expected ~41)")
+        logger.info(f"Frequency bins: {spec_shape[0]} (expected {EXPECTED_SPECTROGRAM_SHAPE[0]})")
+        logger.info(f"Time frames: {spec_shape[1]} (expected {EXPECTED_SPECTROGRAM_SHAPE[1]})")
 
-        if spec_shape == torch.Size([129, 41]):
-            logger.info("✅ SUCCESS: Spectrogram shape matches MDD target (129, 41)!")
+        if spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)):
+            logger.info(f"✅ SUCCESS: Spectrogram shape matches {EXPECTED_SPECTROGRAM_SHAPE}!")
         else:
-            logger.warning(f"⚠️  WARNING: Shape mismatch! Got {spec_shape}, expected (129, 41)")
-            logger.warning("Adjust CANE_STFT_NOVERLAP to fix this.")
-
-            # Calculate correct noverlap
-            chunk_length = chunks.shape[2]
-            target_frames = 41
-            correct_noverlap = CANEDataset.STFT_NPERSEG - (
-                chunk_length - CANEDataset.STFT_NPERSEG
-            ) / (target_frames - 1)
-            logger.info(f"Suggested noverlap: {int(correct_noverlap)}")
+            logger.warning(
+                f"⚠️  WARNING: Shape mismatch! Got {spec_shape}, "
+                f"expected {EXPECTED_SPECTROGRAM_SHAPE}"
+            )
 
         # Print sample statistics
         logger.info("\nSpectrogram statistics:")

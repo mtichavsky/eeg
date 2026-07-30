@@ -25,8 +25,8 @@ Located at `/home/milan/Documents/diplomka/MDD/`. Files follow the naming patter
 - **Channels**: 8 channels available (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) - can use all, select specific channel, or use synthetic in-ear channel
 - **In-ear channel**: Bipolar derivation T8 - T7 simulating IDUN-style in-ear EEG (use `--channel in-ear`)
 - **Channel Naming**: Standardized to 10-20 system (T3→T7, T4→T8 for cross-dataset compatibility)
-- **Sampling**: 250 Hz (SFREQ = 1000/4)
-- **Segments**: 10-second chunks (2500 samples each)
+- **Sampling**: 256 Hz (native rate of the EDF files, verified against all 181 headers), resampled to 250 Hz before the STFT
+- **Segments**: 10-second chunks (2560 samples each at the native rate)
 
 ### 2. CANE Dataset
 Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern: `{H|AX} S{N} {ec|eo}.edf`
@@ -47,7 +47,7 @@ Located at `/home/milan/Documents/diplomka/IDUN_IN_EAR/`. Files follow pattern: 
 - **Classes**: normals (17), anxiety (20), depression (1), comorbid (15) - 53 usable subjects for EC condition
 - **Conditions**: ec (eyes closed), eo (eyes open) - case-insensitive in filenames
 - **Channel**: Single in-ear channel (no multi-channel support)
-- **Sampling**: 250 Hz (same as MDD)
+- **Sampling**: 250 Hz (already at `MODEL_FS`, so no resampling needed — the only dataset that isn't resampled)
 - **Quality Metrics**: Signal quality data in `quality_*.csv` files (0=not measured, 90+=good signal)
 - **Edge cases**: Subjects 1001, 1002 have non-standard filenames (skipped automatically)
 - **Preprocessing**: Custom pipeline for CSV files (z-score → detrend → bandpass → notch → chunking → quality filtering)
@@ -361,7 +361,7 @@ The `MDDDataset` supports two modes:
 
 ## Model Input/Output
 
-**Raw EEG Input:**
+**Raw EEG Input** (all shapes are post-resampling to `MODEL_FS` = 250 Hz; native chunks are 2560 samples for MDD/SAD and 5000 for CANE):
 - Single channel: `(batch_size, 1, 2500)` - 1 channel × 2500 samples
 - In-ear channel: `(batch_size, 1, 2500)` - in-ear EEG
   - MDD/SAD: Synthetic bipolar derivation T8-T7
@@ -375,9 +375,9 @@ The `MDDDataset` supports two modes:
 - In-ear channel: Same as single channel `(batch_size, 1, H, W)` — **no** sign flip augmentation for spectrogram models
   - IDUN or synthetic in-ear depending on dataset
 - Multi-channel (CNNLSTMAll, CNNAttnAll, CNNCatLSTM): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
-- Current default: `(129, 41)` with nperseg=256, noverlap=192
-- Paper target: `(254, 342)` (may require parameter tuning)
+- Current shape: `(72, 41)` — `EXPECTED_SPECTROGRAM_SHAPE` in `thesis/stft.py`
 - Created via STFT in `SpectrogramDataset` or preprocessing
+- **All STFT parameters live in `thesis/stft.py`** — the single source of truth shared by training and inference. Do not pass per-dataset `nperseg`/`noverlap` anywhere.
 
 **Labels (2-class mode):**
 - MDD dataset: 0 = Healthy, 1 = Depressed
@@ -429,10 +429,26 @@ Applied to each MDD/SAD .edf file (`load_and_preprocess_edf_file`):
 
 **Note:** Preprocessing is now more flexible - artifact removal can be skipped for faster iteration. The model can learn to handle artifacts directly from the data.
 
-**Spectrogram Generation:**
-- Uses `scipy.signal.stft()` with Hamming window
-- Log-magnitude: `log1p(abs(Zxx))` for better dynamic range
-- Parameters configurable: `nperseg`, `noverlap`, `fs`
+**Spectrogram Generation (`thesis/stft.py`):**
+
+All parameters are fixed constants in `thesis/stft.py`, imported by both the training path
+(`SpectrogramDataset`) and the inference path (`preprocess_and_infer`). The only per-dataset
+input is `source_fs`.
+
+1. **Resample to `MODEL_FS` (250 Hz)** — CANE (500 Hz) and MDD/SAD (256 Hz) are resampled via
+   `scipy.signal.resample`; only IDUN is already at 250 Hz and passes through untouched
+2. `scipy.signal.stft()` with `nperseg=256`, `noverlap=192`, Hamming window
+3. Log-magnitude: `log1p(abs(Zxx))` for better dynamic range
+4. **Crop to `FREQ_CUTOFF_HZ` (70 Hz)** — drops bins 72+, which carry only band-pass roll-off
+
+Result: `(72, 41)`, with a bin width of 0.977 Hz spanning 0–69.34 Hz **for every dataset**.
+
+**Why resample before the STFT?** `nperseg` fixes the *number* of frequency bins, not their
+width — that is `true_fs / nperseg`. Previously each dataset used its own `noverlap` chosen only
+to make the output *shape* match (129, 41), so CANE had 1.953 Hz bins spanning 0–250 Hz while
+MDD had 0.977 Hz bins spanning 0–125 Hz. Alpha-band energy landed at roughly half the row index
+for CANE, and the position of the band-pass dead zone was a dataset fingerprint the model could
+exploit as a shortcut in combined (`--dataset all`) training and in MDD→CANE transfer learning.
 
 ## Configuration
 
@@ -482,9 +498,8 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
   - MDD uses simpler pipeline
   - IDUN has custom CSV pipeline with quality-based rejection
 - Different file formats (EDF vs CSV for IDUN)
-- Different STFT parameters (though standardized to same output shape)
 - Different channel names/orderings in raw files
-- Different sampling rates (MDD: 250 Hz, CANE: 500 Hz, IDUN: 250 Hz, SAD: 256 Hz)
+- Different native sampling rates (MDD: 256 Hz, CANE: 500 Hz, IDUN: 250 Hz, SAD: 256 Hz) — all resampled to `MODEL_FS` = 250 Hz before reaching a model
 - Different channel naming in raw files (requires mapping to canonical names)
 - Allows independent evolution of preprocessing pipelines
 - Channel standardization: EDF datasets use unified 8-channel canonical ordering
@@ -492,6 +507,16 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Unified spectrogram frequency axis + 70 Hz crop** (Jul 2026): New `thesis/stft.py` is the single source of truth for all STFT parameters, shared by training and inference
+  - All datasets are now resampled to `MODEL_FS` (250 Hz) **before** the STFT, so a spectrogram row means the same frequency everywhere. Previously CANE (500 Hz) had 1.953 Hz bins vs MDD's 0.977 Hz, putting alpha at half the row index and leaving a dataset-identifying dead band
+  - **`MDDDataset.FS` corrected from 250 to 256 Hz** — the EDF headers of all 181 MDD recordings say 256. The old value made a "10-second" chunk 2500/256 = 9.77 s and, after the change above, would have wrongly skipped MDD's resample. MDD chunks are now 2560 samples natively
+  - `FlattenedRawEEGDataset` now resamples instead of truncating when a chunk is longer than `target_samples`; the old truncation handed 256 Hz data to models expecting 250 Hz. **Raw-EEG checkpoints (Deformer/LGGNet/TSception) are invalidated too**
+  - `preprocess_file()` now chunks EDFs at the file's own rate; previously it used a fixed 2500 samples, which produced 40 STFT frames instead of 41 for 256 Hz files — silently, since the LSTM accepts variable sequence lengths
+  - Removed `CANEDataset.STFT_NPERSEG` / `STFT_NOVERLAP` and `inference.get_stft_params_for_fs()` / `_STFT_PARAMS_BY_FS` — per-dataset STFT parameters no longer exist
+  - `SpectrogramDataset(...)` and `convert_to_spectrograms(...)` now take `source_fs` instead of `fs`/`nperseg`/`noverlap`/`window`
+  - Bins above 70 Hz are dropped (the band-pass upper edge): input shape `(129, 41)` → `(72, 41)`, 20–46% fewer model parameters
+  - `preprocess_and_infer()` lost its unused `stft_params` argument
+  - **All spectrogram checkpoints trained before this change are invalid** and must be retrained, including `models/*.pth` used by the API
 - **IDUN real in-ear EEG integration** (Feb 2026): Added `IDUNDataset` for real in-ear recordings
   - 53 subjects (17 normals, 20 anxiety, 1 depression, 15 comorbid) at 250 Hz
   - CSV format with quality metrics for chunk rejection
@@ -555,7 +580,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Important Notes
 
 - The MDD dataset path is hardcoded in `thesis/dataset.py` as `MDD_DIR`
-- STFT dimensions don't currently match the paper's target (254, 342) - adjust `nperseg`/`noverlap` if needed
+- STFT dimensions don't match the original paper's target (254, 342); the project uses its own `(72, 41)` geometry defined in `thesis/stft.py`
 - Some experimental code in `main.py` is commented out (train loops, old dataset usage)
 - Model expects preprocessed spectrograms, not raw EEG directly (unless using the raw EEG example model)
 - Use logging for prints, not print statements.
@@ -606,6 +631,7 @@ The project's main license (MIT) is in `LICENSE`. All CBCR-licensed files are li
 - `thesis/model_factory.py` - `create_model()` factory used by CLI and API
 - `thesis/version.py` - Single source of truth for version string (reads from pyproject.toml)
 - `thesis/labels.py` - Centralized label definitions, display names, and mappings
+- `thesis/stft.py` - Canonical STFT/spectrogram configuration shared by training and inference (resampling, parameters, 70 Hz crop, `EXPECTED_SPECTROGRAM_SHAPE`)
 - `thesis/deformer.py` - EEG-Deformer and DeformerS raw-EEG transformer implementations
 - `thesis/loss.py` - Custom loss functions (`FocalLoss` with alpha/gamma)
 - `thesis/cli.py` - CLI argument parser with all training options
