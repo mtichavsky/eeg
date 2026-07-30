@@ -194,7 +194,7 @@ The project uses **subject-level stratified K-fold cross-validation** (default K
 - Multi-channel mode uses per-channel shared CNN with cross-channel attention (CNNLSTMAll, CNNAttnAll, CNNCatLSTM)
 - 4-class mode requires `--dataset all` (normal/anxiety/depression/comorbid)
 - Channel naming standardized: T3→T7, T4→T8 for cross-dataset compatibility
-- STFT parameters: `nperseg=256`, `noverlap=192` → output shape (129, 41)
+- STFT: every dataset is resampled to 250 Hz, transformed with `nperseg=256`, `noverlap=192`, then cropped at 70 Hz → output shape (72, 41). All parameters live in `thesis/stft.py` and are shared by training and inference.
 - artifact removal are now optional for faster iteration (`--skip-artifact-removal`)
 - Test mode available: `--test-mode` loads one file per class for rapid debugging
 - Model expects preprocessed spectrograms, not raw EEG directly

@@ -28,6 +28,7 @@ from thesis.dataset import (
 )
 from thesis.labels import get_display_names
 from thesis.model import RAW_EEG_MODELS
+from thesis.stft import CHUNK_DURATION_SEC
 
 logger = logging.getLogger(__name__)
 
@@ -65,32 +66,6 @@ def _detect_edf_channel_config(file_path: Path) -> tuple[dict[str, str], list[st
         sorted(edf_channels),
     )
     return {ch: ch for ch in edf_channels}, CANONICAL_CHANNEL_ORDER
-
-
-# STFT parameters tuned to produce (129, 41) spectrograms for each supported sampling rate.
-# nperseg=256 gives 129 frequency bins for all rates.
-# noverlap is chosen so that a 10-second window yields exactly 41 time frames.
-_STFT_PARAMS_BY_FS: dict[int, dict[str, int | str]] = {
-    250: {"nperseg": 256, "noverlap": 192, "window": "hamming"},  # MDD, IDUN
-    256: {"nperseg": 256, "noverlap": 192, "window": "hamming"},  # SAD
-    500: {"nperseg": 256, "noverlap": 131, "window": "hamming"},  # CANE
-}
-
-
-def get_stft_params_for_fs(fs: float) -> dict[str, int | str]:
-    """
-    Return STFT parameters that produce (129, 41) spectrograms for the given sampling rate.
-
-    :param float fs: Sampling rate in Hz. Supported: 250, 256, 500.
-    :return: Dict with keys ``nperseg``, ``noverlap``, ``window``.
-    :rtype: dict[str, int | str]
-    :raises ValueError: If fs is not a supported sampling rate.
-    """
-    fs_int = round(fs)
-    if fs_int not in _STFT_PARAMS_BY_FS:
-        supported = ", ".join(str(k) for k in _STFT_PARAMS_BY_FS)
-        raise ValueError(f"Unsupported sampling rate {fs} Hz. Supported: {supported} Hz")
-    return dict(_STFT_PARAMS_BY_FS[fs_int])
 
 
 def _detect_csv_format(file_path: Path) -> Literal["idun", "cane"]:
@@ -185,12 +160,16 @@ def preprocess_file(
     if file_format == ".edf":
         fs = sampling_rate if sampling_rate is not None else detect_sampling_rate(file_path, ".edf")
         channel_mapping, channel_order = _detect_edf_channel_config(file_path)
+        # Chunk at the file's own rate so a chunk is CHUNK_DURATION_SEC of wall-clock time.
+        # Using a fixed sample count here would make a 256 Hz recording yield 9.77 s chunks,
+        # which survive the STFT with one time frame too few instead of failing loudly.
         return load_and_preprocess_edf_file(
             file_path,
             channel=channel,
             fs=fs,
             channel_mapping=channel_mapping,
             channel_order=channel_order,
+            chunk_samples=int(CHUNK_DURATION_SEC * fs),
         )
     elif file_format == ".csv":
         fmt = _detect_csv_format(file_path)
@@ -293,7 +272,6 @@ def preprocess_and_infer(
     file_format: str,
     num_classes: int,
     sampling_rate: int | None = None,
-    stft_params: dict[str, int | str] | None = None,
     skip_artifact_removal: bool = True,
     model_name: str = "",
 ) -> InferenceResult:
@@ -303,11 +281,10 @@ def preprocess_and_infer(
     Raw-EEG models (those in :data:`thesis.model.RAW_EEG_MODELS`) skip STFT conversion and
     receive the raw EEG chunks directly. All other models follow the spectrogram path.
 
-    Sampling rate and STFT parameters are auto-detected from the file if not provided:
-
-    - ``sampling_rate=None``: inferred via :func:`detect_sampling_rate`.
-    - ``stft_params=None``: derived from the (possibly inferred) sampling rate via
-      :func:`get_stft_params_for_fs` (only for spectrogram models).
+    The sampling rate is inferred via :func:`detect_sampling_rate` when ``sampling_rate=None``.
+    It is used only to resample the signal to :data:`thesis.stft.MODEL_FS`; the STFT parameters
+    themselves are fixed in :mod:`thesis.stft` and shared with the training path, so a
+    spectrogram produced here is identical to one the model saw during training.
 
     :param Path file_path: Path to the EEG file (.edf or .csv).
     :param nn.Module model: Trained model.
@@ -316,9 +293,6 @@ def preprocess_and_infer(
     :param str file_format: File extension including dot (e.g. ".edf", ".csv").
     :param int num_classes: Number of output classes (2 or 4).
     :param float | None sampling_rate: Sampling rate in Hz. Auto-detected from the file if None.
-    :param dict | None stft_params: STFT parameters (``nperseg``, ``noverlap``, ``window``).
-        If None, derived from the sampling rate via :func:`get_stft_params_for_fs`.
-        ``fs`` is always taken from the resolved ``sampling_rate``. Ignored for raw-EEG models.
     :param bool skip_artifact_removal: Skip artifact removal for CANE CSV files.
     :param str model_name: Model architecture name (e.g. ``"Deformer"``). Used to determine
         whether to skip STFT. Defaults to ``""`` (spectrogram path).
@@ -342,15 +316,9 @@ def preprocess_and_infer(
         logger.info(f"Raw-EEG model '{model_name}': skipping spectrogram conversion")
         inputs: list[torch.Tensor] = [chunks[i] for i in range(len(chunks))]
     else:
-        # Spectrogram models: convert chunks to log-magnitude STFT tensors
-        params = get_stft_params_for_fs(fs)
-        spectrograms = SpectrogramDataset.convert_to_spectrograms(
-            chunks,
-            nperseg=int(params["nperseg"]),
-            fs=fs,
-            noverlap=int(params["noverlap"]),
-            window=str(params.get("window", "hamming")),
-        )
+        # Spectrogram models: convert chunks to log-magnitude STFT tensors. Resampling to
+        # MODEL_FS and the STFT parameters themselves are handled inside, from thesis.stft.
+        spectrograms = SpectrogramDataset.convert_to_spectrograms(chunks, source_fs=fs)
 
         if not spectrograms:
             raise RuntimeError("No valid spectrograms generated")

@@ -11,11 +11,17 @@ import mne
 import numpy as np
 import pandas as pd
 import torch
-from scipy.signal import butter, detrend, filtfilt, iirnotch, resample, stft
+from scipy.signal import butter, detrend, filtfilt, iirnotch, resample
 from scipy.stats import zscore
 from torch.utils.data import Dataset
 
 from thesis.labels import CanonicalLabel
+from thesis.stft import (
+    CHUNK_DURATION_SEC,
+    MODEL_FS,
+    STFT_NPERSEG,
+    compute_log_spectrogram,
+)
 
 DEFAULT_CACHE_SIZE: int = 100
 
@@ -28,8 +34,6 @@ CANE_DIR = BASE_DIR / "CANE"
 MDD_DIR = BASE_DIR / "MDD"
 SAD_DIR = BASE_DIR / "SAD"
 IDUN_DIR = BASE_DIR / "IDUN_IN_EAR"
-
-CHUNK_DURATION_SEC = 10
 
 # Canonical channel order for multi-channel loading (consistent across datasets)
 # T7/T8 are new nomenclature, equivalent to T3/T4 in older systems
@@ -55,7 +59,7 @@ def load_and_preprocess_edf_file(
     channel_mapping: dict[str, str],
     channel_order: list[str],
     *,
-    chunk_samples: int = int(CHUNK_DURATION_SEC * 250),
+    chunk_samples: int = int(CHUNK_DURATION_SEC * 256),
 ) -> torch.Tensor:
     """
     Load an EDF file from disk, preprocess it, and return chunks.
@@ -66,12 +70,14 @@ def load_and_preprocess_edf_file(
     :param Path file_path: Path to the EDF file to preprocess.
     :param str channel: Channel to use: specific channel name (e.g., "Fp1") or
            "all" for all 8 channels.
-    :param float fs: Sampling frequency in Hz (e.g., 250 for MDD, 256 for SAD).
+    :param float fs: Native sampling frequency in Hz (256 for both MDD and SAD). Recorded for
+           the caller's bookkeeping; the filters below take their rate from the EDF header.
     :param dict[str, str] channel_mapping: Mapping from raw channel names to canonical names
            (e.g., {"EEG Fp1-LE": "Fp1"}).
     :param list[str] channel_order: Canonical channel order for "all" channel mode
            (e.g., ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]).
-    :param int chunk_samples: Number of samples per chunk (e.g. 2500 = 10 s × 250 Hz).
+    :param int chunk_samples: Number of samples per chunk at the file's native rate
+           (e.g. 2560 = 10 s × 256 Hz for MDD and SAD).
     :return: Tensor of preprocessed EEG chunks with shape (num_chunks, channels, samples).
     :rtype: torch.Tensor
     """
@@ -144,7 +150,10 @@ class MDDDataset(Dataset):
         "EEG T4-LE": "T8",
     }
 
-    FS = 1000 / 4
+    # True rate of the raw EDF files, verified against the headers of all 181 recordings.
+    # (This was previously declared as 1000/4 = 250 Hz, which is wrong: it made a "10-second"
+    # chunk only 2500/256 = 9.77 s long, and it suppressed the resample to MODEL_FS.)
+    FS = 256
     CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)
 
     @staticmethod
@@ -369,10 +378,6 @@ class CANEDataset(Dataset):
 
     FS = 500  # Hz (hardcoded, verified to be ~498-499 Hz in practice)
     SAMPLING_RATE_TOLERANCE = 10  # Hz (allow ±10 Hz deviation)
-
-    # STFT Parameters for matching MDD spectrogram shape (129, 41):
-    STFT_NPERSEG = 256
-    STFT_NOVERLAP = 131
 
     NEIGHBOUR_ZSCORE_THRESHOLD = 2.5
 
@@ -868,7 +873,7 @@ class SADDataset(MDDDataset):
     Files are organized in: {normals|anxious}/{ec|eo}/C{N}.edf
     """
 
-    FS = 256  # Hz (vs MDD's 250 Hz)
+    FS = 256  # Hz (same as MDD; verified from the EDF headers)
     CHUNK_SAMPLES = int(CHUNK_DURATION_SEC * FS)  # 2560 samples per chunk
 
     CLASS_DIRECTORIES = ["normals", "anxious"]
@@ -1394,15 +1399,16 @@ class SpectrogramDataset(Dataset):
 
     Takes an MDDDataset and converts EEG chunks to spectrograms using Short-Time Fourier
     Transform (STFT). Currently, extracts only the first channel from multichannel EEG data.
+
+    All STFT parameters are fixed in :mod:`thesis.stft`; the only per-dataset input is
+    ``source_fs``, which drives resampling to the common rate before the transform. This keeps
+    the frequency axis aligned across datasets with different native sampling rates.
     """
 
     def __init__(
         self,
         dataset: MDDDataset | CANEDataset | IDUNDataset,
-        fs: float = MDDDataset.FS,
-        nperseg: int = 256,
-        noverlap: int = 192,
-        window: str = "hamming",
+        source_fs: float = MDDDataset.FS,
         cache_size: int = DEFAULT_CACHE_SIZE,
         augmentation: Optional[Callable] = None,
         channel: Optional[str] = "all",
@@ -1411,10 +1417,8 @@ class SpectrogramDataset(Dataset):
         Initialize the SpectrogramDataset.
 
         :param dataset: Underlying dataset providing raw EEG data.
-        :param float fs: Sampling frequency for STFT (default: 250 Hz).
-        :param int nperseg: Length of each segment for STFT (default: 256).
-        :param int noverlap: Number of points to overlap between segments (default: 192).
-        :param str window: Window function for STFT (default: "hamming").
+        :param float source_fs: Native sampling rate of the underlying dataset in Hz. Chunks are
+               resampled from this rate to :data:`thesis.stft.MODEL_FS` before the STFT.
         :param int cache_size: Number of processed items to cache in memory.
         :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
                before spectrogram conversion. When enabled, caching is disabled to ensure
@@ -1424,10 +1428,7 @@ class SpectrogramDataset(Dataset):
                of augmentation).
         """
         self.dataset = dataset
-        self.fs = fs
-        self.nperseg = nperseg
-        self.noverlap = noverlap
-        self.window = window
+        self.source_fs = source_fs
         self.augmentation = augmentation
         self.is_inear: bool = channel == "in-ear"
 
@@ -1440,10 +1441,7 @@ class SpectrogramDataset(Dataset):
     @staticmethod
     def convert_to_spectrograms(
         tensor: torch.Tensor,
-        nperseg: int,
-        fs: float,
-        noverlap: int,
-        window: str,
+        source_fs: float,
         augmentation: Optional[Callable] = None,
         is_inear: bool = False,
     ) -> list[torch.Tensor]:
@@ -1453,22 +1451,27 @@ class SpectrogramDataset(Dataset):
         Expects input tensor of shape (num_chunks, num_channels, samples).
         Processes channels to create spectrograms.
 
+        Each channel is resampled from ``source_fs`` to :data:`thesis.stft.MODEL_FS` before the
+        transform and cropped to :data:`thesis.stft.FREQ_CUTOFF_HZ`, so the frequency axis is
+        identical across datasets regardless of their native sampling rate. STFT parameters come
+        from :mod:`thesis.stft` and are not configurable per call site.
+
         :param torch.Tensor tensor: EEG tensor with shape (num_chunks, num_channels, samples).
-        :param int nperseg: Length of each segment for STFT.
-        :param float fs: Sampling frequency for STFT.
-        :param int noverlap: Number of points to overlap between segments.
-        :param str window: Window function for STFT.
+        :param float source_fs: Native sampling rate of the input in Hz.
         :param Optional[Callable] augmentation: Optional augmentation to apply to raw EEG
                before STFT conversion.
         :param bool is_inear: If True, applies 50%% sign flip per chunk to handle in-ear
                polarity ambiguity (independent of augmentation flag).
         :return: List of spectrogram tensors, each with shape
-                 (num_channels, freq_bins, time_frames).
+                 (num_channels, NUM_FREQ_BINS, time_frames).
         :rtype: list[torch.Tensor]
         """
         spectograms = []
         num_chunks = tensor.size(0)
         num_channels = tensor.size(1)
+
+        # A chunk must still fill one STFT window after being resampled to MODEL_FS.
+        min_samples = int(np.ceil(STFT_NPERSEG * source_fs / MODEL_FS))
 
         for chunk_idx in range(num_chunks):
             chunk_data = tensor[chunk_idx]  # (num_channels, samples)
@@ -1482,25 +1485,14 @@ class SpectrogramDataset(Dataset):
                     channel_data = augmentation(channel_data)
 
                 # Skip if too short for STFT
-                if len(channel_data) < nperseg:
+                if len(channel_data) < min_samples:
                     logger.warning(
                         f"Skipping chunk {chunk_idx} channel {ch_idx} due to "
-                        f"insufficient length: {len(channel_data)}"
+                        f"insufficient length: {len(channel_data)} (need {min_samples})"
                     )
                     break
 
-                # Compute STFT
-                f, t, Zxx = stft(
-                    channel_data,
-                    fs=fs,
-                    nperseg=nperseg,
-                    noverlap=noverlap,
-                    window=window,
-                )
-
-                # Log magnitude spectrogram
-                Zxx_mag = np.log1p(np.abs(Zxx))
-                channel_spectrograms.append(Zxx_mag)
+                channel_spectrograms.append(compute_log_spectrogram(channel_data, source_fs))
 
             # Only add if all channels processed successfully
             if len(channel_spectrograms) == num_channels:
@@ -1531,10 +1523,7 @@ class SpectrogramDataset(Dataset):
         item = self.dataset.__getitem__(idx)
         spectograms = self.convert_to_spectrograms(
             item["eeg"],
-            self.nperseg,
-            self.fs,
-            self.noverlap,
-            self.window,
+            self.source_fs,
             self.augmentation,
             self.is_inear,
         )
@@ -1682,12 +1671,12 @@ class FlattenedRawEEGDataset(Dataset):
     chunks. Applies per-chunk z-score normalization per channel and resamples to a common
     target sample count when the source rate differs.
 
-    Resampling strategy (target_samples=2500, i.e. 10 s @ 250 Hz):
-      - 2500 samples (MDD, IDUN): used as-is.
-      - 5000 samples (CANE, 500 Hz): downsampled 2:1 via scipy.signal.resample.
-      - 2560 samples (SAD, 256 Hz): truncated to 2500 (last 60 samples dropped).
-      - Any other length > target_samples * 1.5: resampled.
-      - Any other length > target_samples: truncated.
+    Resampling strategy (target_samples=2500, i.e. 10 s @ MODEL_FS=250 Hz):
+      - 2500 samples (IDUN, 250 Hz): used as-is.
+      - 2560 samples (MDD and SAD, 256 Hz): resampled to 2500.
+      - 5000 samples (CANE, 500 Hz): resampled to 2500 (2:1).
+      - Any other length above target_samples: resampled.
+      - Shorter than target_samples: zero-padded (edge case).
     """
 
     def __init__(
@@ -1749,13 +1738,13 @@ class FlattenedRawEEGDataset(Dataset):
         # Resample / truncate to target_samples if needed
         n_samples = chunk.shape[-1]
         if n_samples != self.target_samples:
-            if n_samples > self.target_samples * 1.5:
-                # Large ratio difference (e.g. CANE 5000 → 2500): resample
+            if n_samples > self.target_samples:
+                # Resample rather than truncate. Both are length-matching, but only resampling
+                # is rate-matching: a chunk is a fixed wall-clock duration, so extra samples mean
+                # a higher native rate (CANE 5000 @ 500 Hz, MDD/SAD 2560 @ 256 Hz), not extra
+                # time. Truncating 2560 → 2500 would hand the model 256 Hz data labelled 250 Hz.
                 chunk_np = resample(chunk.numpy(), self.target_samples, axis=-1)
                 chunk = torch.from_numpy(chunk_np).float()
-            elif n_samples > self.target_samples:
-                # Small excess (e.g. SAD 2560 → 2500): truncate
-                chunk = chunk[..., : self.target_samples]
             else:
                 # chunk shorter than target — pad with zeros (edge case)
                 pad = torch.zeros(
