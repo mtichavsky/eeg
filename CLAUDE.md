@@ -173,6 +173,15 @@ poetry run python main.py train --skip-ica \
   --dataset mdd \
   --condition ec \
   --checkpoint-dir=experiments/mdd_021_all_ec
+
+# AdamW optimizer for a decoupled weight-decay sweep (default optimizer is adam)
+poetry run python main.py train --skip-ica \
+  --channel all \
+  --optimizer adamw \
+  --weight-decay 1e-2 \
+  --dataset mdd \
+  --condition ec \
+  --checkpoint-dir=experiments/mdd_022_all_ec
 ```
 
 ### Transfer Learning
@@ -331,8 +340,9 @@ Run with: `poetry run jupyter notebook`
 - **Transfer learning support**: Load pretrained weights and optionally freeze CNN layers
 - **Model registry**: `MODEL_REGISTRY` dict in `thesis/model.py` maps model names to (class, default_rnn_hidden) tuples
 - **Model factory**: `create_model()` in `thesis/model_factory.py` handles model instantiation, weight loading, and layer freezing
+- **Optimizer selection**: `--optimizer` chooses `adam` (default, backward-compatible) or `adamw`; instantiated via `create_optimizer()` in `thesis/model_factory.py`, which preserves the `filter(lambda p: p.requires_grad, ...)` behaviour needed for `--freeze-cnn`/`--freeze-lstm`. `adamw` decouples `--weight-decay` from the gradient update (unlike `adam`, where Adam's adaptive scaling largely cancels coupled L2 out)
 - **Cosine annealing LR**: Enabled by default for all models (`T_max=num_epochs`, `eta_min=1e-6`); disable with `--no-cosine-lr`
-- **LR scheduler support in `train_one_fold()`**: Scheduler stepped once per epoch; scheduler class name logged at fold start
+- **LR scheduler support in `train_one_fold()`**: Scheduler stepped once per epoch; scheduler class name and chosen optimizer logged at fold start
 - **Parametric chunk duration**: `--chunk-duration` (default 10.0 s) for raw-EEG models; spectrogram models always use 10 s
 - **Train accuracy at best val epoch**: Tracked per fold as `train_acc_at_best` and included in CV results
 - **Raw-EEG config building**: `train()` computes `num_time = chunk_duration × 250`, loads model defaults from `_RAW_EEG_DEFAULT_CONFIGS`, applies CLI overrides via `dataclasses_replace()`
@@ -507,6 +517,11 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Selectable optimizer** (Sep 2026): `--optimizer` chooses between `adam` (default, unchanged behaviour) and `adamw` for the upcoming regularization sweep
+  - Motivation: plain `Adam` couples `weight_decay` into the gradient, where Adam's per-parameter adaptive scaling largely cancels it out, making `--weight-decay` a weaker knob than its value suggests; `AdamW` decouples it
+  - `create_optimizer()` in `thesis/model_factory.py` instantiates the chosen optimizer, preserving the `filter(lambda p: p.requires_grad, ...)` behaviour needed for `--freeze-cnn`/`--freeze-lstm`
+  - Threaded through `train()` → `train_cross_validation(optimizer_name=...)` like other hyperparameters (not read from `args` deep inside the CV loop)
+  - Logged at fold start in `train_one_fold()`, next to the LR scheduler class name
 - **Unified spectrogram frequency axis + 70 Hz crop** (Jul 2026): New `thesis/stft.py` is the single source of truth for all STFT parameters, shared by training and inference
   - All datasets are now resampled to `MODEL_FS` (250 Hz) **before** the STFT, so a spectrogram row means the same frequency everywhere. Previously CANE (500 Hz) had 1.953 Hz bins vs MDD's 0.977 Hz, putting alpha at half the row index and leaving a dataset-identifying dead band
   - **`MDDDataset.FS` corrected from 250 to 256 Hz** — the EDF headers of all 181 MDD recordings say 256. The old value made a "10-second" chunk 2500/256 = 9.77 s and, after the change above, would have wrongly skipped MDD's resample. MDD chunks are now 2560 samples natively
@@ -628,7 +643,7 @@ The project's main license (MIT) is in `LICENSE`. All CBCR-licensed files are li
 - `thesis/dataset.py` - Dataset implementations (MDDDataset, CANEDataset, IDUNDataset, SADDataset, SpectrogramDataset)
 - `thesis/data_preparation.py` - Dataset preparation functions (prepare_mdd_dataset, prepare_cane_dataset, prepare_idun_dataset, prepare_sad_dataset)
 - `thesis/inference.py` - Shared inference pipeline (preprocess, infer, aggregate) for CLI and API
-- `thesis/model_factory.py` - `create_model()` factory used by CLI and API
+- `thesis/model_factory.py` - `create_model()` factory used by CLI and API; also `create_optimizer()` (adam/adamw)
 - `thesis/version.py` - Single source of truth for version string (reads from pyproject.toml)
 - `thesis/labels.py` - Centralized label definitions, display names, and mappings
 - `thesis/stft.py` - Canonical STFT/spectrogram configuration shared by training and inference (resampling, parameters, 70 Hz crop, `EXPECTED_SPECTROGRAM_SHAPE`)
