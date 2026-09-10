@@ -51,6 +51,40 @@ LABEL_INT_MAP: dict[str, int] = {
 }
 
 
+class _PicklableLRUCacheMixin:
+    """Make a dataset that stores ``functools.lru_cache`` wrappers as instance attributes
+    picklable.
+
+    Python 3.14 made ``forkserver`` the default multiprocessing start method on Linux. Under
+    ``forkserver`` the :class:`~torch.utils.data.DataLoader` pickles the dataset to hand it
+    to each worker process, which never happened under the old ``fork`` default. The dataset
+    classes memoise their file-preprocessing functions in ``lru_cache`` wrappers, and those
+    wrappers are not picklable (``AttributeError: ... has no attribute '__qualname__'``).
+
+    This mixin drops every ``lru_cache`` wrapper found in ``__dict__`` on pickling and
+    rebuilds an empty cache around the same wrapped callable on unpickling. Each worker
+    therefore starts with a cold cache, exactly as forked workers did (their cache fills were
+    never shared back to the parent either).
+    """
+
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        lru_caches: dict[str, tuple[Callable[..., Any], Optional[int], bool]] = {}
+        for name, value in list(state.items()):
+            if hasattr(value, "cache_parameters") and hasattr(value, "__wrapped__"):
+                params = value.cache_parameters()
+                lru_caches[name] = (value.__wrapped__, params["maxsize"], params["typed"])
+                del state[name]
+        state["_lru_cache_state"] = lru_caches
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        lru_caches = state.pop("_lru_cache_state", {})
+        self.__dict__.update(state)
+        for name, (func, maxsize, typed) in lru_caches.items():
+            setattr(self, name, lru_cache(maxsize=maxsize, typed=typed)(func))
+
+
 def load_and_preprocess_edf_file(
     file_path: Path,
     channel: str,
@@ -140,7 +174,7 @@ def load_and_preprocess_edf_file(
     return chunks_tensor
 
 
-class MDDDataset(Dataset):
+class MDDDataset(_PicklableLRUCacheMixin, Dataset):
     """
     PyTorch Dataset for MDD EEG data.
     """
@@ -378,7 +412,7 @@ class NaNValuesError(Exception):
     pass
 
 
-class CANEDataset(Dataset):
+class CANEDataset(_PicklableLRUCacheMixin, Dataset):
     """
     PyTorch Dataset for CANE EEG data (anxiety detection).
     """
@@ -1048,7 +1082,7 @@ class SADDataset(MDDDataset):
         }
 
 
-class IDUNDataset(Dataset):
+class IDUNDataset(_PicklableLRUCacheMixin, Dataset):
     """
     PyTorch Dataset for IDUN in-ear EEG data.
 
@@ -1400,7 +1434,7 @@ class IDUNDataset(Dataset):
         }
 
 
-class SpectrogramDataset(Dataset):
+class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
     """
     Wrapper dataset that converts raw EEG data to spectrograms on-the-fly.
 
