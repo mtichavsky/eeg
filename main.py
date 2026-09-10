@@ -55,6 +55,7 @@ from thesis.model_factory import (
     TSceptionSConfig,
     build_raw_eeg_config,
     create_model,
+    create_optimizer,
 )
 
 RANDOM_SEED = 42
@@ -332,6 +333,7 @@ def train_one_fold(
     }
 
     logger.info(f"Starting training for fold {fold + 1}")
+    logger.info(f"Optimizer: {optimizer.__class__.__name__}")
     if scheduler is not None:
         logger.info(f"LR schedule: {scheduler.__class__.__name__} over {num_epochs} epochs")
 
@@ -526,6 +528,7 @@ def train_cross_validation(
     | None = None,
     chunk_duration: float = 10.0,
     l1_lambda: float = 0.0,
+    optimizer_name: Literal["adam", "adamw"] = "adam",
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -558,6 +561,8 @@ def train_cross_validation(
     :param bool cosine_lr: If True (default), use cosine annealing LR schedule (T_max=num_epochs,
         eta_min=1e-6). Set to False for constant LR.
     :param Path | None log_file: Path to the log file for JSON metrics output.
+    :param Literal["adam", "adamw"] optimizer_name: Optimizer to use. "adam" (default) applies
+        weight decay coupled into the gradient; "adamw" decouples it from the gradient update.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
     :rtype: dict
@@ -863,7 +868,8 @@ def train_cross_validation(
         else:
             criterion = nn.CrossEntropyLoss()
         # Only optimize trainable parameters (important when CNN layers are frozen)
-        optimizer = torch.optim.Adam(
+        optimizer = create_optimizer(
+            optimizer_name,
             filter(lambda p: p.requires_grad, model.parameters()),
             lr=learning_rate,
             weight_decay=weight_decay,
@@ -1012,6 +1018,7 @@ def train(args: argparse.Namespace) -> None:
         raw_eeg_config=raw_eeg_config,
         chunk_duration=args.chunk_duration,
         l1_lambda=args.l1_lambda,
+        optimizer_name=args.optimizer,
     )
 
     # Save final results to file

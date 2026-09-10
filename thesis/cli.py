@@ -122,6 +122,16 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Weight decay (L2 regularization)",
     )
     train_parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="adam",
+        choices=["adam", "adamw"],
+        help="Optimizer to use for training. 'adam' couples weight decay into the gradient "
+        "(Adam's adaptive scaling largely cancels it out); 'adamw' decouples weight decay "
+        "from the gradient update, making --weight-decay a stronger, more predictable knob. "
+        "Default: adam (preserves existing behaviour).",
+    )
+    train_parser.add_argument(
         "--l1-lambda",
         type=float,
         default=0.0,

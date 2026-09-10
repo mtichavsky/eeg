@@ -7,6 +7,7 @@ to instantiate, optionally load pretrained weights, and freeze layers.
 
 import argparse
 import logging
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 from dataclasses import replace as dataclasses_replace
 from typing import Any, cast
@@ -375,3 +376,32 @@ def create_model(
             )
 
     return model
+
+
+def create_optimizer(
+    optimizer_name: str,
+    parameters: Iterator[nn.Parameter],
+    lr: float,
+    weight_decay: float,
+) -> torch.optim.Optimizer:
+    """
+    Create an optimizer for the given trainable parameters.
+
+    :param str optimizer_name: Optimizer to use, "adam" (default, backward-compatible) or
+        "adamw". "adam" couples weight decay into the gradient, where it is largely cancelled
+        out by Adam's per-parameter adaptive scaling. "adamw" decouples weight decay from the
+        gradient update, making it a stronger and more predictable regularization knob.
+    :param Iterator[nn.Parameter] parameters: Trainable model parameters (e.g. already filtered
+        by ``requires_grad`` for transfer-learning layer freezing).
+    :param float lr: Learning rate.
+    :param float weight_decay: Weight decay (L2 penalty for "adam", decoupled for "adamw").
+    :return: Initialized optimizer.
+    :rtype: torch.optim.Optimizer
+    :raises ValueError: If ``optimizer_name`` is not "adam" or "adamw".
+    """
+    if optimizer_name == "adamw":
+        return torch.optim.AdamW(parameters, lr=lr, weight_decay=weight_decay)
+    elif optimizer_name == "adam":
+        return torch.optim.Adam(parameters, lr=lr, weight_decay=weight_decay)
+    else:
+        raise ValueError(f"Unknown optimizer: {optimizer_name}. Available: ['adam', 'adamw']")
