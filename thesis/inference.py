@@ -28,7 +28,7 @@ from thesis.dataset import (
 )
 from thesis.labels import get_display_names
 from thesis.model import RAW_EEG_MODELS
-from thesis.stft import CHUNK_DURATION_SEC
+from thesis.stft import CHUNK_DURATION_SEC, FREQ_CUTOFF_HZ
 
 logger = logging.getLogger(__name__)
 
@@ -271,6 +271,7 @@ def preprocess_and_infer(
     sampling_rate: int | None = None,
     skip_artifact_removal: bool = True,
     model_name: str = "",
+    freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
 ) -> InferenceResult:
     """
     High-level convenience: preprocess → (spectrograms or raw EEG) → inference → aggregation.
@@ -293,6 +294,8 @@ def preprocess_and_infer(
     :param bool skip_artifact_removal: Skip artifact removal for CANE CSV files.
     :param str model_name: Model architecture name (e.g. ``"Deformer"``). Used to determine
         whether to skip STFT. Defaults to ``""`` (spectrogram path).
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Must match the
+        cutoff the model checkpoint was trained with. Ignored for raw-EEG models.
     :return: Aggregated inference result.
     :rtype: InferenceResult
     """
@@ -315,7 +318,9 @@ def preprocess_and_infer(
     else:
         # Spectrogram models: convert chunks to log-magnitude STFT tensors. Resampling to
         # MODEL_FS and the STFT parameters themselves are handled inside, from thesis.stft.
-        spectrograms = SpectrogramDataset.convert_to_spectrograms(chunks, source_fs=fs)
+        spectrograms = SpectrogramDataset.convert_to_spectrograms(
+            chunks, source_fs=fs, freq_cutoff_hz=freq_cutoff_hz
+        )
 
         if not spectrograms:
             raise RuntimeError("No valid spectrograms generated")

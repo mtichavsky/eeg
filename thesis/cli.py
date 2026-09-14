@@ -64,6 +64,14 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         help="Test mode: load only one file from each class (hardcoded filenames) "
         "for faster debugging. Skips full dataset preprocessing.",
     )
+    preproc_group.add_argument(
+        "--freq-cutoff",
+        type=float,
+        default=70.0,
+        help="Highest spectrogram frequency kept, in Hz (default 70, the band-pass upper edge). "
+        "Lower it for frequency ablations, e.g. 30 to exclude EMG-dominated gamma. Must be in "
+        "[21, 70]: below ~21 Hz the spectrogram CNN has no rows left. Ignored by raw-EEG models.",
+    )
 
 
 def add_model_args(parser: argparse.ArgumentParser) -> None:

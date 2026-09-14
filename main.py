@@ -20,7 +20,6 @@ from plot_training_curves import (
 from thesis.augmentation import EEGAugmentation
 from thesis.cli import get_arg_parser
 from thesis.data_preparation import (
-    EXPECTED_SPECTROGRAM_SHAPE,
     SubjectList,
     create_balanced_folds,
     determine_num_classes,
@@ -58,6 +57,7 @@ from thesis.model_factory import (
     create_model,
     create_optimizer,
 )
+from thesis.stft import FREQ_CUTOFF_HZ, spectrogram_shape
 
 RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
@@ -68,6 +68,21 @@ logger = logging.getLogger(__name__)
 
 class IllegalPathError(Exception):
     pass
+
+
+def _validate_freq_cutoff(freq_cutoff_hz: float) -> None:
+    """
+    Validate ``--freq-cutoff`` is within the range the spectrogram CNN can build for.
+
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz.
+    :raises ValueError: If outside ``[21, 70]``.
+    """
+    if not (21 <= freq_cutoff_hz <= 70):
+        raise ValueError(
+            f"--freq-cutoff must be in [21, 70], got {freq_cutoff_hz}. Below ~21 Hz the "
+            "spectrogram CNN has no rows left to build its layers from; above 70 Hz is "
+            "meaningless after the 1-70 Hz preprocessing band-pass."
+        )
 
 
 def get_unique_checkpoint_dir(checkpoint_dir: Path, suffix_length: int = 3) -> Path:
@@ -287,6 +302,7 @@ def train_one_fold(
     log_file: Path | None = None,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
     l1_lambda: float = 0.0,
+    freq_cutoff_hz: float | None = FREQ_CUTOFF_HZ,
 ) -> dict:
     """
     Train model for one-fold with comprehensive logging, checkpointing, and early stopping.
@@ -308,6 +324,10 @@ def train_one_fold(
     :param Path | None log_file: Path to the log file for JSON metrics output.
     :param torch.optim.lr_scheduler.LRScheduler | None scheduler: Optional LR scheduler stepped
         once per epoch. Pass ``None`` (default) to keep a constant learning rate.
+    :param float | None freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Recorded in
+        the best-model checkpoint so a checkpoint always carries the geometry it was trained
+        on. Pass ``None`` for raw-EEG models, which never build a spectrogram — the key is
+        then omitted from the checkpoint entirely.
     :return: Dictionary with fold results.
     :rtype: dict
     """
@@ -405,16 +425,19 @@ def train_one_fold(
                 best_per_dataset_metrics = eval_metrics.get("per_dataset")
 
                 best_model_path = checkpoint_dir / f"fold_{fold + 1}_best.pth"
-                torch.save(
-                    {
-                        "epoch": epoch,
-                        "model_state_dict": model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "chunk_acc": best_chunk_acc,
-                        "val_metrics": eval_metrics,
-                    },
-                    best_model_path,
-                )
+                checkpoint_payload: dict[str, object] = {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "chunk_acc": best_chunk_acc,
+                    "val_metrics": eval_metrics,
+                }
+                if freq_cutoff_hz is not None:
+                    # Raw-EEG models never build a spectrogram, so the cutoff is meaningless
+                    # for them; omit the key entirely instead of recording a value that was
+                    # never applied.
+                    checkpoint_payload["freq_cutoff_hz"] = freq_cutoff_hz
+                torch.save(checkpoint_payload, best_model_path)
                 logger.info(
                     f"✓ Saved best model: {best_model_path} "
                     f"(chunk={chunk_metrics['accuracy']:.4f}, "
@@ -530,6 +553,7 @@ def train_cross_validation(
     chunk_duration: float = 10.0,
     l1_lambda: float = 0.0,
     optimizer_name: Literal["adam", "adamw"] = "adam",
+    freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -564,6 +588,8 @@ def train_cross_validation(
     :param Path | None log_file: Path to the log file for JSON metrics output.
     :param Literal["adam", "adamw"] optimizer_name: Optimizer to use. "adam" (default) applies
         weight decay coupled into the gradient; "adamw" decouples it from the gradient update.
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Ignored for
+        raw-EEG models.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
            best chunk accuracy model (primary metric).
     :rtype: dict
@@ -625,6 +651,7 @@ def train_cross_validation(
             label_mapping=label_mapping,
             use_raw_eeg=use_raw_eeg,
             chunk_duration=chunk_duration,
+            freq_cutoff_hz=freq_cutoff_hz,
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -647,6 +674,7 @@ def train_cross_validation(
                 test_mode=test_mode,
                 use_raw_eeg=use_raw_eeg,
                 chunk_duration=chunk_duration,
+                freq_cutoff_hz=freq_cutoff_hz,
             )
         else:
             if bipolar_pair(channel) is not None:
@@ -664,6 +692,7 @@ def train_cross_validation(
                 test_mode=test_mode,
                 use_raw_eeg=use_raw_eeg,
                 chunk_duration=chunk_duration,
+                freq_cutoff_hz=freq_cutoff_hz,
             )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -687,6 +716,7 @@ def train_cross_validation(
             label_mapping=label_mapping,
             use_raw_eeg=use_raw_eeg,
             chunk_duration=chunk_duration,
+            freq_cutoff_hz=freq_cutoff_hz,
         )
         normal, anxiety, depression, anxiety_depression = (
             subject_classes.normal,
@@ -710,6 +740,7 @@ def train_cross_validation(
             label_mapping=label_mapping,
             use_raw_eeg=use_raw_eeg,
             chunk_duration=chunk_duration,
+            freq_cutoff_hz=freq_cutoff_hz,
         )
         mdd_normal, mdd_anxiety, mdd_depression, mdd_anxiety_depression = (
             mdd_subject_classes.normal,
@@ -733,6 +764,7 @@ def train_cross_validation(
                 test_mode=test_mode,
                 use_raw_eeg=use_raw_eeg,
                 chunk_duration=chunk_duration,
+                freq_cutoff_hz=freq_cutoff_hz,
             )
         else:
             if bipolar_pair(channel) is not None:
@@ -750,6 +782,7 @@ def train_cross_validation(
                 test_mode=test_mode,
                 use_raw_eeg=use_raw_eeg,
                 chunk_duration=chunk_duration,
+                freq_cutoff_hz=freq_cutoff_hz,
             )
         cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
             cane_subject_classes.normal,
@@ -769,6 +802,7 @@ def train_cross_validation(
             label_mapping=label_mapping,
             use_raw_eeg=use_raw_eeg,
             chunk_duration=chunk_duration,
+            freq_cutoff_hz=freq_cutoff_hz,
         )
         sad_normal, sad_anxiety, sad_depression, sad_anxiety_depression = (
             sad_subject_classes.normal,
@@ -802,7 +836,7 @@ def train_cross_validation(
             split_into_folds(anxiety_depression, n_folds) if anxiety_depression else empty_folds
         )
 
-    spec_shape = EXPECTED_SPECTROGRAM_SHAPE
+    spec_shape = spectrogram_shape(freq_cutoff_hz)
     for fold in range(n_folds):
         logger.info(f"{'=' * 80}")
         logger.info(f"FOLD {fold + 1}/{n_folds}")
@@ -912,6 +946,7 @@ def train_cross_validation(
             log_file=log_file,
             scheduler=fold_scheduler,
             l1_lambda=l1_lambda,
+            freq_cutoff_hz=None if use_raw_eeg else freq_cutoff_hz,
         )
 
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
@@ -954,6 +989,8 @@ def _get_git_commit() -> str:
 
 
 def train(args: argparse.Namespace) -> None:
+    _validate_freq_cutoff(args.freq_cutoff)
+
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
@@ -977,6 +1014,10 @@ def train(args: argparse.Namespace) -> None:
     cfg["checkpoint_dir"] = checkpoint_dir
     cfg["log_file"] = log_path
     cfg["git_commit"] = _get_git_commit()
+    if args.model in RAW_EEG_MODELS:
+        # The cutoff only ever affects spectrogram geometry; raw-EEG models never build one,
+        # so printing it here would suggest it did something.
+        cfg.pop("freq_cutoff", None)
 
     logger.info("Starting EEG Classification Training")
     logger.info("Hyperparameters:")
@@ -996,6 +1037,12 @@ def train(args: argparse.Namespace) -> None:
     if raw_eeg_config is not None:
         logger.info(
             f"{args.model} config: {raw_eeg_config} (chunk_duration={args.chunk_duration}s)"
+        )
+
+    if args.model in RAW_EEG_MODELS and args.freq_cutoff != FREQ_CUTOFF_HZ:
+        logger.warning(
+            f"--freq-cutoff={args.freq_cutoff} is ignored for raw-EEG model {args.model} "
+            "(no spectrogram is computed)"
         )
 
     # Run cross-validation training
@@ -1030,6 +1077,7 @@ def train(args: argparse.Namespace) -> None:
         chunk_duration=args.chunk_duration,
         l1_lambda=args.l1_lambda,
         optimizer_name=args.optimizer,
+        freq_cutoff_hz=args.freq_cutoff,
     )
 
     # Save final results to file
@@ -1075,6 +1123,8 @@ def run(args: argparse.Namespace) -> None:
 
     :param argparse.Namespace args: Command-line arguments.
     """
+    _validate_freq_cutoff(args.freq_cutoff)
+
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
@@ -1089,6 +1139,23 @@ def run(args: argparse.Namespace) -> None:
 
     if not input_file.exists():
         raise IllegalPathError(f"Input file not found: {input_file}")
+
+    # PyTorch raises on any shape mismatch regardless of strict=False (strict only suppresses
+    # missing/unexpected keys), so this check catches a freq_cutoff mismatch before create_model
+    # gives an opaque "size mismatch" error instead of an actionable one. Raw-EEG models never
+    # build a spectrogram, so the cutoff is meaningless for them and the check is skipped.
+    if args.model not in RAW_EEG_MODELS:
+        checkpoint = torch.load(model_path, weights_only=False, map_location=device)
+        checkpoint_freq_cutoff = checkpoint.get("freq_cutoff_hz", FREQ_CUTOFF_HZ)
+        if checkpoint_freq_cutoff != args.freq_cutoff:
+            raise ValueError(
+                f"Checkpoint {model_path} was trained with --freq-cutoff={checkpoint_freq_cutoff} "
+                f"(spectrogram height {spectrogram_shape(checkpoint_freq_cutoff)[0]}), but "
+                f"--freq-cutoff={args.freq_cutoff} "
+                f"(height {spectrogram_shape(args.freq_cutoff)[0]}) was passed. A missing "
+                "freq_cutoff_hz key means the checkpoint predates this flag and used 70 Hz. "
+                f"Re-run with --freq-cutoff {checkpoint_freq_cutoff} to match."
+            )
 
     num_classes = int(args.class_mode)
     in_channels = 8 if args.channel == "all" else 1
@@ -1109,7 +1176,7 @@ def run(args: argparse.Namespace) -> None:
     )
     model = create_model(
         model_name=args.model,
-        spec_shape=EXPECTED_SPECTROGRAM_SHAPE,
+        spec_shape=spectrogram_shape(args.freq_cutoff),
         dropout=0,
         num_classes=num_classes,
         device=device,
@@ -1131,6 +1198,7 @@ def run(args: argparse.Namespace) -> None:
         num_classes=num_classes,
         sampling_rate=args.fs,
         model_name=args.model,
+        freq_cutoff_hz=args.freq_cutoff,
     )
 
     # Log per-chunk results

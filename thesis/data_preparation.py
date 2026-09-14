@@ -22,8 +22,13 @@ from thesis.dataset import (
 from thesis.labels import LabelMapping
 
 # Canonical sampling rate and spectrogram geometry live in thesis.stft, the single source of
-# truth shared by the training and inference paths. Re-exported here for existing importers.
-from thesis.stft import EXPECTED_SPECTROGRAM_SHAPE, MODEL_FS
+# truth shared by the training and inference paths. EXPECTED_SPECTROGRAM_SHAPE is re-exported
+# here (explicit "as" alias so ruff doesn't prune it as unused) for api/model_manager.py, which
+# still assumes the fixed 70 Hz default.
+from thesis.stft import (
+    EXPECTED_SPECTROGRAM_SHAPE as EXPECTED_SPECTROGRAM_SHAPE,
+)
+from thesis.stft import FREQ_CUTOFF_HZ, MODEL_FS, spectrogram_shape
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +82,7 @@ def _prepare_dataset_generic(
     label_mapping: Optional[dict[int, int]] = None,
     use_raw_eeg: bool = False,
     chunk_duration: float = CHUNK_DURATION_SEC,
+    freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Generic dataset preparation for datasets following the MDD pattern.
@@ -97,7 +103,9 @@ def _prepare_dataset_generic(
            for use with raw-EEG models such as Deformer.
     :param float chunk_duration: EEG chunk duration in seconds. Applied only on the raw EEG
            path (use_raw_eeg=True); the spectrogram path always uses CHUNK_DURATION_SEC to
-           preserve the expected STFT shape (EXPECTED_SPECTROGRAM_SHAPE).
+           preserve the expected STFT shape.
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Ignored when
+           use_raw_eeg=True.
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
             SubjectClasses]
@@ -129,14 +137,19 @@ def _prepare_dataset_generic(
         else:
             # Create spectrogram dataset
             spec_dataset = SpectrogramDataset(
-                dataset, source_fs=fs, augmentation=augmentation, channel=channel
+                dataset,
+                source_fs=fs,
+                augmentation=augmentation,
+                channel=channel,
+                freq_cutoff_hz=freq_cutoff_hz,
             )
             flat_dataset = FlattenedSpectrogramDataset(spec_dataset, label_mapping=label_mapping)
 
             # Validate shape
+            expected_shape = spectrogram_shape(freq_cutoff_hz)
             spec_shape = flat_dataset[0][0].shape[1:]
-            assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-                f"Expected {EXPECTED_SPECTROGRAM_SHAPE}, got {spec_shape}. "
+            assert spec_shape == torch.Size(list(expected_shape)), (
+                f"Expected {expected_shape}, got {spec_shape}. "
                 f"The neural net was designed using this assumption."
             )
 
@@ -163,6 +176,7 @@ def prepare_mdd_dataset(
     label_mapping: Optional[dict[int, int]] = None,
     use_raw_eeg: bool = False,
     chunk_duration: float = CHUNK_DURATION_SEC,
+    freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare MDD dataset for classification.
@@ -181,6 +195,8 @@ def prepare_mdd_dataset(
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset instead of spectrogram
            dataset. For use with raw-EEG models such as Deformer.
     :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Ignored when
+           use_raw_eeg=True.
     :return: Tuple of (flat_dataset, SubjectClasses).
              Note: anxiety and anxiety_depression are empty for MDD dataset.
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
@@ -203,6 +219,7 @@ def prepare_mdd_dataset(
         label_mapping=effective_label_mapping,
         use_raw_eeg=use_raw_eeg,
         chunk_duration=chunk_duration,
+        freq_cutoff_hz=freq_cutoff_hz,
     )
 
 
@@ -216,6 +233,7 @@ def prepare_cane_dataset(
     test_mode: bool = False,
     use_raw_eeg: bool = False,
     chunk_duration: float = CHUNK_DURATION_SEC,
+    freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare CANE dataset with spectrograms and split subjects by class.
@@ -232,6 +250,8 @@ def prepare_cane_dataset(
            CANE is 500 Hz so native chunks are 2× the target_samples; FlattenedRawEEGDataset
            downsamples 2:1 automatically.
     :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Ignored when
+           use_raw_eeg=True.
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
             SubjectClasses]
@@ -267,13 +287,15 @@ def prepare_cane_dataset(
                 source_fs=CANEDataset.FS,
                 augmentation=augmentation,
                 channel=channel,
+                freq_cutoff_hz=freq_cutoff_hz,
             )
             cane_flat_dataset = FlattenedSpectrogramDataset(
                 cane_spec_dataset, label_mapping=label_mapping
             )
+            expected_shape = spectrogram_shape(freq_cutoff_hz)
             spec_shape = cane_flat_dataset[0][0].shape[1:]
-            assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-                f"Expected {EXPECTED_SPECTROGRAM_SHAPE}, got {spec_shape}. "
+            assert spec_shape == torch.Size(list(expected_shape)), (
+                f"Expected {expected_shape}, got {spec_shape}. "
                 f"The neural net was designed using this assumption."
             )
 
@@ -300,6 +322,7 @@ def prepare_sad_dataset(
     label_mapping: Optional[dict[int, int]] = None,
     use_raw_eeg: bool = False,
     chunk_duration: float = CHUNK_DURATION_SEC,
+    freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, SubjectClasses]:
     """
     Prepare SAD dataset with spectrograms and split subjects by class.
@@ -313,6 +336,8 @@ def prepare_sad_dataset(
     :param Optional[dict[int, int]] label_mapping: Optional label remapping dict.
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
     :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Ignored when
+           use_raw_eeg=True.
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
             SubjectClasses]
@@ -329,6 +354,7 @@ def prepare_sad_dataset(
         label_mapping=label_mapping,
         use_raw_eeg=use_raw_eeg,
         chunk_duration=chunk_duration,
+        freq_cutoff_hz=freq_cutoff_hz,
     )
 
 
@@ -342,6 +368,7 @@ def prepare_idun_dataset(
     quality_threshold: float = 30.0,
     use_raw_eeg: bool = False,
     chunk_duration: float = CHUNK_DURATION_SEC,
+    freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
 ) -> tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset, "SubjectClasses"]:
     """
     Prepare IDUN real in-ear dataset with spectrograms and split subjects by class.
@@ -358,6 +385,8 @@ def prepare_idun_dataset(
     :param float quality_threshold: Reject IDUN chunks with quality at or below this value.
     :param bool use_raw_eeg: If True, return FlattenedRawEEGDataset (skips STFT).
     :param float chunk_duration: EEG chunk duration in seconds (raw EEG path only).
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Ignored when
+           use_raw_eeg=True.
     :return: Tuple of (flat_dataset, SubjectClasses).
     :rtype: tuple[ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset,
             SubjectClasses]
@@ -391,13 +420,15 @@ def prepare_idun_dataset(
                 source_fs=IDUNDataset.FS,
                 augmentation=augmentation,
                 channel=channel,
+                freq_cutoff_hz=freq_cutoff_hz,
             )
             idun_flat_dataset = FlattenedSpectrogramDataset(
                 idun_spec_dataset, label_mapping=label_mapping
             )
+            expected_shape = spectrogram_shape(freq_cutoff_hz)
             spec_shape = idun_flat_dataset[0][0].shape[1:]
-            assert spec_shape == torch.Size(list(EXPECTED_SPECTROGRAM_SHAPE)), (
-                f"Expected {EXPECTED_SPECTROGRAM_SHAPE}, got {spec_shape}. "
+            assert spec_shape == torch.Size(list(expected_shape)), (
+                f"Expected {expected_shape}, got {spec_shape}. "
                 f"The neural net was designed using this assumption."
             )
 
