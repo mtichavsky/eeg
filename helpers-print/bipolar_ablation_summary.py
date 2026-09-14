@@ -250,25 +250,17 @@ def parse_val_subjects(log_path: Path) -> list[list[str]]:
 
 
 def _find_training_log(run_dir: Path) -> Optional[Path]:
-    """Return the most recently modified ``training_*.log`` in ``run_dir``, or None.
-
-    A restarted run can leave multiple ``training_*.log`` files behind (e.g. a partial log
-    from a crashed attempt plus the full one from the successful rerun). ``glob()`` order is
-    not chronological, so picking ``logs[0]`` risks silently reading a stale/partial log
-    instead of the current run's. Sorting by mtime and warning when more than one is found
-    makes the ambiguity visible instead of picking one arbitrarily.
-    """
+    """Return the newest ``training_*.log`` in ``run_dir`` (a restarted run leaves several)."""
     logs = list(run_dir.glob("training_*.log"))
     if not logs:
         return None
+    chosen = max(logs, key=lambda p: p.stat().st_mtime)
     if len(logs) > 1:
-        chosen = max(logs, key=lambda p: p.stat().st_mtime)
         print(
             f"  WARNING: {len(logs)} training_*.log files found in {run_dir}, "
             f"using most recent: {chosen.name}"
         )
-        return chosen
-    return logs[0]
+    return chosen
 
 
 def check_fold_identity(runs: dict[str, dict[str, RunMetrics]]) -> bool:
