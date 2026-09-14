@@ -32,6 +32,7 @@ from thesis.data_preparation import (
     split_into_folds,
 )
 from thesis.dataset import (
+    bipolar_pair,
     collate_spectrograms,
 )
 from thesis.early_stopping import EarlyStopping
@@ -648,6 +649,11 @@ def train_cross_validation(
                 chunk_duration=chunk_duration,
             )
         else:
+            if bipolar_pair(channel) is not None:
+                logger.info(
+                    f"Bipolar channel '{channel}' with CANE: loading from the 8-channel "
+                    "headset, not IDUN"
+                )
             flat_dataset, subject_classes = prepare_cane_dataset(
                 cane_conditions,
                 channel,
@@ -729,6 +735,11 @@ def train_cross_validation(
                 chunk_duration=chunk_duration,
             )
         else:
+            if bipolar_pair(channel) is not None:
+                logger.info(
+                    f"Bipolar channel '{channel}' with CANE: loading from the 8-channel "
+                    "headset, not IDUN"
+                )
             cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
                 cane_conditions,
                 channel,

@@ -43,6 +43,34 @@ MDD_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]  # T3→T
 CANE_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "Oz"]
 SAD_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]
 
+# Bipolar (interhemispheric) derivations available via --channel, each right-minus-left to match
+# the existing T8-T7 in-ear convention. Explicit whitelist rather than splitting on "-":
+# "in-ear" also contains a hyphen and must never be parsed as a bipolar spec of its own.
+BIPOLAR_CHANNELS: dict[str, tuple[str, str]] = {
+    "Fp2-Fp1": ("Fp2", "Fp1"),
+    "C4-C3": ("C4", "C3"),
+    "T8-T7": ("T8", "T7"),
+}
+
+
+def bipolar_pair(channel: Optional[str]) -> Optional[tuple[str, str]]:
+    """
+    Return the (minuend, subtrahend) electrodes for a bipolar channel spec.
+
+    ``"in-ear"`` resolves to ``("T8", "T7")``, matching the synthetic in-ear derivation used
+    for MDD and SAD. Returns ``None`` for any non-bipolar spec (``"all"``, a plain channel
+    name, or ``None``).
+
+    :param Optional[str] channel: The ``--channel`` value to resolve.
+    :return: The (minuend, subtrahend) electrode names, or ``None`` if ``channel`` is not a
+             bipolar spec.
+    :rtype: Optional[tuple[str, str]]
+    """
+    if channel == "in-ear":
+        return ("T8", "T7")
+    return BIPOLAR_CHANNELS.get(channel) if channel is not None else None
+
+
 LABEL_INT_MAP: dict[str, int] = {
     "normals": CanonicalLabel.HEALTHY,
     "anxiety": CanonicalLabel.ANXIETY_ONLY,
@@ -129,15 +157,20 @@ def load_and_preprocess_edf_file(
     if "A2-A1" in raw.ch_names:
         raw = raw.drop_channels(["A2-A1"])
 
-    if channel == "in-ear":
-        # Bipolar derivation: only T7 and T8 are needed; CAR over two electrodes is meaningless.
-        # Sign flip augmentation is applied in FlattenedRawEEGDataset (raw-EEG models only).
-        # Spectrogram models need no sign flip: log-magnitude STFT is polarity-invariant.
-        raw = raw.pick(["T7", "T8"])
-        pair_data = raw.get_data()  # (2, n_samples) — T7 at [0], T8 at [1]
+    pair = bipolar_pair(channel)
+    if pair is not None:
+        # Bipolar derivation: only the two named electrodes are needed; CAR over two
+        # electrodes is meaningless. Sign flip augmentation is applied in
+        # FlattenedRawEEGDataset (raw-EEG models only). Spectrogram models need no sign
+        # flip: log-magnitude STFT is polarity-invariant.
+        minuend, subtrahend = pair
+        # Index by name, not position: raw.pick()'s output order is not guaranteed.
+        raw = raw.pick([minuend, subtrahend])
+        pair_data = raw.get_data()
+        ch_index = {name: i for i, name in enumerate(raw.ch_names)}
         pair_data = detrend(pair_data, axis=1, type="linear")
-        inear_signal = pair_data[1] - pair_data[0]  # T8 - T7
-        data = inear_signal.reshape(1, -1)
+        bipolar_signal = pair_data[ch_index[minuend]] - pair_data[ch_index[subtrahend]]
+        data = bipolar_signal.reshape(1, -1)
     else:
         # Get all EEG channel data at once for shared preprocessing steps
         all_data = raw.get_data()  # (n_channels, n_samples)
@@ -751,12 +784,15 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
         df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
 
         # Determine which channels to use
-        if channel == "in-ear":
-            # Bipolar derivation: process T7 and T8 individually (preserves filter integrity),
-            # then subtract. Sign flip augmentation is applied in FlattenedRawEEGDataset (raw-EEG models only).
-            # Spectrogram models need no sign flip: log-magnitude STFT is polarity-invariant.
-            channels_to_use = ["T7", "T8"]
-            logger.info("Computing in-ear bipolar derivation (T8 - T7)")
+        pair = bipolar_pair(channel)
+        if pair is not None:
+            # Bipolar derivation: process the two electrodes individually (preserves filter
+            # integrity), then subtract. Sign flip augmentation is applied in
+            # FlattenedRawEEGDataset (raw-EEG models only). Spectrogram models need no sign
+            # flip: log-magnitude STFT is polarity-invariant.
+            minuend, subtrahend = pair
+            channels_to_use = [subtrahend, minuend]
+            logger.info(f"Computing bipolar derivation ({minuend} - {subtrahend})")
         elif channel == "all":
             # Use all 8 channels in canonical order
             channels_to_use = CANE_CHANNEL_ORDER
@@ -781,11 +817,11 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
             )
             processed_channels.append(processed_signal)
 
-        # For in-ear: subtract filtered channels to get bipolar derivation
-        if channel == "in-ear":
-            # processed_channels = [T7_filtered, T8_filtered]
-            inear_signal = processed_channels[1] - processed_channels[0]  # T8 - T7
-            processed_channels = [inear_signal]
+        # For bipolar specs: subtract filtered channels to get the bipolar derivation
+        if pair is not None:
+            # processed_channels = [subtrahend_filtered, minuend_filtered]
+            bipolar_signal = processed_channels[1] - processed_channels[0]  # minuend - subtrahend
+            processed_channels = [bipolar_signal]
 
         # Step 7: Chunk the signals at native sampling rate
         # Stack all channels together: (num_channels, n_samples)

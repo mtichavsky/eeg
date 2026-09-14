@@ -12,7 +12,7 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
     :param argparse.ArgumentParser parser: Parser or subparser to add arguments to.
     """
     # Import here to avoid circular dependencies
-    from thesis.dataset import CANEDataset, MDDDataset
+    from thesis.dataset import BIPOLAR_CHANNELS, CANEDataset, MDDDataset
 
     preproc_group = parser.add_argument_group("Preprocessing options")
     preproc_group.add_argument(
@@ -37,12 +37,15 @@ def add_preprocessing_args(parser: argparse.ArgumentParser) -> None:
         choices=list(
             set(MDDDataset.CHANNEL_MAPPING.values()) | set(CANEDataset.CHANNEL_MAPPING.values())
         )
-        + ["all", "in-ear"],
+        + ["all", "in-ear"]
+        + list(BIPOLAR_CHANNELS),
         default="all",
         help="Channel to use: specific channel name (Fp1, T7, etc.), 'all' for all 8 channels, "
-        "or 'in-ear' for in-ear EEG. When 'in-ear' is selected, CANE is replaced with real "
-        "IDUN in-ear recordings; MDD and SAD use synthetic bipolar derivation T8-T7. "
-        "Includes 50%% sign flip augmentation. "
+        "'in-ear' for in-ear EEG, or one of 'Fp2-Fp1', 'C4-C3', 'T8-T7': bipolar derivations "
+        "on all datasets, CANE from the 8-channel headset (unlike 'in-ear', which uses IDUN "
+        "for CANE). When 'in-ear' is selected, CANE is replaced with real IDUN in-ear "
+        "recordings; MDD and SAD use synthetic bipolar derivation T8-T7. All bipolar specs "
+        "include 50%% sign flip augmentation on raw-EEG models. "
         "When 'all' is selected, model receives 8-channel data.",
     )
     preproc_group.add_argument(

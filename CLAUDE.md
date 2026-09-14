@@ -24,6 +24,7 @@ Located at `/home/milan/Documents/diplomka/MDD/`. Files follow the naming patter
 - **Conditions**: EC (Eyes Closed), EO (Eyes Open), TASK - can train on single or combined (ec+eo)
 - **Channels**: 8 channels available (Fp1, Fp2, T7, T8, C3, C4, Cz, Oz) - can use all, select specific channel, or use synthetic in-ear channel
 - **In-ear channel**: Bipolar derivation T8 - T7 simulating IDUN-style in-ear EEG (use `--channel in-ear`)
+- **Bipolar montages**: `--channel Fp2-Fp1`, `--channel C4-C3`, `--channel T8-T7` — interhemispheric bipolar derivations (minuend − subtrahend), no CAR (meaningless over two electrodes). `T8-T7` is bit-identical to `in-ear` on this dataset
 - **Channel Naming**: Standardized to 10-20 system (T3→T7, T4→T8 for cross-dataset compatibility)
 - **Sampling**: 256 Hz (native rate of the EDF files, verified against all 181 headers), resampled to 250 Hz before the STFT
 - **Segments**: 10-second chunks (2560 samples each at the native rate)
@@ -35,10 +36,11 @@ Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern:
 - **AX** = Anxiety disorder
 - **Conditions**: ec (eyes closed), eo (eyes open) - lowercase, can train on single or combined (ec+eo)
 - **Channels**: Same 8 channels as MDD (standardized naming), plus synthetic in-ear option
+- **Bipolar montages**: `--channel Fp2-Fp1`, `--channel C4-C3`, `--channel T8-T7` — same derivations as MDD/SAD, but sourced from the 8-channel headset, **not** IDUN (unlike `in-ear`)
 - **Sampling**: 500 Hz
 - **Preprocessing**: Artifact removal optional via `--skip-artifact-removal` flag
 
-**IMPORTANT**: When using `--channel in-ear`, CANE is automatically replaced with IDUN real in-ear data (see below).
+**IMPORTANT**: When using `--channel in-ear`, CANE is automatically replaced with IDUN real in-ear data (see below). The bipolar montages (`Fp2-Fp1`, `C4-C3`, `T8-T7`) do **not** trigger this replacement — CANE is always loaded from the headset for those.
 
 ### 3. IDUN Dataset
 Located at `/home/milan/Documents/diplomka/IDUN_IN_EAR/`. Files follow pattern: `{class_dir}/{subject_id}/eeg_{subject_id}{condition}.csv`
@@ -376,6 +378,7 @@ The `MDDDataset` supports two modes:
 - In-ear channel: `(batch_size, 1, 2500)` - in-ear EEG
   - MDD/SAD: Synthetic bipolar derivation T8-T7
   - IDUN (replaces CANE): Real in-ear recordings from IDUN device
+- Bipolar montage (`Fp2-Fp1`, `C4-C3`, `T8-T7`): Same shape `(batch_size, 1, 2500)` as in-ear; CANE always from the headset (never IDUN); 50% sign flip augmentation applied like in-ear
 - Multi-channel: `(batch_size, 8, 2500)` - 8 channels × 2500 samples
 - Output from datasets as `batch['eeg']`
 - **Deformer/DeformerS** consume raw EEG directly `(batch, channels, num_time)` where `num_time = chunk_duration × 250`; they bypass `SpectrogramDataset`
@@ -384,6 +387,7 @@ The `MDDDataset` supports two modes:
 - Single channel (CNN_LSTM_DepCap, CNNLSTM): `(batch_size, 1, H, W)` where H=frequency bins, W=time frames
 - In-ear channel: Same as single channel `(batch_size, 1, H, W)` — **no** sign flip augmentation for spectrogram models
   - IDUN or synthetic in-ear depending on dataset
+- Bipolar montage (`Fp2-Fp1`, `C4-C3`, `T8-T7`): Same as single channel `(batch_size, 1, H, W)`; CANE always from the headset
 - Multi-channel (CNNLSTMAll, CNNAttnAll, CNNCatLSTM): `(batch_size, 8, H, W)` - 8 spectrograms, one per channel
 - Current shape: `(72, 41)` — `EXPECTED_SPECTROGRAM_SHAPE` in `thesis/stft.py`
 - Created via STFT in `SpectrogramDataset` or preprocessing
@@ -517,6 +521,13 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Bipolar surrogate ablation channels** (Sep 2026): `--channel Fp2-Fp1`, `--channel C4-C3`, `--channel T8-T7` add interhemispheric bipolar derivations alongside `in-ear`
+  - Motivation: the paper's in-ear result uses T8-T7 as a surrogate for real in-ear EEG on MDD/SAD; this ablation tests whether that specific electrode pair matters or whether any bipolar channel reaches similar accuracy
+  - `thesis/dataset.py`: `BIPOLAR_CHANNELS` dict + `bipolar_pair()` resolve a `--channel` spec to its (minuend, subtrahend) electrodes; `"in-ear"` resolves to `("T8", "T7")`. Explicit whitelist, not string-splitting on `-` (`in-ear` also contains a hyphen)
+  - `load_and_preprocess_edf_file()` (MDD/SAD) and `CANEDataset.load_and_preprocess_cane_raw_file()` (CANE) both branch on `bipolar_pair(channel) is not None` instead of the old `channel == "in-ear"` hardcode
+  - `T8-T7` on MDD/SAD is bit-identical to `in-ear` (same electrodes, same "no CAR" path) — verified in `tests/test_bipolar_channels.py`
+  - Unlike `in-ear`, the new bipolar specs do **not** trigger the CANE→IDUN swap in `main.py`: CANE is always loaded from the 8-channel headset for `Fp2-Fp1`/`C4-C3`/`T8-T7`, with a `logger.info` line making this explicit
+  - `is_inear` in `thesis/data_preparation.py` (drives raw-EEG sign-flip augmentation) now checks `bipolar_pair(channel) is not None`, so all three montages get the same augmentation as `in-ear`
 - **Selectable optimizer** (Sep 2026): `--optimizer` chooses between `adam` (default, unchanged behaviour) and `adamw` for the upcoming regularization sweep
   - Motivation: plain `Adam` couples `weight_decay` into the gradient, where Adam's per-parameter adaptive scaling largely cancels it out, making `--weight-decay` a weaker knob than its value suggests; `AdamW` decouples it
   - `create_optimizer()` in `thesis/model_factory.py` instantiates the chosen optimizer, preserving the `filter(lambda p: p.requires_grad, ...)` behaviour needed for `--freeze-cnn`/`--freeze-lstm`
