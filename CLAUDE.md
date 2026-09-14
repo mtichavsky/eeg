@@ -36,7 +36,7 @@ Located at `/home/milan/Documents/diplomka/CANE-dataset/`. Files follow pattern:
 - **AX** = Anxiety disorder
 - **Conditions**: ec (eyes closed), eo (eyes open) - lowercase, can train on single or combined (ec+eo)
 - **Channels**: Same 8 channels as MDD (standardized naming), plus synthetic in-ear option
-- **Bipolar montages**: `--channel Fp2-Fp1`, `--channel C4-C3`, `--channel T8-T7` — same derivations as MDD/SAD, but sourced from the 8-channel headset, **not** IDUN (unlike `in-ear`)
+- **Bipolar montages**: `--channel Fp2-Fp1`, `--channel C4-C3`, `--channel T8-T7` — same derivations as MDD/SAD, but sourced from the 8-channel headset, **not** IDUN (unlike `in-ear`). For these specs the initial per-channel z-score and CAR are skipped and the raw electrode voltages are subtracted first (`minuend − subtrahend`), matching MDD/SAD; only the resulting single derived channel then goes through detrend → artifact removal → bandpass → notch
 - **Sampling**: 500 Hz
 - **Preprocessing**: Artifact removal optional via `--skip-artifact-removal` flag
 
@@ -528,6 +528,7 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
   - `T8-T7` on MDD/SAD is bit-identical to `in-ear` (same electrodes, same "no CAR" path) — verified in `tests/test_bipolar_channels.py`
   - Unlike `in-ear`, the new bipolar specs do **not** trigger the CANE→IDUN swap in `main.py`: CANE is always loaded from the 8-channel headset for `Fp2-Fp1`/`C4-C3`/`T8-T7`, with a `logger.info` line making this explicit
   - `is_inear` in `thesis/data_preparation.py` (drives raw-EEG sign-flip augmentation) now checks `bipolar_pair(channel) is not None`, so all three montages get the same augmentation as `in-ear`
+  - CANE bipolar specs skip the initial per-channel z-score and CAR and subtract raw electrode columns before the single-channel pipeline, so common-mode content cancels exactly (per-channel z-scoring would scale each electrode by its own σ). Covered by synthetic-CSV tests in `tests/test_bipolar_channels.py::TestCANEBipolarCancellation`
 - **Selectable optimizer** (Sep 2026): `--optimizer` chooses between `adam` (default, unchanged behaviour) and `adamw` for the upcoming regularization sweep
   - Motivation: plain `Adam` couples `weight_decay` into the gradient, where Adam's per-parameter adaptive scaling largely cancels it out, making `--weight-decay` a weaker knob than its value suggests; `AdamW` decouples it
   - `create_optimizer()` in `thesis/model_factory.py` instantiates the chosen optimizer, preserving the `filter(lambda p: p.requires_grad, ...)` behaviour needed for `--freeze-cnn`/`--freeze-lstm`

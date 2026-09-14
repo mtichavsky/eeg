@@ -746,6 +746,11 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
         Preprocessing pipeline: CAR → detrend → artifact removal → bandpass filter (1-70 Hz)
         → notch filter (50 Hz) → chunking → z-score normalization.
 
+        For a bipolar spec (see :func:`bipolar_pair`), the initial per-channel z-score and CAR
+        are skipped entirely: the two raw electrode columns are subtracted first (matching
+        :func:`load_and_preprocess_edf_file` for MDD/SAD), and the resulting single derived
+        channel is the one that goes through detrend → artifact removal → bandpass → notch.
+
         :param Path file_path: Path to the CSV file to preprocess.
         :param str channel: Channel to use: specific channel name (e.g., "Fp1", "T7") or None.
         :param str artifact_method: Method for artifact removal ("interpolation", "clipping",
@@ -769,30 +774,49 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
         except ValueError as exc:
             raise ValueError(f"Error while processing {file_path}") from exc
 
-        # Step 1: Initial z-score normalization of raw ADC values
-        for ch in CANEDataset.CHANNELS:
-            if ch in df.columns:
-                df[ch] = zscore(df[ch])
+        # Bipolar specs must be resolved before Steps 1-2 below, since they skip both.
+        pair = bipolar_pair(channel)
 
-        # Step 2: Common Average Reference (before filtering to remove common noise)
-        if apply_car and all(ch in df.columns for ch in CANEDataset.CHANNELS):
-            car = df[CANEDataset.CHANNELS].mean(axis=1)
+        if pair is None:
+            # Step 1: Initial z-score normalization of raw ADC values
             for ch in CANEDataset.CHANNELS:
-                df[ch] = df[ch] - car
-            logger.info("Applied Common Average Reference")
+                if ch in df.columns:
+                    df[ch] = zscore(df[ch])
+
+            # Step 2: Common Average Reference (before filtering to remove common noise)
+            if apply_car and all(ch in df.columns for ch in CANEDataset.CHANNELS):
+                car = df[CANEDataset.CHANNELS].mean(axis=1)
+                for ch in CANEDataset.CHANNELS:
+                    df[ch] = df[ch] - car
+                logger.info("Applied Common Average Reference")
+        else:
+            # Bipolar derivation: skip the per-channel z-score and CAR above entirely. Both
+            # would corrupt the subtraction below: independent per-channel z-scoring rescales
+            # each electrode by its own sigma before the difference is taken, so
+            # T8/sigma(T8) - T7/sigma(T7) is not a true voltage difference whenever
+            # sigma(T8) != sigma(T7) (common-mode content no longer cancels); CAR mixes 1/8 of
+            # every other channel (e.g. a frontal blink on Fp1) into both electrodes before
+            # they are subtracted, leaking it into the "bipolar" signal instead of cancelling
+            # it. This matches load_and_preprocess_edf_file (MDD/SAD), which also subtracts
+            # raw, unscaled voltages with no CAR for its bipolar/in-ear channels.
+            logger.info("Bipolar channel: skipping initial z-score and CAR (raw voltage diff)")
 
         df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
 
         # Determine which channels to use
-        pair = bipolar_pair(channel)
         if pair is not None:
-            # Bipolar derivation: process the two electrodes individually (preserves filter
-            # integrity), then subtract. Sign flip augmentation is applied in
+            # Take the raw voltage difference now, before any filtering, so common-mode
+            # content shared by both electrodes cancels exactly. The resulting single derived
+            # channel is what goes through the standard single-channel pipeline below (once,
+            # not per-electrode) — sign flip augmentation is applied later in
             # FlattenedRawEEGDataset (raw-EEG models only). Spectrogram models need no sign
             # flip: log-magnitude STFT is polarity-invariant.
             minuend, subtrahend = pair
-            channels_to_use = [subtrahend, minuend]
-            logger.info(f"Computing bipolar derivation ({minuend} - {subtrahend})")
+            logger.info(
+                f"Computing bipolar derivation ({minuend} - {subtrahend}) from raw voltages"
+            )
+            df["__bipolar__"] = df[minuend].astype(float) - df[subtrahend].astype(float)
+            channels_to_use = ["__bipolar__"]
         elif channel == "all":
             # Use all 8 channels in canonical order
             channels_to_use = CANE_CHANNEL_ORDER
@@ -803,7 +827,10 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
         else:
             raise RuntimeError("Must specify 'channel' parameter")
 
-        # Process each channel through the preprocessing pipeline
+        # Process each channel through the preprocessing pipeline. For a bipolar spec,
+        # channels_to_use has exactly one entry (the derived difference signal above), so
+        # detrend -> artifact removal -> bandpass -> notch runs once on it, not once per
+        # electrode.
         processed_channels = []
         for ch in channels_to_use:
             signal = cast(np.ndarray, df[ch].values.astype(float))
@@ -816,12 +843,6 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
                 skip_artifact_removal,
             )
             processed_channels.append(processed_signal)
-
-        # For bipolar specs: subtract filtered channels to get the bipolar derivation
-        if pair is not None:
-            # processed_channels = [subtrahend_filtered, minuend_filtered]
-            bipolar_signal = processed_channels[1] - processed_channels[0]  # minuend - subtrahend
-            processed_channels = [bipolar_signal]
 
         # Step 7: Chunk the signals at native sampling rate
         # Stack all channels together: (num_channels, n_samples)
