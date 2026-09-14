@@ -229,6 +229,17 @@ def _base_cane_channels(n_samples: int, seed: int = 0) -> dict:
     return {f"d{i}": rng.normal(0, 1.0, n_samples) for i in range(1, 9)}
 
 
+def _cane_channels_with_t7_t8(t7: np.ndarray, t8: np.ndarray, seed: int = 0) -> dict:
+    """Baseline CANE channels with T7 (``"d3"``) and T8 (``"d7"``) replaced.
+
+    :param np.ndarray t7: Samples for T7.
+    :param np.ndarray t8: Samples for T8.
+    :param int seed: Seed for the baseline noise on the other channels.
+    :return: Dict mapping ``"d1"``..``"d8"`` to sample arrays.
+    """
+    return {**_base_cane_channels(len(t7), seed), "d3": t7, "d7": t8}
+
+
 class TestCANEBipolarCancellation:
     """CANE bipolar derivations must subtract raw electrode voltages, not per-channel
     z-scored/CAR'd ones. Otherwise common-mode content does not cancel when the two
@@ -253,9 +264,7 @@ class TestCANEBipolarCancellation:
     def test_common_mode_cancels_exactly_despite_sigma_mismatch(self, tmp_path):
         t7, t8 = self._t7_t8_with_sigma_mismatch()
 
-        channels = _base_cane_channels(self.N, seed=0)
-        channels["d3"] = t7  # T7
-        channels["d7"] = t8  # T8
+        channels = _cane_channels_with_t7_t8(t7, t8)
         file_path = _write_cane_csv(tmp_path, "sigma_mismatch.csv", channels)
         bipolar = CANEDataset.load_and_preprocess_cane_raw_file(
             file_path, channel="T8-T7", chunk_samples=self.N
@@ -267,9 +276,7 @@ class TestCANEBipolarCancellation:
         # first file: (t8 - t7) - 0 == t8 - t7. The two must therefore produce the same
         # output -- proof the common-mode content cancels exactly, independent of the
         # sigma mismatch.
-        diff_channels = _base_cane_channels(self.N, seed=0)
-        diff_channels["d3"] = np.zeros(self.N)
-        diff_channels["d7"] = t8 - t7
+        diff_channels = _cane_channels_with_t7_t8(np.zeros(self.N), t8 - t7)
         diff_file_path = _write_cane_csv(tmp_path, "diff_only.csv", diff_channels)
         bipolar_from_diff = CANEDataset.load_and_preprocess_cane_raw_file(
             diff_file_path, channel="T8-T7", chunk_samples=self.N
@@ -285,9 +292,7 @@ class TestCANEBipolarCancellation:
         written.
         """
         t7, t8 = self._t7_t8_with_sigma_mismatch()
-        channels = _base_cane_channels(self.N, seed=0)
-        channels["d3"] = t7
-        channels["d7"] = t8
+        channels = _cane_channels_with_t7_t8(t7, t8)
         df = pd.DataFrame({"timestamp": np.arange(self.N) * (1000.0 / CANEDataset.FS), **channels})
 
         # Old (buggy) steps: per-channel z-score, then CAR, on raw ADC columns.
@@ -324,14 +329,10 @@ class TestCANEBipolarCancellation:
         """
         t7, t8 = self._t7_t8_with_sigma_mismatch()
 
-        clean_channels = _base_cane_channels(self.N, seed=0)
-        clean_channels["d3"] = t7
-        clean_channels["d7"] = t8
+        clean_channels = _cane_channels_with_t7_t8(t7, t8)
         clean_path = _write_cane_csv(tmp_path, "clean_fp1.csv", clean_channels)
 
-        artifact_channels = _base_cane_channels(self.N, seed=0)
-        artifact_channels["d3"] = t7
-        artifact_channels["d7"] = t8
+        artifact_channels = _cane_channels_with_t7_t8(t7, t8)
         artifact_channels["d1"] = artifact_channels["d1"].copy()
         artifact_channels["d1"][self.N // 2] += 5000.0  # large spike on Fp1 only
         artifact_path = _write_cane_csv(tmp_path, "artifact_fp1.csv", artifact_channels)

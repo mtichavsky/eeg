@@ -746,10 +746,9 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
         Preprocessing pipeline: CAR → detrend → artifact removal → bandpass filter (1-70 Hz)
         → notch filter (50 Hz) → chunking → z-score normalization.
 
-        For a bipolar spec (see :func:`bipolar_pair`), the initial per-channel z-score and CAR
-        are skipped entirely: the two raw electrode columns are subtracted first (matching
-        :func:`load_and_preprocess_edf_file` for MDD/SAD), and the resulting single derived
-        channel is the one that goes through detrend → artifact removal → bandpass → notch.
+        For a bipolar spec (see :func:`bipolar_pair`), the initial z-score and CAR are skipped:
+        the raw electrode columns are subtracted first and only the derived signal goes through
+        the single-channel pipeline, matching :func:`load_and_preprocess_edf_file` (MDD/SAD).
 
         :param Path file_path: Path to the CSV file to preprocess.
         :param str channel: Channel to use: specific channel name (e.g., "Fp1", "T7") or None.
@@ -774,10 +773,21 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
         except ValueError as exc:
             raise ValueError(f"Error while processing {file_path}") from exc
 
-        # Bipolar specs must be resolved before Steps 1-2 below, since they skip both.
         pair = bipolar_pair(channel)
-
-        if pair is None:
+        if pair is not None:
+            # Bipolar derivation from raw voltages. Per-channel z-scoring would scale each
+            # electrode by its own sigma and CAR would mix other channels in, so common-mode
+            # content would no longer cancel. Sign flip augmentation is applied in
+            # FlattenedRawEEGDataset (raw-EEG models only). Spectrogram models need no sign
+            # flip: log-magnitude STFT is polarity-invariant.
+            minuend, subtrahend = pair
+            logger.info(f"Computing bipolar derivation ({minuend} - {subtrahend})")
+            columns = CANEDataset.REVERSE_CHANNEL_MAPPING
+            signals = {
+                f"{minuend}-{subtrahend}": df[columns[minuend]].to_numpy(dtype=float)
+                - df[columns[subtrahend]].to_numpy(dtype=float)
+            }
+        else:
             # Step 1: Initial z-score normalization of raw ADC values
             for ch in CANEDataset.CHANNELS:
                 if ch in df.columns:
@@ -789,60 +799,33 @@ class CANEDataset(_PicklableLRUCacheMixin, Dataset):
                 for ch in CANEDataset.CHANNELS:
                     df[ch] = df[ch] - car
                 logger.info("Applied Common Average Reference")
-        else:
-            # Bipolar derivation: skip the per-channel z-score and CAR above entirely. Both
-            # would corrupt the subtraction below: independent per-channel z-scoring rescales
-            # each electrode by its own sigma before the difference is taken, so
-            # T8/sigma(T8) - T7/sigma(T7) is not a true voltage difference whenever
-            # sigma(T8) != sigma(T7) (common-mode content no longer cancels); CAR mixes 1/8 of
-            # every other channel (e.g. a frontal blink on Fp1) into both electrodes before
-            # they are subtracted, leaking it into the "bipolar" signal instead of cancelling
-            # it. This matches load_and_preprocess_edf_file (MDD/SAD), which also subtracts
-            # raw, unscaled voltages with no CAR for its bipolar/in-ear channels.
-            logger.info("Bipolar channel: skipping initial z-score and CAR (raw voltage diff)")
 
-        df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
+            df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
 
-        # Determine which channels to use
-        if pair is not None:
-            # Take the raw voltage difference now, before any filtering, so common-mode
-            # content shared by both electrodes cancels exactly. The resulting single derived
-            # channel is what goes through the standard single-channel pipeline below (once,
-            # not per-electrode) — sign flip augmentation is applied later in
-            # FlattenedRawEEGDataset (raw-EEG models only). Spectrogram models need no sign
-            # flip: log-magnitude STFT is polarity-invariant.
-            minuend, subtrahend = pair
-            logger.info(
-                f"Computing bipolar derivation ({minuend} - {subtrahend}) from raw voltages"
-            )
-            df["__bipolar__"] = df[minuend].astype(float) - df[subtrahend].astype(float)
-            channels_to_use = ["__bipolar__"]
-        elif channel == "all":
-            # Use all 8 channels in canonical order
-            channels_to_use = CANE_CHANNEL_ORDER
-            logger.info(f"Loading all {len(channels_to_use)} channels in canonical order")
-        elif channel is not None:
-            channels_to_use = [channel]
-            logger.info(f"Picking {channel} channel")
-        else:
-            raise RuntimeError("Must specify 'channel' parameter")
+            # Determine which channels to use
+            if channel == "all":
+                # Use all 8 channels in canonical order
+                channels_to_use = CANE_CHANNEL_ORDER
+                logger.info(f"Loading all {len(channels_to_use)} channels in canonical order")
+            elif channel is not None:
+                channels_to_use = [channel]
+                logger.info(f"Picking {channel} channel")
+            else:
+                raise RuntimeError("Must specify 'channel' parameter")
+            signals = {ch: cast(np.ndarray, df[ch].values.astype(float)) for ch in channels_to_use}
 
-        # Process each channel through the preprocessing pipeline. For a bipolar spec,
-        # channels_to_use has exactly one entry (the derived difference signal above), so
-        # detrend -> artifact removal -> bandpass -> notch runs once on it, not once per
-        # electrode.
-        processed_channels = []
-        for ch in channels_to_use:
-            signal = cast(np.ndarray, df[ch].values.astype(float))
-            processed_signal = CANEDataset._process_single_channel(
+        # Process each channel through the preprocessing pipeline
+        processed_channels = [
+            CANEDataset._process_single_channel(
                 signal,
-                ch,
+                name,
                 file_path,
                 artifact_method,
                 artifact_threshold,
                 skip_artifact_removal,
             )
-            processed_channels.append(processed_signal)
+            for name, signal in signals.items()
+        ]
 
         # Step 7: Chunk the signals at native sampling rate
         # Stack all channels together: (num_channels, n_samples)
