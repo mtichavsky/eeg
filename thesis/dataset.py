@@ -18,6 +18,7 @@ from torch.utils.data import Dataset
 from thesis.labels import CanonicalLabel
 from thesis.stft import (
     CHUNK_DURATION_SEC,
+    FREQ_CUTOFF_HZ,
     compute_log_spectrogram,
     resample_to_length,
 )
@@ -1481,9 +1482,11 @@ class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
     Takes an MDDDataset and converts EEG chunks to spectrograms using Short-Time Fourier
     Transform (STFT). Currently, extracts only the first channel from multichannel EEG data.
 
-    All STFT parameters are fixed in :mod:`thesis.stft`; the only per-dataset input is
-    ``source_fs``, which drives resampling to the common rate before the transform. This keeps
+    Most STFT parameters are fixed in :mod:`thesis.stft`; the per-dataset input is
+    ``source_fs``, which drives resampling to the common rate before the transform, keeping
     the frequency axis aligned across datasets with different native sampling rates.
+    ``freq_cutoff_hz`` is configurable per instance (not a module constant) for
+    frequency-cutoff ablations, and survives pickling to DataLoader worker processes.
     """
 
     def __init__(
@@ -1493,6 +1496,7 @@ class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
         cache_size: int = DEFAULT_CACHE_SIZE,
         augmentation: Optional[Callable] = None,
         channel: Optional[str] = "all",
+        freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
     ):
         """
         Initialize the SpectrogramDataset.
@@ -1509,11 +1513,15 @@ class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
         :param Optional[str] channel: Channel mode. When "in-ear", applies 50%% sign flip
                augmentation per chunk to handle polarity ambiguity (always enabled regardless
                of augmentation).
+        :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Defaults to
+               :data:`thesis.stft.FREQ_CUTOFF_HZ` (70 Hz). Stored on the instance (not a module
+               constant) so it survives pickling to DataLoader worker processes.
         """
         self.dataset = dataset
         self.source_fs = source_fs
         self.augmentation = augmentation
         self.is_inear: bool = channel == "in-ear"
+        self.freq_cutoff_hz = freq_cutoff_hz
 
         # Disable caching only when augmentation is enabled (requires fresh randomness).
         if augmentation is None:
@@ -1527,6 +1535,7 @@ class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
         source_fs: float,
         augmentation: Optional[Callable] = None,
         is_inear: bool = False,
+        freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
     ) -> list[torch.Tensor]:
         """
         Convert EEG tensor to list of spectrograms using STFT.
@@ -1535,9 +1544,9 @@ class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
         Processes channels to create spectrograms.
 
         Each channel is resampled from ``source_fs`` to :data:`thesis.stft.MODEL_FS` before the
-        transform and cropped to :data:`thesis.stft.FREQ_CUTOFF_HZ`, so the frequency axis is
-        identical across datasets regardless of their native sampling rate. STFT parameters come
-        from :mod:`thesis.stft` and are not configurable per call site.
+        transform and cropped to ``freq_cutoff_hz``, so the frequency axis is identical across
+        datasets regardless of their native sampling rate. All other STFT parameters come from
+        :mod:`thesis.stft` and are not configurable per call site.
 
         :param torch.Tensor tensor: EEG tensor with shape (num_chunks, num_channels, samples).
         :param float source_fs: Native sampling rate of the input in Hz.
@@ -1545,8 +1554,10 @@ class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
                before STFT conversion.
         :param bool is_inear: If True, applies 50%% sign flip per chunk to handle in-ear
                polarity ambiguity (independent of augmentation flag).
+        :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Defaults to
+               :data:`thesis.stft.FREQ_CUTOFF_HZ` (70 Hz).
         :return: List of spectrogram tensors, each with shape
-                 (num_channels, NUM_FREQ_BINS, time_frames).
+                 (num_channels, num_freq_bins(freq_cutoff_hz), time_frames).
         :rtype: list[torch.Tensor]
         """
         spectograms = []
@@ -1564,7 +1575,9 @@ class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
                 if augmentation is not None:
                     channel_data = augmentation(channel_data)
 
-                channel_spectrograms.append(compute_log_spectrogram(channel_data, source_fs))
+                channel_spectrograms.append(
+                    compute_log_spectrogram(channel_data, source_fs, freq_cutoff_hz)
+                )
 
             # Stack: (num_channels, H, W)
             spec_tensor = torch.tensor(np.stack(channel_spectrograms), dtype=torch.float32)
@@ -1596,6 +1609,7 @@ class SpectrogramDataset(_PicklableLRUCacheMixin, Dataset):
             self.source_fs,
             self.augmentation,
             self.is_inear,
+            self.freq_cutoff_hz,
         )
         return spectograms, item["label"], item["subject"]
 

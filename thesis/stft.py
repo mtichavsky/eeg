@@ -7,7 +7,10 @@ rate. The bin width is ``fs / nperseg``, so without the resample a 500 Hz datase
 one would put the same frequency on different rows.
 
 Rows above :data:`FREQ_CUTOFF_HZ` are dropped: the preprocessing band-pass is 1-70 Hz, so those
-bins carry only filter roll-off and numerical noise.
+bins carry only filter roll-off and numerical noise. :data:`FREQ_CUTOFF_HZ` (and the constants
+derived from it) is the default assumed everywhere else in the codebase, but it can be lowered
+per run for frequency ablations via :func:`compute_log_spectrogram`'s ``freq_cutoff_hz``
+parameter — see :func:`num_freq_bins` and :func:`spectrogram_shape`.
 """
 
 import numpy as np
@@ -38,12 +41,38 @@ STFT_HOP: int = STFT_NPERSEG - STFT_NOVERLAP
 #: Width of one frequency bin in Hz (``MODEL_FS / STFT_NPERSEG``) = 0.9766 Hz.
 FREQ_BIN_WIDTH_HZ: float = MODEL_FS / STFT_NPERSEG
 
-#: Number of frequency bins kept, i.e. bins whose centre frequency is <= FREQ_CUTOFF_HZ.
-#: Bin ``i`` is centred at ``i * FREQ_BIN_WIDTH_HZ``, so the last kept bin is 69.34 Hz.
-NUM_FREQ_BINS: int = int(FREQ_CUTOFF_HZ / FREQ_BIN_WIDTH_HZ) + 1
-
 #: Number of samples in a chunk once resampled to MODEL_FS.
 CHUNK_SAMPLES: int = int(CHUNK_DURATION_SEC * MODEL_FS)
+
+
+def num_freq_bins(freq_cutoff_hz: float = FREQ_CUTOFF_HZ) -> int:
+    """
+    Number of STFT bins whose centre frequency is <= ``freq_cutoff_hz``.
+
+    Bin ``i`` is centred at ``i * FREQ_BIN_WIDTH_HZ``. Matches the mask used by
+    :func:`compute_log_spectrogram` (``freqs <= freq_cutoff_hz``) for any cutoff.
+
+    :param float freq_cutoff_hz: Highest frequency kept, in Hz.
+    :return: Number of frequency bins.
+    :rtype: int
+    """
+    return int(freq_cutoff_hz / FREQ_BIN_WIDTH_HZ) + 1
+
+
+def spectrogram_shape(freq_cutoff_hz: float = FREQ_CUTOFF_HZ) -> tuple[int, int]:
+    """
+    Spectrogram shape (frequency bins, time frames) for a canonical chunk at this cutoff.
+
+    :param float freq_cutoff_hz: Highest frequency kept, in Hz.
+    :return: Tuple of (num_freq_bins, NUM_TIME_FRAMES).
+    :rtype: tuple[int, int]
+    """
+    return (num_freq_bins(freq_cutoff_hz), NUM_TIME_FRAMES)
+
+
+#: Number of frequency bins kept, i.e. bins whose centre frequency is <= FREQ_CUTOFF_HZ.
+#: Bin ``i`` is centred at ``i * FREQ_BIN_WIDTH_HZ``, so the last kept bin is 69.34 Hz.
+NUM_FREQ_BINS: int = num_freq_bins()
 
 
 def stft_time_frames(num_samples: int) -> int:
@@ -69,7 +98,7 @@ def stft_time_frames(num_samples: int) -> int:
 NUM_TIME_FRAMES: int = stft_time_frames(CHUNK_SAMPLES)
 
 #: Spectrogram shape (frequency bins, time frames) every spectrogram model is built for.
-EXPECTED_SPECTROGRAM_SHAPE: tuple[int, int] = (NUM_FREQ_BINS, NUM_TIME_FRAMES)
+EXPECTED_SPECTROGRAM_SHAPE: tuple[int, int] = spectrogram_shape()
 
 
 def resample_to_length(signal: np.ndarray, target_samples: int, axis: int = -1) -> np.ndarray:
@@ -109,16 +138,21 @@ def resample_to_model_fs(signal: np.ndarray, source_fs: float) -> np.ndarray:
     return resample_to_length(signal, int(round(len(signal) * MODEL_FS / source_fs)))
 
 
-def compute_log_spectrogram(signal: np.ndarray, source_fs: float) -> np.ndarray:
+def compute_log_spectrogram(
+    signal: np.ndarray, source_fs: float, freq_cutoff_hz: float = FREQ_CUTOFF_HZ
+) -> np.ndarray:
     """
     Convert a 1-D EEG signal to a cropped log-magnitude spectrogram.
 
     Pipeline: resample to :data:`MODEL_FS` → STFT with the canonical parameters →
-    ``log1p(abs(...))`` → drop bins above :data:`FREQ_CUTOFF_HZ`.
+    ``log1p(abs(...))`` → drop bins above ``freq_cutoff_hz``.
 
     :param np.ndarray signal: 1-D EEG signal at ``source_fs``.
     :param float source_fs: Native sampling rate of ``signal`` in Hz.
-    :return: Log-magnitude spectrogram of shape ``(NUM_FREQ_BINS, time_frames)``.
+    :param float freq_cutoff_hz: Highest frequency kept, in Hz. Defaults to
+           :data:`FREQ_CUTOFF_HZ` (70 Hz), the value every other default in this module
+           assumes. Lower it for frequency-cutoff ablations.
+    :return: Log-magnitude spectrogram of shape ``(num_freq_bins(freq_cutoff_hz), time_frames)``.
     :rtype: np.ndarray
     """
     resampled = resample_to_model_fs(signal, source_fs)
@@ -131,4 +165,4 @@ def compute_log_spectrogram(signal: np.ndarray, source_fs: float) -> np.ndarray:
         window=STFT_WINDOW,
     )
 
-    return np.asarray(np.log1p(np.abs(Zxx))[freqs <= FREQ_CUTOFF_HZ])
+    return np.asarray(np.log1p(np.abs(Zxx))[freqs <= freq_cutoff_hz])

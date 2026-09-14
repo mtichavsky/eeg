@@ -445,17 +445,31 @@ Applied to each MDD/SAD .edf file (`load_and_preprocess_edf_file`):
 
 **Spectrogram Generation (`thesis/stft.py`):**
 
-All parameters are fixed constants in `thesis/stft.py`, imported by both the training path
-(`SpectrogramDataset`) and the inference path (`preprocess_and_infer`). The only per-dataset
-input is `source_fs`.
+Most parameters are fixed constants in `thesis/stft.py`, imported by both the training path
+(`SpectrogramDataset`) and the inference path (`preprocess_and_infer`). The per-dataset input is
+`source_fs`; the frequency cutoff is overridable per run via `--freq-cutoff` (see below).
 
 1. **Resample to `MODEL_FS` (250 Hz)** — CANE (500 Hz) and MDD/SAD (256 Hz) are resampled via
    `scipy.signal.resample`; only IDUN is already at 250 Hz and passes through untouched
 2. `scipy.signal.stft()` with `nperseg=256`, `noverlap=192`, Hamming window
 3. Log-magnitude: `log1p(abs(Zxx))` for better dynamic range
-4. **Crop to `FREQ_CUTOFF_HZ` (70 Hz)** — drops bins 72+, which carry only band-pass roll-off
+4. **Crop to `FREQ_CUTOFF_HZ` (70 Hz default)** — drops bins above the cutoff, which carry only
+   band-pass roll-off (at 70 Hz) or, at a lower ablation cutoff, frequencies deliberately excluded
 
-Result: `(72, 41)`, with a bin width of 0.977 Hz spanning 0–69.34 Hz **for every dataset**.
+Result at the default 70 Hz: `(72, 41)`, with a bin width of 0.977 Hz spanning 0–69.34 Hz **for
+every dataset**. The cutoff is overridable per run via `--freq-cutoff` (both `train` and `run`,
+range `[21, 70]` — below ~21 Hz the spectrogram CNN has no rows left to build its layers from);
+`thesis.stft.spectrogram_shape(freq_cutoff_hz)` gives the resulting shape (e.g. 30 Hz → `(31,
+41)`). Every checkpoint's `fold_N_best.pth` records the `freq_cutoff_hz` it was trained with
+(missing the key means 70, the pre-ablation default); `main.py run` raises if `--freq-cutoff`
+doesn't match a loaded checkpoint's recorded value. This isn't preventing a silent failure —
+`create_model` loads weights with `strict=False`, but PyTorch raises a `RuntimeError` on any
+shape mismatch regardless of `strict` (`strict=False` only suppresses missing/unexpected
+*keys*, not mismatched-shape ones) — the check exists to turn that eventual opaque
+"size mismatch for proj.weight: ..." error into an actionable one before we get there.
+Raw-EEG models (`RAW_EEG_MODELS`) never build a spectrogram, so they don't record, check, or
+print `freq_cutoff_hz` at all — the flag is silently meaningless for them except for a
+warning logged when a non-default value is explicitly passed.
 
 **Why resample before the STFT?** `nperseg` fixes the *number* of frequency bins, not their
 width — that is `true_fs / nperseg`. Previously each dataset used its own `noverlap` chosen only
@@ -521,6 +535,14 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Frequency-cutoff ablation** (Sep 2026): `--freq-cutoff` (default 70, range `[21, 70]`) makes the spectrogram's upper frequency bound overridable per run, for testing whether results depend on the EMG-dominated gamma range (e.g. `--freq-cutoff 30`)
+  - Motivation: scalp EMG from jaw/forehead/neck muscles dominates EEG above ~20 Hz (Whitham et al. 2007); retraining with gamma cropped out — rather than post-hoc occlusion — tests whether accuracy depends on that band without ever showing the model an unnatural input (avoids the ROAR/Hooker extrapolation critique of permutation methods)
+  - `thesis/stft.py`: `num_freq_bins(freq_cutoff_hz)` and `spectrogram_shape(freq_cutoff_hz)` compute geometry for any cutoff; `NUM_FREQ_BINS`/`EXPECTED_SPECTROGRAM_SHAPE` are just these evaluated at the 70 Hz default. `compute_log_spectrogram()` takes `freq_cutoff_hz` as its third parameter
+  - `SpectrogramDataset` stores `freq_cutoff_hz` **on the instance**, not as a module constant — `forkserver` DataLoader workers re-import modules, so a module-level override would never reach them; the instance attribute survives pickling via the existing `_PicklableLRUCacheMixin`
+  - Threaded through `thesis/data_preparation.py`'s `prepare_*_dataset()` functions and `main.py`'s `train_cross_validation()`/`train_one_fold()` like `chunk_duration`; ignored (with a logged warning if non-default) for `RAW_EEG_MODELS`, which never build spectrograms — raw-EEG checkpoints never record a `freq_cutoff_hz` key, `main.py run` skips the cutoff check entirely for them, and `train()`'s config dump omits `freq_cutoff` from both the console log and `results.txt` for them
+  - Every `fold_N_best.pth` checkpoint now records the `freq_cutoff_hz` it was trained with (a missing key means 70, the pre-ablation default); `main.py run` raises if `--freq-cutoff` doesn't match a loaded checkpoint's recorded value. `create_model` loads weights with `strict=False`, but PyTorch raises a `RuntimeError` on any shape mismatch regardless of `strict` (`strict=False` only suppresses missing/unexpected *keys*, not mismatched-shape ones), so this check isn't preventing a silent failure — it replaces an opaque low-level "size mismatch for proj.weight: ..." error with an actionable one
+  - `--freq-cutoff` is validated to `[21, 70]`: below ~21 Hz (`spectrogram_shape` height 21) the CNN's conv/pool stack would need a negative dimension and fails to build; above 70 is meaningless after the 1–70 Hz band-pass
+  - Tests in `tests/test_freq_cutoff.py` cover bin-count/mask agreement, the 70 Hz default being unchanged, crop-consistency (a lower cutoff is a strict row-prefix of the 70 Hz spectrogram), model construction at reduced/minimum/below-minimum shapes, CLI range validation, and pickling
 - **Bipolar surrogate ablation channels** (Sep 2026): `--channel Fp2-Fp1`, `--channel C4-C3`, `--channel T8-T7` add interhemispheric bipolar derivations alongside `in-ear`
   - Motivation: the paper's in-ear result uses T8-T7 as a surrogate for real in-ear EEG on MDD/SAD; this ablation tests whether that specific electrode pair matters or whether any bipolar channel reaches similar accuracy
   - `thesis/dataset.py`: `BIPOLAR_CHANNELS` dict + `bipolar_pair()` resolve a `--channel` spec to its (minuend, subtrahend) electrodes; `"in-ear"` resolves to `("T8", "T7")`. Explicit whitelist, not string-splitting on `-` (`in-ear` also contains a hyphen)
