@@ -6,12 +6,19 @@ Verifies:
 - ``T8-T7`` on MDD/SAD is bit-identical to ``in-ear`` (same electrodes, same "no CAR" path).
 - A bipolar derivation equals the difference of its two electrodes preprocessed independently.
 - CANE bipolar derivations produce sane, distinguishable output.
+- CANE bipolar derivations subtract raw electrode voltages (no initial per-channel z-score,
+  no CAR) so common-mode content cancels exactly even when the two electrodes have very
+  different noise scales, and are unaffected by artifacts on unrelated channels -- using
+  synthetic CANE-format CSVs, no real dataset required.
 
 The equivalence/derivation/CANE tests need real recordings and are skipped when the
 corresponding dataset directory is absent (e.g. in CI or a machine without the thesis data).
+The synthetic-CSV cancellation tests need no dataset and always run.
 """
 
 import mne
+import numpy as np
+import pandas as pd
 import pytest
 import torch
 from scipy.signal import detrend
@@ -188,3 +195,171 @@ class TestCANEBipolarDerivations:
         fp2_fp1 = CANEDataset.load_and_preprocess_cane_raw_file(file_path, channel="Fp2-Fp1")
         n = min(len(t8_t7), len(fp2_fp1))
         assert not torch.equal(t8_t7[:n], fp2_fp1[:n])
+
+
+def _write_cane_csv(tmp_path, filename: str, channels: dict):
+    """Write a synthetic CANE-format CSV.
+
+    :param tmp_path: pytest ``tmp_path`` fixture directory to write into.
+    :param str filename: Name of the CSV file to create.
+    :param dict channels: Maps raw CANE column names (``"d1"``..``"d8"``) to sample arrays.
+           A ``"timestamp"`` column (milliseconds, exactly ``CANEDataset.FS`` Hz spacing) is
+           added automatically, satisfying ``CANEDataset.verify_sampling_rate``.
+    :return: Path to the written CSV file.
+    """
+    n_samples = len(next(iter(channels.values())))
+    t_ms = np.arange(n_samples) * (1000.0 / CANEDataset.FS)
+    data = {"timestamp": t_ms}
+    data.update(channels)
+    path = tmp_path / filename
+    pd.DataFrame(data).to_csv(path, index=False)
+    return path
+
+
+def _base_cane_channels(n_samples: int, seed: int = 0) -> dict:
+    """Baseline arrays (small independent Gaussian noise) for all 8 raw CANE channels.
+
+    Tests overwrite specific channels (e.g. ``"d3"``/``"d7"`` for T7/T8) to build scenarios.
+
+    :param int n_samples: Number of samples per channel.
+    :param int seed: Seed for the noise RNG, for reproducibility.
+    :return: Dict mapping ``"d1"``..``"d8"`` to noise arrays.
+    """
+    rng = np.random.RandomState(seed)
+    return {f"d{i}": rng.normal(0, 1.0, n_samples) for i in range(1, 9)}
+
+
+class TestCANEBipolarCancellation:
+    """CANE bipolar derivations must subtract raw electrode voltages, not per-channel
+    z-scored/CAR'd ones. Otherwise common-mode content does not cancel when the two
+    electrodes have different noise scales, and unrelated channels can leak in via CAR.
+    Uses synthetic CANE-format CSVs (``tmp_path``), so no real dataset is required.
+    """
+
+    N = 1000  # 2 s at CANEDataset.FS (500 Hz); short enough to keep the test fast.
+
+    def _t7_t8_with_sigma_mismatch(self):
+        """Common 10 Hz component shared by T7/T8 at equal raw amplitude, but with very
+        different independent noise scales (std 1 vs std 100) -- so per-channel z-scoring
+        (dividing by each electrode's own total sigma) would rescale the shared component
+        very differently on each electrode before any subtraction.
+        """
+        t = np.arange(self.N)
+        common = 50.0 * np.sin(2 * np.pi * 10 * t / CANEDataset.FS)
+        t7_noise = np.random.RandomState(1).normal(0, 1.0, self.N)
+        t8_noise = np.random.RandomState(2).normal(0, 100.0, self.N)
+        return common + t7_noise, common + t8_noise
+
+    def test_common_mode_cancels_exactly_despite_sigma_mismatch(self, tmp_path):
+        t7, t8 = self._t7_t8_with_sigma_mismatch()
+
+        channels = _base_cane_channels(self.N, seed=0)
+        channels["d3"] = t7  # T7
+        channels["d7"] = t8  # T8
+        file_path = _write_cane_csv(tmp_path, "sigma_mismatch.csv", channels)
+        bipolar = CANEDataset.load_and_preprocess_cane_raw_file(
+            file_path, channel="T8-T7", chunk_samples=self.N
+        )
+
+        # A second file storing the raw difference directly as "T8" with "T7" zeroed. Since
+        # the fixed pipeline subtracts raw voltages (T8 - T7) before any per-channel
+        # rescaling or filtering, this is algebraically the same input signal as on the
+        # first file: (t8 - t7) - 0 == t8 - t7. The two must therefore produce the same
+        # output -- proof the common-mode content cancels exactly, independent of the
+        # sigma mismatch.
+        diff_channels = _base_cane_channels(self.N, seed=0)
+        diff_channels["d3"] = np.zeros(self.N)
+        diff_channels["d7"] = t8 - t7
+        diff_file_path = _write_cane_csv(tmp_path, "diff_only.csv", diff_channels)
+        bipolar_from_diff = CANEDataset.load_and_preprocess_cane_raw_file(
+            diff_file_path, channel="T8-T7", chunk_samples=self.N
+        )
+
+        assert torch.allclose(bipolar, bipolar_from_diff, atol=1e-6)
+
+    def test_old_per_channel_zscore_and_car_would_have_broken_cancellation(self, tmp_path):
+        """Regression guard: reimplements the pre-fix pipeline (z-score every channel, then
+        CAR, then process T7/T8 individually, then subtract) to show it does NOT reproduce
+        the raw-difference reference that the fixed pipeline matches exactly above --
+        confirming the old code was genuinely broken for this case, not just differently
+        written.
+        """
+        t7, t8 = self._t7_t8_with_sigma_mismatch()
+        channels = _base_cane_channels(self.N, seed=0)
+        channels["d3"] = t7
+        channels["d7"] = t8
+        df = pd.DataFrame({"timestamp": np.arange(self.N) * (1000.0 / CANEDataset.FS), **channels})
+
+        # Old (buggy) steps: per-channel z-score, then CAR, on raw ADC columns.
+        for ch in CANEDataset.CHANNELS:
+            df[ch] = zscore(df[ch])
+        car = df[CANEDataset.CHANNELS].mean(axis=1)
+        for ch in CANEDataset.CHANNELS:
+            df[ch] = df[ch] - car
+        df.rename(columns=CANEDataset.CHANNEL_MAPPING, inplace=True)
+
+        dummy_path = tmp_path / "dummy.csv"
+        t7_old = CANEDataset._process_single_channel(
+            df["T7"].values.astype(float), "T7", dummy_path, "interpolation", 4.0, False
+        )
+        t8_old = CANEDataset._process_single_channel(
+            df["T8"].values.astype(float), "T8", dummy_path, "interpolation", 4.0, False
+        )
+        old_bipolar = zscore(t8_old - t7_old)
+
+        # Reference: raw difference run through the single-channel pipeline once (what the
+        # fixed code does), then z-scored the same way the final chunk normalization does.
+        reference = zscore(
+            CANEDataset._process_single_channel(
+                t8 - t7, "T8-T7", dummy_path, "interpolation", 4.0, False
+            )
+        )
+
+        assert not np.allclose(old_bipolar, reference, atol=0.5)
+
+    def test_unaffected_by_artifact_on_unrelated_channel(self, tmp_path):
+        """Fp1 gets a large artifact in one file and none in the other; T8-T7 must be
+        identical between the two since the fixed pipeline never touches Fp1 (no CAR, no
+        shared z-score) when computing a bipolar derivation.
+        """
+        t7, t8 = self._t7_t8_with_sigma_mismatch()
+
+        clean_channels = _base_cane_channels(self.N, seed=0)
+        clean_channels["d3"] = t7
+        clean_channels["d7"] = t8
+        clean_path = _write_cane_csv(tmp_path, "clean_fp1.csv", clean_channels)
+
+        artifact_channels = _base_cane_channels(self.N, seed=0)
+        artifact_channels["d3"] = t7
+        artifact_channels["d7"] = t8
+        artifact_channels["d1"] = artifact_channels["d1"].copy()
+        artifact_channels["d1"][self.N // 2] += 5000.0  # large spike on Fp1 only
+        artifact_path = _write_cane_csv(tmp_path, "artifact_fp1.csv", artifact_channels)
+
+        clean_bipolar = CANEDataset.load_and_preprocess_cane_raw_file(
+            clean_path, channel="T8-T7", chunk_samples=self.N
+        )
+        artifact_bipolar = CANEDataset.load_and_preprocess_cane_raw_file(
+            artifact_path, channel="T8-T7", chunk_samples=self.N
+        )
+
+        assert torch.equal(clean_bipolar, artifact_bipolar)
+
+    def test_non_bipolar_paths_unaffected(self, tmp_path):
+        """Sanity/regression check: 'all' and single-channel CANE paths are untouched by the
+        bipolar fix (shape + finiteness only -- their code path did not change).
+        """
+        channels = _base_cane_channels(self.N, seed=0)
+        file_path = _write_cane_csv(tmp_path, "non_bipolar.csv", channels)
+
+        single = CANEDataset.load_and_preprocess_cane_raw_file(
+            file_path, channel="Fp1", chunk_samples=self.N
+        )
+        assert single.shape[1:] == (1, self.N)
+        assert torch.isfinite(single).all()
+
+        all_channels = CANEDataset.load_and_preprocess_cane_raw_file(
+            file_path, channel="all", chunk_samples=self.N
+        )
+        assert all_channels.shape[1:] == (8, self.N)
+        assert torch.isfinite(all_channels).all()
