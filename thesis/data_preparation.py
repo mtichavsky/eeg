@@ -17,6 +17,7 @@ from thesis.dataset import (
     MDDDataset,
     SADDataset,
     SpectrogramDataset,
+    bipolar_pair,
 )
 from thesis.labels import LabelMapping
 
@@ -122,7 +123,7 @@ def _prepare_dataset_generic(
                     dataset,
                     target_samples=target_samples,
                     label_mapping=label_mapping,
-                    is_inear=(channel == "in-ear"),
+                    is_inear=bipolar_pair(channel) is not None,
                 )
             )
         else:
@@ -257,7 +258,7 @@ def prepare_cane_dataset(
                     cane_dataset,
                     target_samples=target_samples,
                     label_mapping=label_mapping,
-                    is_inear=(channel == "in-ear"),
+                    is_inear=bipolar_pair(channel) is not None,
                 )
             )
         else:
