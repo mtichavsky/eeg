@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#
+# Generic PBS job template for one training run on Metacentrum (PBS Pro).
+# One qsub submission = one experiment on one GPU; the scheduler places it
+# wherever a free GPU exists, so a whole sweep is just N independent
+# `qsub` calls (see ../run-bipolar-meta.sh / ../run-round1-atv4-meta.sh)
+# instead of manually picking CUDA_VISIBLE_DEVICES on a fixed 4-GPU box.
+#
+# Loosely follows the pattern of the old KNN-project jobs at
+# ~/mit/knn/p/metacentrum/{train_model_job,evaluate_job} (PBS -l select,
+# clean_scratch trap), adapted for this repo's Poetry env and CLI.
+#
+# Usage (do not qsub this file directly — EXP_NAME/MAIN_ARGS are required):
+#   qsub -N "$name" -v "EXP_NAME=$name,MAIN_ARGS=$args" metacentrum/train_job.pbs
+#
+#PBS -N eeg_train
+#PBS -q gpu
+#PBS -l select=1:ncpus=2:ngpus=1:gpu_mem=20gb:mem=24gb:scratch_local=10gb
+#PBS -l walltime=24:00:00
+#PBS -j oe
+#PBS -m ae
+
+set -uo pipefail
+
+# ---- EDIT THESE ONCE, to match your actual Metacentrum account ----------
+# Find your storage with: ssh <frontend> 'ls -d /storage/*/home/$USER 2>/dev/null'
+STORAGE_HOME="/storage/brno2/home/${PBS_O_LOGNAME}"
+REPO_DIR="$STORAGE_HOME/eeg-code"        # git clone target, see setup steps
+DATA_DIR="$STORAGE_HOME/eeg-data"        # must contain MDD/ CANE/ SAD/ IDUN_IN_EAR/
+PYTHON_MODULE="Python/3.12.3-GCCcore-13.3.0"
+CUDA_MODULE="CUDA/12.6.0"
+# ---------------------------------------------------------------------------
+
+: "${EXP_NAME:?set via qsub -v EXP_NAME=...}"
+: "${MAIN_ARGS:?set via qsub -v MAIN_ARGS=\"...\"}"
+
+trap 'clean_scratch' TERM EXIT
+cd "$SCRATCHDIR" || exit 2
+clean_scratch
+
+printf -- "-----------------------------------------------------------\n"
+printf "JOB ID:    %s\nJOB NAME:  %s\nNODE:      %s\nEXP:       %s\nSTART:     %s\n" \
+    "$PBS_JOBID" "$PBS_JOBNAME" "$HOSTNAME" "$EXP_NAME" "$(date +%Y-%m-%d_%H-%M)"
+printf "ARGS:      %s\n" "$MAIN_ARGS"
+printf -- "-----------------------------------------------------------\n"
+
+echo "Loading modules..."
+module add "$PYTHON_MODULE"
+module add "$CUDA_MODULE"
+
+echo "Activating shared venv at $REPO_DIR/.venv ..."
+cd "$REPO_DIR" || { echo "REPO_DIR $REPO_DIR not found - run the one-time setup first"; exit 2; }
+source .venv/bin/activate
+
+OUT_DIR="$STORAGE_HOME/experiments/$EXP_NAME"
+mkdir -p "$OUT_DIR"
+
+echo "Starting training: $EXP_NAME"
+# shellcheck disable=SC2086
+EEG_DATA_DIR="$DATA_DIR" python main.py train \
+    --checkpoint-dir="$OUT_DIR" $MAIN_ARGS \
+    2>&1 | tee "$OUT_DIR/stdout.log"
+
+echo "Done. Results in $OUT_DIR"
+clean_scratch
