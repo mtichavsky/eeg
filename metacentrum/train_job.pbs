@@ -16,19 +16,19 @@
 #PBS -N eeg_train
 #PBS -q gpu
 #PBS -l select=1:ncpus=2:ngpus=1:gpu_mem=20gb:mem=24gb:scratch_local=10gb
-#PBS -l walltime=24:00:00
+#PBS -l walltime=05:00:00
 #PBS -j oe
 #PBS -m ae
 
 set -uo pipefail
 
-# ---- EDIT THESE ONCE, to match your actual Metacentrum account ----------
-# Find your storage with: ssh <frontend> 'ls -d /storage/*/home/$USER 2>/dev/null'
+# ---- Matches the real layout confirmed on skirit.ics.muni.cz ------------
 STORAGE_HOME="/storage/brno2/home/${PBS_O_LOGNAME}"
-REPO_DIR="$STORAGE_HOME/eeg-code"        # git clone target, see setup steps
-DATA_DIR="$STORAGE_HOME/eeg-data"        # must contain MDD/ CANE/ SAD/ IDUN_IN_EAR/
-PYTHON_MODULE="Python/3.12.3-GCCcore-13.3.0"
-CUDA_MODULE="CUDA/12.6.0"
+REPO_DIR="$STORAGE_HOME/eeg"              # git clone target, see setup steps
+DATA_DIR="$STORAGE_HOME"                  # CANE/ MDD/ SAD/ IDUN_IN_EAR/ live directly here
+PYTHON_MODULE="python"                    # confirmed working: ~/.bash_history has `module load python`
+# No CUDA module needed: torch is installed from the pytorch-cuda (cu126) wheel,
+# which bundles its own CUDA runtime.
 # ---------------------------------------------------------------------------
 
 : "${EXP_NAME:?set via qsub -v EXP_NAME=...}"
@@ -46,7 +46,6 @@ printf -- "-----------------------------------------------------------\n"
 
 echo "Loading modules..."
 module add "$PYTHON_MODULE"
-module add "$CUDA_MODULE"
 
 echo "Activating shared venv at $REPO_DIR/.venv ..."
 cd "$REPO_DIR" || { echo "REPO_DIR $REPO_DIR not found - run the one-time setup first"; exit 2; }
