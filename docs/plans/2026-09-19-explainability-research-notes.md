@@ -13,9 +13,9 @@ facts from the Aug 16 catalogue, so nothing has to be re-derived.
 Companion plans that are **not** merged here: `2026-09-14-bipolar-surrogate-ablation.md` (plan A)
 and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83).
 
-**Last updated: 2026-09-19 (evening), after experiments A and B finished.**
+**Last updated: 2026-09-19 (late evening), after experiments A and B and the six single-dataset runs finished.**
 
-## TL;DR (2026-09-19 evening)
+## TL;DR (2026-09-19 late evening)
 
 1. **A (bipolar montage) and B (30 Hz cutoff) are done.** A: no montage is significantly better
    (min BH p = 0.50). B: cutting at 30 Hz costs 9.5 pp (CNN-AttnS in-ear, significant) and 5.6 pp
@@ -24,13 +24,22 @@ and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83)
    (always predict each dataset's majority class), the gain is +7 to +18 pp, MDD supplies
    +12 to +17 of it, and CANE sits at or below its base rate. At 30 Hz the MDD contribution
    survives (+12 to +14 pp) while CANE and SAD fall further below base rate (§4.3).
-3. **Objection 1 (dataset identity) is the open problem and the top priority.** The cheap checks
-   are built (PR #88, not yet run on the cluster). Nothing in the paper defends against it yet
-   beyond stating the decomposition.
-4. **Paper Section VII is up to date for A, B and the decomposition** (thesis-text PR #4,
-   open). Everything still to do is in red in the paper.
-5. **Known bug:** per-dataset sensitivity/specificity are mislabelled (§3.5). Fix is written
-   but uncommitted in a worktree; accuracy numbers are unaffected.
+3. **Single-dataset runs (objection 1) are done and change the reading of CANE (§3.6).** MDD
+   trained alone reaches 90.5 / 92.7 % balanced accuracy (EC / EO), so its result is not a
+   cross-dataset shortcut. CANE alone has plain accuracy *below* its 72 % majority rate but
+   balanced accuracy of 68.6 % (EC, BH p = 0.009) and 65.4 % (EO, p = 0.051), about the same as in
+   the combined model. SAD alone: 69.6 / 65.3 % (p = 0.020 / 0.009), 5 to 8 pp above its combined
+   value. So a weak anxiety signal exists in both setups; "at or below the majority rate" was a
+   statement about a metric the model is not trained for.
+4. **Still open for objection 1:** dataset-identity probe, shuffled labels, four-class
+   decomposition. The fold-rebuild harness they need was **dropped** (user decision: too much
+   code complexity); see §7.
+5. **Paper Section VII is up to date for A, B, the decomposition and the single-dataset runs**
+   (thesis-text PR #4, open). Whitham 2007 is cited. Everything still to do is in red.
+6. **Known bug:** per-dataset sensitivity/specificity are mislabelled (§3.5). Fix is PR #91
+   (open, by the parallel session code-c0); accuracy numbers are unaffected.
+7. **Cutoff curve (50 / 40 Hz, in-ear CNN-AttnS)** was submitted (jobs 23807556 / 23807557,
+   PR #90 merged). Results not yet analysed.
 
 ---
 
@@ -42,26 +51,27 @@ answer one of these:
 
 | # | Reviewer objection | Claim it threatens | Covered by |
 |---|---|---|---|
-| 1 | "The model learned which dataset a recording came from, not pathology." | Every accuracy, 4-class especially | Prior-baseline decomposition (§3.4, §4.3) only; **top priority, checks not run yet (§7)** |
+| 1 | "The model learned which dataset a recording came from, not pathology." | Every accuracy, 4-class especially | Prior-baseline decomposition (§3.4, §4.3) and single-dataset runs (§3.6); probe, shuffled labels and 4-class still open (§7) |
 | 2 | "Why would one in-ear channel match 8 channels?" | Headline in-ear result | A (done: §3) |
 | 3 | "It's reading artifacts (muscle, eye movement), not brain." | Clinical validity | B (muscle, partly: §4.4), A's EC/EO split (eye movement, not a valid test: §3.3) |
 | 4 | "Does it use the known biomarkers (alpha asymmetry, beta power)?" | Scientific credibility | C (candidate), asymmetry swap (candidate) |
 
 ---
 
-## 2. Status at a glance (2026-09-19 evening)
+## 2. Status at a glance (2026-09-19 late evening)
 
 | Exp. | What | Code | Runs | Result |
 |---|---|---|---|---|
 | **A** | Bipolar surrogate ablation (Fp2−Fp1 / C4−C3 / T8−T7 / in-ear) × EC / EO | ✅ In `main` (PR #82) | ✅ 8 runs, 2026-09-18. `experiments/all_040_*` | §3: no montage significantly better |
-| **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ In `main` (PR #83 flag, PR #89 launcher + summary) | ✅ 4 runs, 2026-09-19, ~30 min wall. `experiments/all_041_*` | §4: 30 Hz costs 5.6 to 9.5 pp |
+| **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ In `main` (PR #83 flag, PR #89 launcher + summary) | ✅ 4 runs, 2026-09-19, ~30 min wall. `experiments/all_041_*`. ⏳ curve points 50 / 40 Hz (in-ear CNN-AttnS, `all_042_inear_ec+eo_f{50,40}`, jobs 23807556/57, PR #90) | §4: 30 Hz costs 5.6 to 9.5 pp; curve pending |
 | **C** | Post-hoc band shuffle on saved checkpoints | ❌ | n/a (inference only) | Undecided (§6). Now unblocked: B saved 70 Hz AllTransformerV4 checkpoints |
-| Obj. 1 | Dataset-identity checks | ✅ Prior-baseline script, single-dataset launcher and summary in `main` (PR #88) | ⏳ 6 single-dataset runs `{cane,sad,mdd}_041_t8-t7_{ec,eo}` submitted 2026-09-19 (jobs 23807482–87); probe / shuffled labels / 4-class not built | §3.4, §4.3 (decomposition only) |
-| Bug | `main.py:259` swapped args | ⚠️ Fix + `tests/test_per_dataset_eval.py` being opened as a PR (branch `fix/per-dataset-metrics-arg-order`) | n/a; the 6 single-dataset runs predate the fix (their summary uses chunk metrics, unaffected) | §3.5 |
+| Obj. 1 | Dataset-identity checks | ✅ Prior-baseline script, single-dataset launcher and summary in `main` (PR #88, merged) | ✅ 6 single-dataset runs `{cane,sad,mdd}_041_t8-t7_{ec,eo}` (jobs 23807482–87, run by code-c0) done, synced to `experiments/`. Probe / shuffled labels / 4-class not built | §3.4, §3.6, §4.3 |
+| Bug | `main.py:259` swapped args | ⚠️ Fix + `tests/test_per_dataset_eval.py` in PR #91 (open, branch `fix/per-dataset-metrics-arg-order`) | n/a; the 6 single-dataset runs predate the fix (their summary uses chunk metrics, unaffected) | §3.5 |
 
-**PRs (mtichavsky/eeg):** #87 docs (this file + CLAUDE.md Metacentrum section) open; #88 objection-1
-tools open; #89 cutoff launcher **merged**. **PR (mtichavsky/thesis-text):** #4 open, holds Section VII
-(shortcut, montage, cutoff, planned) plus the user's own prose edits. After #4 merges the user must
+**PRs (mtichavsky/eeg):** #87 docs (this file + CLAUDE.md Metacentrum section) open; #91 per-dataset
+metrics fix open; #88 objection-1 tools, #89 cutoff launcher and #90 cutoff-curve launcher **merged**.
+**PR (mtichavsky/thesis-text):** #4 open, holds Section VII (shortcut, montage, cutoff, planned)
+plus the user's own prose edits. After #4 merges the user must
 `git checkout -- paper/paper.tex` in their checkout before switching branches.
 
 ---
@@ -155,8 +165,9 @@ Reading:
 - Caveats: this is the **single-channel Exp A models only**. The Table II 8-channel
   AllTransformerV4 numbers have not been decomposed this way yet (cheap, see §7). CNN-AttnS
   chunk-level specificity on CANE is 30–58 %, i.e. many healthy CANE subjects are called
-  pathological. Hypothesis, not tested: MDD's high accuracy might reflect a site or recording
-  effect as much as pathology, which is what objection 1 is about.
+  pathological. The single-dataset runs of §3.6 now test the cross-dataset version of this:
+  MDD alone reaches about 90 % balanced accuracy, so its accuracy is not a shortcut from mixing
+  datasets. A within-MDD recording effect remains untested.
 
 **Update (same day, from `helpers-print/dataset_prior_baseline.py`, PR #88):** the Table II binary
 runs show the same pattern. 7 binary runs with per-dataset checkpoint data gain +7 to +18 pp over
@@ -182,7 +193,56 @@ signature is `(y_true, y_pred, subjects, subject_dataset_map)` (`thesis/metrics.
 - Anything that reports per-dataset sens/spec (the `Per-Dataset Chunk Metrics` table in every
   `results.txt`, `docs/per_dataset_comparison.png` if it uses those columns, any paper text)
   should be recomputed. It is recoverable from stored checkpoints by swapping `fp`↔`fn` (that is
-  what §3.4 did). **Fix written but not committed** (worktree `fix-per-dataset-metrics-args`, §7 item 1).
+  what §3.4 did). **Fix is PR #91** (open; branch `fix/per-dataset-metrics-arg-order`, §7 item 1).
+
+### 3.6 Single-dataset runs (objection 1; run by code-c0, analysed 2026-09-19 late evening)
+
+CNN-AttnS, `--channel T8-T7`, Exp A hyperparameters, one dataset per run, EC and EO separately,
+10-fold (`{mdd,cane,sad}_041_t8-t7_{ec,eo}`, jobs 23807482–87; CANE from the headset, as in
+`all_040_t8-t7_*`). Summary script: `helpers-print/single_dataset_summary.py` (plain accuracy vs
+the fold's majority rate). Balanced accuracy below is **not** in that script: it was computed
+independently by code-c0 (pooled counts) and by me (per-fold values, checked against code-c0's
+pooled numbers to within 1.5 pp; the p-values agree), from the checkpoints' chunk confusion matrices
+with a Nadeau–Bengio test of per-fold balanced accuracy against 50 %, BH over these 6 runs
+(scratch script, not committed).
+
+| Dataset | Cond | Chunk acc (fold mean ± sd) | Majority rate (pooled) | Balanced acc, fold mean ± sd (pooled) | Folds > 50 % | BH p (NB) | Combined-run bal. acc (`all_040_t8-t7`, other folds) |
+|---|---|---|---|---|---|---|---|
+| MDD | EC | 90.20 ± 8.77 | 50.7 | 89.3 ± 10.2 (90.5) | 10/10 | < 0.001 | 88.6 |
+| MDD | EO | 92.59 ± 8.87 | 53.0 | 92.3 ± 9.6 (92.7) | 10/10 | < 0.001 | 90.1 |
+| CANE | EC | 66.78 ± 10.12 | 71.7 | 68.4 ± 10.6 (68.6) | 9/10 | 0.009 | 66.6 |
+| CANE | EO | 64.49 ± 19.89 | 72.3 | 66.9 ± 16.4 (65.4) | 9/10 | 0.051 | 64.6 |
+| SAD | EC | 70.49 ± 15.18 | 50.0 | 70.5 ± 15.2 (69.6) | 9/10 | 0.020 | 61.6 |
+| SAD | EO | 65.69 ± 9.51 | 50.0 | 65.7 ± 9.5 (65.3) | 9/10 | 0.009 | 60.1 |
+
+Plain accuracy vs the fold's majority rate (script output): MDD +37.1 / +38.6 pp (BH p 0.0002 /
+0.0001), CANE −4.7 / −8.2 pp (p 0.45 / 0.45), SAD +20.5 / +15.7 pp (p 0.025 / 0.012).
+
+Reading:
+
+1. **MDD is the positive control and it works.** Without any other dataset to be confused with,
+   MDD reaches about 90 %. So the high MDD accuracy in the combined runs is **not** a
+   dataset-identity shortcut. A within-MDD confound (e.g. a recording difference between groups)
+   cannot be ruled out by this.
+2. **CANE: the "at or below the majority rate" reading needs correcting.** Plain accuracy is below
+   the 72 % majority rate, but balanced accuracy is 68.4 / 66.9 % (significantly above 50 % in EC,
+   borderline in EO with 9 of 10 folds above), and the combined model has **the same** CANE
+   balanced accuracy (66.6 / 64.6). Training is class-balanced (WeightedRandomSampler plus class
+   weights in the focal loss), so the model is optimised for balanced accuracy, and the majority
+   rate is a demanding yardstick for it on a 72 % pathological dataset. Any dataset-prior rule has
+   balanced accuracy 50 % by construction, which makes balanced accuracy the fair within-dataset
+   test. Conclusion: a **weak anxiety/comorbid signal is present** and is not created or destroyed
+   by pooling with MDD. The earlier hypothesis "signal exists and the combined model fails to use
+   it" is not supported. The strength (about 65–68 %) is far below MDD's.
+3. **SAD alone is 5–8 pp better than SAD inside the pooled run** (70.5 / 65.7 vs 61.6 / 60.1
+   balanced). Different folds, so descriptive only. Consistent with pooled training costing SAD
+   something, but not tested.
+4. **Caveats.** Folds are small (SAD: 4 to 6 validation subjects), so per-fold values are
+   coarse (SDs 10–20 pp). CANE EO is the noisiest (SD 16–20 pp).
+   Chunk-level sensitivity/specificity here are reliable (they come from the pooled `chunk`
+   metrics, not the buggy per-dataset ones). A model that reads the *recording session*
+   (equipment, site) within a single dataset would also pass this test; the test removes only the
+   between-dataset shortcut.
 
 ---
 
@@ -343,24 +403,21 @@ Reading:
 
 ## 7. Open items and suggested next steps (in order, as of 2026-09-19 evening)
 
-**Needs the user (merging):** mtichavsky/eeg #87 and #88; mtichavsky/thesis-text #4 (then
-`git checkout -- paper/paper.tex` in the thesis checkout). Add Whitham 2007 to
-`thesis-text/paper/references.bib` and replace the red placeholder.
+**Needs the user (merging):** mtichavsky/eeg #87 and #91; mtichavsky/thesis-text #4 (then
+`git checkout -- paper/paper.tex` in the thesis checkout). Whitham 2007 is already in
+`references.bib` and cited in `sec:cutoff` (done in PR #4).
 
-1. **Commit the per-dataset metrics fix as a PR.** The change (`main.py:259`, argument order) and
-   `tests/test_per_dataset_eval.py` exist uncommitted in `.claude/worktrees/fix-per-dataset-metrics-args`.
-   Then regenerate anything using per-dataset sens/spec (`per_dataset_comparison.png` if it uses
+1. **Per-dataset metrics fix: PR #91 is open** (code-c0: `main.py:259` argument order, tests, and
+   the single-fold crash in `bipolar_ablation_summary.py`). After it merges, regenerate anything using per-dataset sens/spec (`per_dataset_comparison.png` if it uses
    those columns; the paper caption says accuracy only, so probably unaffected; unverified).
    `helpers-print/dataset_prior_baseline.py` already handles both orientations.
 2. **Objection 1, cheapest first (the priority).**
-   1. **Single-dataset CV runs** (`run-single-dataset-meta.sh` from #88: CANE / SAD / MDD alone,
-      CNN-AttnS on T8−T7, EC and EO, 6 jobs, about 10 min each). **Submitted 2026-09-19** as
-      `{cane,sad,mdd}_041_t8-t7_{ec,eo}`; summarise with `helpers-print/single_dataset_summary.py`.
-      Version `041` is shared with B's `all_041_*_f{70,30}` runs by coincidence; the two families
-      are unrelated experiments, told apart by the dataset prefix and the `_f70`/`_f30` suffix. If CANE
-      alone clearly exceeds its 72 % majority rate the signal exists and the combined model fails
-      to use it. If not, the anxiety result has no support in this setup. MDD is the positive
-      control. **Ask the user before submitting.**
+   1. **Single-dataset CV runs: DONE** (§3.6). Version `041` is shared with B's
+      `all_041_*_f{70,30}` runs by coincidence; the families are told apart by the dataset prefix and
+      the `_f70`/`_f30` suffix. Result: MDD alone ≈ 90 % (positive control), CANE alone
+      68.4 / 66.9 % balanced accuracy (weak signal, same as in the combined model), SAD alone
+      70.5 / 65.7 %. Optional follow-up: put the balanced-accuracy test into
+      `single_dataset_summary.py` so the numbers are reproducible from a committed script.
    2. **Four-class shortcut analysis.** 4-class runs store per-dataset accuracy only, not class
       balance, so a re-evaluation harness is needed (same harness as C, §9.4), plus a CANE-only
       anxiety vs comorbid run (CANE has 18 anxiety / 26 comorbid, no shortcut from other datasets).
@@ -368,17 +425,24 @@ Reading:
       subject-independent folds, vs the same probe on an untrained network) and a
       **shuffled-label retraining** as a CV-protocol check. The 70 Hz AllTransformerV4
       checkpoints from B (`experiments/all_041_all_ec+eo_f70/`, 10 folds) are the model to probe.
-3. **Extend B only if the paper needs a firmer muscle claim.** Intermediate cutoffs (e.g. 40 and
-   50 Hz; the CNN's floor is ~21 Hz) on the in-ear CNN cost a few minutes each on Metacentrum. A
+3. **Extend B: intermediate cutoffs submitted** (50 and 40 Hz, in-ear CNN-AttnS, jobs
+   23807556 / 23807557, PR #90 merged). Fetch `experiments/all_042_inear_ec+eo_f{50,40}` (result dir
+   has a random suffix, plus `<name>/stdout.log`) and run
+   `helpers-print/freq_cutoff_curve_summary.py --root experiments`. A
    frontal-vs-temporal comparison could help because EMG is strongest frontally. AllTransformerV4's
    +5.6 pp is under-powered at 10 folds and can't be improved by adding folds (10-fold is
    mandatory), so lean on the in-ear model for the significant result.
-4. **Build the fold-rebuild harness once, then use it for C, the asymmetry swap, the 4-class
-   decomposition and the probe** (§9.4). Gate: unablated `eval_epoch` must reproduce the stored
-   `val_metrics`.
-5. **Decide on C** (band shuffle). B's checkpoints now exist for AllTransformerV4, so the only
-   remaining blocker is the harness. Report per band **and per dataset**.
-6. **Alpha asymmetry swap:** swap Fp1↔Fp2, C3↔C4, T7↔T8 in AllTransformerV4 inputs (channel
+4. **Fold-rebuild harness: DROPPED (user decision 2026-09-19).** A post-hoc harness that
+   rebuilds folds and re-evaluates checkpoints adds code complexity. Preferred route for any new
+   metric is to add it to the training/eval code and rerun on Metacentrum. **Open suggestion,
+   on hold until PR #91 merges** (both touch `compute_per_dataset_metrics`): store the full
+   per-dataset confusion matrix (and class counts) in `results.txt`/checkpoints and rerun the
+   4-class ATv4 / in-ear CNN-AttnS (optionally the binary ATv4). That would enable the 4-class
+   decomposition without a harness. C, the asymmetry swap and the probe are dropped with the
+   harness unless the user asks again (§9.4 kept for reference).
+5. **C (band shuffle): dropped with the harness** (see item 4). If revived: report per band
+   **and per dataset**.
+6. **Alpha asymmetry swap (dropped with the harness, item 4):** swap Fp1↔Fp2, C3↔C4, T7↔T8 in AllTransformerV4 inputs (channel
    indices in §9.1). Cheap once the harness exists (Aug 16 name: E2).
 7. **`run-explainability-analysis.sh`:** one script for every post-training analysis, taking the
    runs directory, checking each run has 10 `fold_N_best.pth` and a `results.txt`, running A's and
@@ -390,8 +454,8 @@ Reading:
    untracked Aug 16 leftovers (`thesis/explain/`, `tests/test_explainability.py`,
    `run-explainability.sh`, `helpers-print/plot_explainability.py`, `EXPLAINABILITY.md`);
    there is no `EXPERIMENTS.md` in the repo, although `CLAUDE.md` says to log experiments there.
-10. **Section VII:** already holds A, B and the decomposition (thesis-text PR #4). When items 2 to
-    6 produce results, replace the matching red bullets in `sec:planned`. Print budget in §9.5.
+10. **Section VII:** already holds A, B, the decomposition and the single-dataset runs
+    (thesis-text PR #4). When items 2 to 6 produce results, replace the matching red bullets in `sec:planned`. Print budget in §9.5.
 
 ---
 
