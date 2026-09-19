@@ -39,6 +39,7 @@ from thesis.inference import preprocess_and_infer
 from thesis.json_logging import log_metrics_json
 from thesis.loss import FocalLoss
 from thesis.metrics import (
+    PerDatasetMetrics,
     aggregate_subject_predictions,
     classification_metrics,
     compute_per_dataset_metrics,
@@ -269,13 +270,14 @@ def eval_epoch(
             )
 
     # Per-dataset metrics (when mapping is available)
-    per_dataset: dict[str, dict[str, float | int]] | None = None
+    per_dataset: PerDatasetMetrics | None = None
     if subject_dataset_map is not None:
         per_dataset = compute_per_dataset_metrics(
             y_true=labels_arr,
             y_pred=preds_arr,
             subjects=all_subjects,
             subject_dataset_map=subject_dataset_map,
+            num_classes=num_classes,
         )
 
     return {
@@ -344,7 +346,7 @@ def train_one_fold(
     best_chunk_metrics: dict[str, float] = {}
     best_subject_metrics: dict[str, float] = {}
     best_chunk_confusion_matrix: np.ndarray = np.zeros((num_classes, num_classes), dtype=int)
-    best_per_dataset_metrics: dict[str, dict[str, float | int]] | None = None
+    best_per_dataset_metrics: PerDatasetMetrics | None = None
 
     fold_history: dict[str, list[Any]] = {
         "train_loss": [],
