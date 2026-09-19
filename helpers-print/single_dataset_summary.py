@@ -24,7 +24,7 @@ For every present run this script prints
    ``all_040_t8-t7_{ec,eo}`` next to it. **Those runs use different folds** (folds of the pooled
    subject set), so this comparison is descriptive only.
 
-Caveats: with 10 folds a fold holds only a handful of subjects (SAD: 4-5), so per-fold accuracy is
+Caveats: with 10 folds a fold holds only a handful of subjects (SAD: 4-6), so per-fold accuracy is
 coarse and the Nadeau-Bengio correction (which assumes equal fold sizes) is only approximate.
 "Above the majority rate" is a low bar for a pooled fold-wise test; read the mean difference and
 the per-fold table (``--per-fold``) alongside the p-values.
@@ -288,7 +288,7 @@ def print_paired_table(runs: dict[tuple[str, str], SingleRun], per_fold: bool = 
         "Wilcoxon signed-rank and the Nadeau-Bengio corrected t-test, as in "
         "bipolar_ablation_summary.py (equal fold sizes assumed: n_test/n_train = 1/(k-1)).\n"
         "BH is applied over the runs listed, to the Nadeau-Bengio p-values.\n"
-        "Folds are small (SAD: 4-5 subjects), so per-fold accuracy is coarse.\n"
+        "Folds are small (SAD: 4-6 subjects), so per-fold accuracy is coarse.\n"
     )
     keys = [(d, c) for d in DATASETS for c in CONDITIONS if (d, c) in runs]
     results = {key: paired_vs_majority(runs[key]) for key in keys}
