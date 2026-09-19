@@ -38,8 +38,9 @@ and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83)
    (thesis-text PR #4, open). Whitham 2007 is cited. Everything still to do is in red.
 6. **Known bug:** per-dataset sensitivity/specificity are mislabelled (§3.5). Fix is PR #91
    (merged, by the parallel session code-c0); accuracy numbers are unaffected.
-7. **Cutoff curve (50 / 40 Hz, in-ear CNN-AttnS)** was submitted (jobs 23807556 / 23807557,
-   PR #90 merged). Results not yet analysed.
+7. **Cutoff curve (50 / 40 Hz, in-ear CNN-AttnS) is done (§4.5).** Chunk accuracy 77.1 → 74.0 →
+   72.7 → 67.5 at 70 / 50 / 40 / 30 Hz. The loss is gradual and already significant at 50 Hz
+   (−3.1 pp), not a single cliff, so the dependence is spread over 30–70 Hz.
 
 ---
 
@@ -63,7 +64,7 @@ answer one of these:
 | Exp. | What | Code | Runs | Result |
 |---|---|---|---|---|
 | **A** | Bipolar surrogate ablation (Fp2−Fp1 / C4−C3 / T8−T7 / in-ear) × EC / EO | ✅ In `main` (PR #82) | ✅ 8 runs, 2026-09-18. `experiments/all_040_*` | §3: no montage significantly better |
-| **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ In `main` (PR #83 flag, PR #89 launcher + summary) | ✅ 4 runs, 2026-09-19, ~30 min wall. `experiments/all_041_*`. ⏳ curve points 50 / 40 Hz (in-ear CNN-AttnS, `all_042_inear_ec+eo_f{50,40}`, jobs 23807556/57, PR #90) | §4: 30 Hz costs 5.6 to 9.5 pp; curve pending |
+| **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ In `main` (PR #83 flag, PR #89 launcher + summary) | ✅ 4 runs, 2026-09-19, ~30 min wall. `experiments/all_041_*`. ✅ curve points 50 / 40 Hz (in-ear CNN-AttnS, `all_042_inear_ec+eo_f{50,40}`, jobs 23807556/57, PR #90; done 2026-09-19) | §4: 30 Hz costs 5.6 to 9.5 pp; §4.5: 50 Hz −3.1, 40 Hz −4.4 pp |
 | **C** | Post-hoc band shuffle on saved checkpoints | ❌ | n/a (inference only) | Undecided (§6). Now unblocked: B saved 70 Hz AllTransformerV4 checkpoints |
 | Obj. 1 | Dataset-identity checks | ✅ Prior-baseline script, single-dataset launcher and summary in `main` (PR #88, merged) | ✅ 6 single-dataset runs `{cane,sad,mdd}_041_t8-t7_{ec,eo}` (jobs 23807482–87, run by code-c0) done, synced to `experiments/`. Probe / shuffled labels / 4-class not built | §3.4, §3.6, §4.3 |
 | Bug | `main.py:259` swapped args | ✅ Fix + `tests/test_per_dataset_eval.py` in PR #91 (merged) | n/a; the 6 single-dataset runs predate the fix (their summary uses chunk metrics, unaffected) | §3.5 |
@@ -339,6 +340,34 @@ Reading:
 - Paper status: added as subsection "Reliance on High Frequencies" (`sec:cutoff`, `tab:cutoff`) in
   thesis-text PR #4. Whitham 2007 is a red `[add citation]` placeholder, not in `references.bib`.
 
+### 4.5 Cutoff curve for CNN-AttnS (in-ear), 70 / 50 / 40 / 30 Hz (done 2026-09-19)
+
+Jobs 23807556 (50 Hz) and 23807557 (40 Hz), exit 0, `all_042_inear_ec+eo_f{50,40}`, launched by
+`run-freq-cutoff-curve-meta.sh` (PR #90). Same code, hyperparameters and folds as the 70 / 30 Hz
+runs (fold identity **verified** against `all_041_inear_ec+eo_f70` for all three cutoffs).
+`helpers-print/freq_cutoff_curve_summary.py`:
+
+| Cutoff | Chunk acc | Subj acc | Params | 70 Hz minus cutoff (95 % CI) | Wilcoxon p (BH over 3) | NB p |
+|---|---|---|---|---|---|---|
+| 70 | 77.06 ± 4.48 | 76.37 ± 6.91 | 79,490 | | | |
+| 50 | 73.95 ± 4.47 | 71.85 ± 6.82 | 69,250 | +3.11 pp [1.61, 4.98] | 0.0020 (0.0059) | 0.0478 |
+| 40 | 72.67 ± 3.70 | 71.39 ± 6.56 | 63,106 | +4.39 pp [1.77, 6.65] | 0.0195 (0.0195) | 0.0462 |
+| 30 | 67.54 ± 5.42 | 67.91 ± 6.84 | 57,986 | +9.52 pp [6.17, 12.62] | 0.0039 (0.0059) | 0.0043 |
+
+Per-dataset chunk accuracy (CANE column = IDUN): MDD 88.6 → 87.9 → 86.4 → 81.6; CANE 67.5 → 61.8 →
+63.2 → 58.4; SAD 64.0 → 56.4 → 51.6 → 46.9.
+
+Reading:
+
+- **Monotone and gradual.** Every band removed costs accuracy; no single cliff at 30 Hz. Even 50 Hz
+  costs 3.1 pp (Wilcoxon significant after BH; Nadeau–Bengio p = 0.048 before BH, about 0.048
+  after BH over three cutoffs, i.e. borderline). 30 Hz is clearly significant on both tests
+  (NB BH ≈ 0.013).
+- **MDD is robust down to 40 Hz** (−2.2 pp) and only loses noticeably at 30 Hz (−7.0); CANE and SAD
+  lose accuracy earlier. SAD ends near chance (46.9 %, below its 50 % base rate).
+- **Same limits as §4.4:** cannot separate muscle from neural beta/gamma, the parameter count
+  falls with the cutoff (79 K → 58 K), and folds are small. Per-dataset SDs are 10–20 pp.
+
 ---
 
 ## 5. Decision log (what we considered and why)
@@ -428,10 +457,9 @@ Reading:
       subject-independent folds, vs the same probe on an untrained network) and a
       **shuffled-label retraining** as a CV-protocol check. The 70 Hz AllTransformerV4
       checkpoints from B (`experiments/all_041_all_ec+eo_f70/`, 10 folds) are the model to probe.
-3. **Extend B: intermediate cutoffs submitted** (50 and 40 Hz, in-ear CNN-AttnS, jobs
-   23807556 / 23807557, PR #90 merged). Fetch `experiments/all_042_inear_ec+eo_f{50,40}` (result dir
-   has a random suffix, plus `<name>/stdout.log`) and run
-   `helpers-print/freq_cutoff_curve_summary.py --root experiments`. A
+3. **Extend B: intermediate cutoffs DONE** (50 and 40 Hz, in-ear CNN-AttnS; §4.5, fetched to
+   `experiments/all_042_inear_ec+eo_f{50,40}`, summary with
+   `helpers-print/freq_cutoff_curve_summary.py --root experiments`). Remaining option: A
    frontal-vs-temporal comparison could help because EMG is strongest frontally. AllTransformerV4's
    +5.6 pp is under-powered at 10 folds and can't be improved by adding folds (10-fold is
    mandatory), so lean on the in-ear model for the significant result.
