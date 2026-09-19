@@ -272,7 +272,10 @@ def eval_epoch(
     per_dataset: dict[str, dict[str, float | int]] | None = None
     if subject_dataset_map is not None:
         per_dataset = compute_per_dataset_metrics(
-            preds_arr, labels_arr, all_subjects, subject_dataset_map
+            y_true=labels_arr,
+            y_pred=preds_arr,
+            subjects=all_subjects,
+            subject_dataset_map=subject_dataset_map,
         )
 
     return {
