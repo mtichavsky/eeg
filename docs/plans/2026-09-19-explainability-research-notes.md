@@ -7,11 +7,30 @@ Single source of truth for the explainability work behind Section VII of
 - `2026-09-14-explainability-design.md` (reviewed design: what was kept, dropped, and why)
 - `2026-09-14-explainability-session-state.md` (status, decision log, next steps, cluster notes)
 
-Read §1–§4 first when picking the work back up. §9 keeps the still-useful technical facts from
-the Aug 16 catalogue, so nothing has to be re-derived.
+Read the TL;DR and §2–§4 first when picking the work back up. §9 keeps the still-useful technical
+facts from the Aug 16 catalogue, so nothing has to be re-derived.
 
 Companion plans that are **not** merged here: `2026-09-14-bipolar-surrogate-ablation.md` (plan A)
-and `2026-09-14-frequency-cutoff-ablation.md` (plan B, lives on branch `cutoff`, not in `main`).
+and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83).
+
+**Last updated: 2026-09-19 (evening), after experiments A and B finished.**
+
+## TL;DR (2026-09-19 evening)
+
+1. **A (bipolar montage) and B (30 Hz cutoff) are done.** A: no montage is significantly better
+   (min BH p = 0.50). B: cutting at 30 Hz costs 9.5 pp (CNN-AttnS in-ear, significant) and 5.6 pp
+   (AllTransformerV4, not significant at 10 folds), so the models use information above 30 Hz.
+2. **The pooled accuracy is MDD-driven, at every cutoff.** Against a dataset-prior baseline
+   (always predict each dataset's majority class), the gain is +7 to +18 pp, MDD supplies
+   +12 to +17 of it, and CANE sits at or below its base rate. At 30 Hz the MDD contribution
+   survives (+12 to +14 pp) while CANE and SAD fall further below base rate (§4.3).
+3. **Objection 1 (dataset identity) is the open problem and the top priority.** The cheap checks
+   are built (PR #88, not yet run on the cluster). Nothing in the paper defends against it yet
+   beyond stating the decomposition.
+4. **Paper Section VII is up to date for A, B and the decomposition** (thesis-text PR #4,
+   open). Everything still to do is in red in the paper.
+5. **Known bug:** per-dataset sensitivity/specificity are mislabelled (§3.5). Fix is written
+   but uncommitted in a worktree; accuracy numbers are unaffected.
 
 ---
 
@@ -23,21 +42,27 @@ answer one of these:
 
 | # | Reviewer objection | Claim it threatens | Covered by |
 |---|---|---|---|
-| 1 | "The model learned which dataset a recording came from, not pathology." | Every accuracy, 4-class especially | **Nothing yet, and §3 makes it the top priority** |
-| 2 | "Why would one in-ear channel match 8 channels?" | Headline in-ear result | A (done) |
-| 3 | "It's reading artifacts (muscle, eye movement), not brain." | Clinical validity | B (muscle), A's EC/EO split (eye movement) |
+| 1 | "The model learned which dataset a recording came from, not pathology." | Every accuracy, 4-class especially | Prior-baseline decomposition (§3.4, §4.3) only; **top priority, checks not run yet (§7)** |
+| 2 | "Why would one in-ear channel match 8 channels?" | Headline in-ear result | A (done: §3) |
+| 3 | "It's reading artifacts (muscle, eye movement), not brain." | Clinical validity | B (muscle, partly: §4.4), A's EC/EO split (eye movement, not a valid test: §3.3) |
 | 4 | "Does it use the known biomarkers (alpha asymmetry, beta power)?" | Scientific credibility | C (candidate), asymmetry swap (candidate) |
 
 ---
 
-## 2. Status at a glance (2026-09-19)
+## 2. Status at a glance (2026-09-19 evening)
 
-| Exp. | What | Code | Runs | Plan |
+| Exp. | What | Code | Runs | Result |
 |---|---|---|---|---|
-| **A** | Bipolar surrogate ablation (Fp2−Fp1 / C4−C3 / T8−T7 / in-ear) × EC / EO | ✅ Committed (`15836ae`, `ef3258c`, `5222920`, `03fd601`) | ✅ Done 2026-09-18 on Metacentrum, 8 required runs (optional `ec+eo` ×3 not run). Local: `experiments/all_040_{fp2-fp1,c4-c3,t8-t7,inear}_{ec,eo}/` | `2026-09-14-bipolar-surrogate-ablation.md` |
-| **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ Committed (`2491b5d`) on branch `cutoff` (pushed, **not merged to `main`**): `--freq-cutoff` flag + tests | ❌ `run-freq-cutoff.sh` and `helpers-print/freq_cutoff_summary.py` **not written** | `2026-09-14-frequency-cutoff-ablation.md` (on branch) |
-| **C** | Post-hoc band shuffle on saved checkpoints | ❌ | n/a (inference only) | Undecided (§6) |
-| Obj. 1 | Dataset-identity check | ❌ | — | Not scoped, **now urgent** (§3, §7) |
+| **A** | Bipolar surrogate ablation (Fp2−Fp1 / C4−C3 / T8−T7 / in-ear) × EC / EO | ✅ In `main` (PR #82) | ✅ 8 runs, 2026-09-18. `experiments/all_040_*` | §3: no montage significantly better |
+| **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ In `main` (PR #83 flag, PR #89 launcher + summary) | ✅ 4 runs, 2026-09-19, ~30 min wall. `experiments/all_041_*` | §4: 30 Hz costs 5.6 to 9.5 pp |
+| **C** | Post-hoc band shuffle on saved checkpoints | ❌ | n/a (inference only) | Undecided (§6). Now unblocked: B saved 70 Hz AllTransformerV4 checkpoints |
+| Obj. 1 | Dataset-identity checks | ⚠️ Prior-baseline script and single-dataset launcher written (PR #88, open) | ❌ Single-dataset runs not submitted; probe / shuffled labels / 4-class not built | §3.4, §4.3 (decomposition only) |
+| Bug | `main.py:259` swapped args | ⚠️ Fix + `tests/test_per_dataset_eval.py` written, **uncommitted** in worktree `fix-per-dataset-metrics-args` (branch `worktree-fix-per-dataset-metrics-args`) | n/a | §3.5 |
+
+**PRs (mtichavsky/eeg):** #87 docs (this file + CLAUDE.md Metacentrum section) open; #88 objection-1
+tools open; #89 cutoff launcher **merged**. **PR (mtichavsky/thesis-text):** #4 open, holds Section VII
+(shortcut, montage, cutoff, planned) plus the user's own prose edits. After #4 merges the user must
+`git checkout -- paper/paper.tex` in their checkout before switching branches.
 
 ---
 
@@ -157,46 +182,100 @@ signature is `(y_true, y_pred, subjects, subject_dataset_map)` (`thesis/metrics.
 - Anything that reports per-dataset sens/spec (the `Per-Dataset Chunk Metrics` table in every
   `results.txt`, `docs/per_dataset_comparison.png` if it uses those columns, any paper text)
   should be recomputed. It is recoverable from stored checkpoints by swapping `fp`↔`fn` (that is
-  what §3.4 did). **Not fixed in code yet** (decision pending, §7 item 1).
+  what §3.4 did). **Fix written but not committed** (worktree `fix-per-dataset-metrics-args`, §7 item 1).
 
 ---
 
-## 4. Experiment B: 30 Hz cutoff retrain (objection 3, muscle artifact). Not run yet
+## 4. Experiment B: 30 Hz cutoff retrain (objection 3, muscle artifact). Done 2026-09-19
 
 - **Question:** does the result depend on the frequency range where muscle activity (EMG)
   dominates? Anxious subjects plausibly tense their jaw and forehead more.
 - **Method:** retrain with the spectrogram cropped at 30 Hz, shape `(31, 41)` instead of
   `(72, 41)`. Retraining rather than post-hoc occlusion, so the model never sees an unnatural
   input.
-- **Runs (4):** CNN-AttnS in-ear and AllTransformerV4, each at 70 Hz and 30 Hz, all `ec+eo`,
-  10-fold, Table II hyperparameters:
-  - `all_041_inear_ec+eo_f70`, `all_041_inear_ec+eo_f30`: CNNAttnS with the A hyperparameters.
-  - `all_041_all_ec+eo_f70`, `all_041_all_ec+eo_f30`: AllTransformerV4
-    `--epochs 200 --lr 1e-4 --dropout 0.1 --weight-decay 1e-4 --patience 50 --batch-size 64 --focal-loss`.
+- **Runs (4, all `ec+eo`, 10-fold, binary, Table II hyperparameters):** launched with
+  `run-freq-cutoff-meta.sh` at commit `7206375-dirty` (the cluster clone has untracked files;
+  the branch was later rebased, so the label no longer resolves).
+  - `all_041_inear_ec+eo_f70`, `_f30`: CNN-AttnS with the A hyperparameters, in-ear (IDUN for CANE).
+  - `all_041_all_ec+eo_f70`, `_f30`: AllTransformerV4 `--epochs 200 --lr 1e-4 --dropout 0.1
+    --weight-decay 1e-4 --patience 50 --batch-size 64 --focal-loss`.
 - **Why rerun 70 Hz:** torch isn't seeded, and Table II was trained at commit `454c49e-dirty`.
-  Rerunning gives identical folds and code, so the 30-vs-70 comparison is paired and free of
-  run-to-run noise. It also yields the saved AllTransformerV4 checkpoints C needs (the Table II
-  run `atv4-lowlr_oex` did not keep them). A's results suggest run-to-run noise alone is 1–3 pp,
-  so this pairing matters.
-- **Code:** `--freq-cutoff` CLI flag. The cutoff lives on the `SpectrogramDataset` instance, not in
-  a module global, because forkserver DataLoader workers wouldn't see a runtime override. Model
-  size follows automatically and checkpoints record the cutoff.
-- **Verified facts:** parameter counts drop at 30 Hz: CNNAttnS 79,490 → 57,986; AllTransformerV4
-  113,474 → 91,970. The CNN can't be built below ~21 Hz (22 rows builds, 21 fails), so a 20 Hz
-  cut is impossible (and would remove beta, an anxiety biomarker).
-- **Caveat for the paper:** Whitham et al. (2007) show EMG contaminates scalp EEG from ~**20 Hz**,
-  so 30 Hz removes the EMG-*dominated* range, not all EMG. If accuracy holds, the claim is "the
-  result doesn't depend on gamma", not "no artifact sensitivity".
+  Rerunning gives identical folds and code, so 30-vs-70 is paired. Fold identity was **verified**
+  for both models (10/10 folds identical validation subjects).
+- **Code:** `--freq-cutoff` flag; the cutoff lives on the `SpectrogramDataset` instance (not a
+  module global, since forkserver DataLoader workers wouldn't see a runtime override). Parameter
+  counts drop at 30 Hz: CNNAttnS 79,490 → 57,986; AllTransformerV4 113,474 → 91,970. The CNN can't
+  be built below ~21 Hz (22 rows builds, 21 fails), so 20 Hz is impossible.
 - **Correction found during implementation:** the earlier plan and `EXPLAINABILITY.md` said
   `create_model(strict=False)` would *silently* drop a mismatched layer. It doesn't: PyTorch raises
-  on shape mismatches regardless of `strict`. The `run` command's cutoff check exists to turn that
-  error into a clear message.
-- **Next:** write `run-freq-cutoff.sh` (model it on `run-all-experiments.sh`, 4 runs in parallel;
-  or use the Metacentrum job template, §10) and `helpers-print/freq_cutoff_summary.py` (table,
-  per-fold paired differences, per-dataset accuracy, 70 Hz rerun vs Table II reproducibility).
-  **Add the dataset-prior baseline and the per-dataset gain decomposition from §3.4 to that
-  summary**, since B is only meaningful if it also shows *where* accuracy is lost at 30 Hz. Use
-  correct per-dataset sens/spec (swap `fp`↔`fn` until the bug is fixed).
+  on shape mismatches regardless of `strict`.
+
+### 4.1 Results (mean ± std over 10 folds, %; `helpers-print/freq_cutoff_summary.py`)
+
+| Model | Cut | Chunk acc | Subj acc | Chunk sens | Chunk spec | Params |
+|---|---|---|---|---|---|---|
+| CNN-AttnS (in-ear) | 70 | 77.06 ± 4.48 | 76.37 ± 6.91 | 82.37 | 69.81 | 79,490 |
+| CNN-AttnS (in-ear) | 30 | 67.54 ± 5.42 | 67.91 ± 6.84 | 69.53 | 64.73 | 57,986 |
+| AllTransformerV4 | 70 | 75.43 ± 4.63 | 75.55 ± 6.00 | 80.90 | 66.63 | 113,474 |
+| AllTransformerV4 | 30 | 69.79 ± 6.36 | 69.74 ± 9.01 | 70.38 | 67.71 | 91,970 |
+
+Paired 70 minus 30 (positive = 70 Hz better), BH-adjusted over the two models within each metric:
+
+| Model | Metric | Diff | Bootstrap 95 % CI | Wilcoxon (BH) | Nadeau–Bengio (BH) |
+|---|---|---|---|---|---|
+| CNN-AttnS | Chunk acc | +9.52 pp | [+6.17, +12.62] | 0.0039 (**0.0078**) | 0.0043 (**0.0087**) |
+| CNN-AttnS | Subject acc | +8.46 pp | [+2.59, +13.73] | 0.031 (0.0625) | 0.085 (0.171) |
+| CNN-AttnS | Chunk sens | +12.83 pp | [+7.65, +18.11] | 0.0020 (**0.0039**) | 0.012 (**0.024**) |
+| CNN-AttnS | Chunk spec | +5.08 pp | [−1.07, +10.84] | 0.160 (0.320) | 0.304 (0.609) |
+| AllTransformerV4 | Chunk acc | +5.63 pp | [+0.92, +10.58] | 0.106 (0.106) | 0.176 (0.176) |
+| AllTransformerV4 | Subject acc | +5.81 pp | [−1.81, +13.80] | 0.275 | 0.373 |
+| AllTransformerV4 | Chunk sens | +10.53 pp | [+1.59, +20.04] | 0.131 | 0.187 |
+| AllTransformerV4 | Chunk spec | −1.08 pp | [−6.53, +3.80] | 0.770 | 0.795 |
+
+**Reproducibility of the 70 Hz reruns vs Table II** (chunk / subject): CNN-AttnS 77.06 vs 77.0 /
+76.37 vs 79.2; AllTransformerV4 75.43 vs 76.5 / 75.55 vs 78.6. Chunk accuracy reproduces within
+about 1 pp, subject accuracy is 2.8–3.0 pp lower. Combined with A, run-to-run noise is about
+1–3 pp on chunk and up to 3 pp on subject accuracy.
+
+### 4.2 Per-dataset chunk accuracy (accuracy only; per-dataset sens/spec are mislabelled, §3.5)
+
+| Model | Cut | MDD | CANE (IDUN in-ear) | SAD |
+|---|---|---|---|---|
+| CNN-AttnS | 70 / 30 | 88.6 / 81.6 (+7.0) | 67.5 / 58.4 (+9.1) | 64.0 / 46.9 (+17.0) |
+| AllTransformerV4 | 70 / 30 | 88.5 / 83.2 (+5.3) | 67.0 / 61.7 (+5.3) | 64.2 / 57.4 (+6.8) |
+
+The drop is **not confined to MDD**.
+
+### 4.3 Decomposition against the dataset-prior baseline (pooled over folds, from `helpers-print/dataset_prior_baseline.py`, PR #88)
+
+| Run | MDD acc / base | CANE acc / base | SAD acc / base | Overall acc | Prior | Gain | Gain from MDD / CANE / SAD (pp) |
+|---|---|---|---|---|---|---|---|
+| in-ear f70 | 89.0 / 53.3 | 66.8 / 68.2 | 64.3 / 54.3 | 77.1 | 58.9 | +18.2 | +17.1 / −0.5 / +1.6 |
+| in-ear f30 | 81.8 / 53.3 | 57.6 / 68.2 | 47.6 / 54.3 | 67.7 | 58.9 | +8.8 | +13.7 / −3.9 / −1.0 |
+| AllTransformerV4 f70 | 89.3 / 53.8 | 66.2 / 72.0 | 64.4 / 55.5 | 75.2 | 62.5 | +12.7 | +14.2 / −2.7 / +1.2 |
+| AllTransformerV4 f30 | 84.1 / 53.8 | 61.7 / 72.0 | 57.5 / 55.5 | 70.1 | 62.5 | +7.7 | +12.2 / −4.8 / +0.3 |
+
+Reading:
+- Of the gain lost at 30 Hz (in-ear −9.4 pp, AllTransformerV4 −5.0 pp), the loss is spread over
+  the three datasets (in-ear MDD −3.4, CANE −3.4, SAD −2.6; AllTransformerV4 −2.0, −2.1, −0.9),
+  not concentrated in MDD.
+- At 30 Hz the **MDD signal mostly survives** (still +28 to +30 pp above its base rate, contributing
+  +12 to +14 pp overall), whereas CANE falls about 10 pp **below** its majority rate and SAD to
+  +2.0 pp (AllTransformerV4) or −6.7 pp (in-ear) relative to its own. So even at 30 Hz the residual accuracy is an MDD result.
+- Objection 3 is therefore only **partly** answered: the models do use frequencies above 30 Hz on
+  all three datasets, which is what EMG reliance would predict, but it is also what neural
+  beta/gamma reliance or group differences in muscle tone would predict. B cannot separate them.
+
+### 4.4 What B does and doesn't show (as written in the paper)
+
+- Shows: dependence on the 30–70 Hz range, significant for CNN-AttnS on chunk accuracy and
+  sensitivity, same direction and a bootstrap CI excluding zero for AllTransformerV4 but not
+  significant at 10 folds.
+- Doesn't show: that the dependence is muscle. Whitham et al. (2007) put EMG contamination from
+  ~20 Hz, so 30 Hz removes the EMG-*dominated* range, not all EMG. The 30 Hz cut also removes about
+  21.5K parameters (confound), and it is one cutoff, not a curve.
+- Paper status: added as subsection "Reliance on High Frequencies" (`sec:cutoff`, `tab:cutoff`) in
+  thesis-text PR #4. Whitham 2007 is a red `[add citation]` placeholder, not in `references.bib`.
 
 ---
 
@@ -262,58 +341,54 @@ signature is `(y_true, y_pred, subjects, subject_dataset_map)` (`thesis/metrics.
 
 ---
 
-## 7. Open items and suggested next steps (in order)
+## 7. Open items and suggested next steps (in order, as of 2026-09-19 evening)
 
-1. **Decide on the per-dataset metrics bug (§3.5).** Recommended: swap the arguments at
-   `main.py:259`, add a regression test on a tiny hand-built confusion case, and add a
-   `thesis/metrics` note. Then regenerate any figure/table that uses per-dataset sens/spec.
-   Existing checkpoints stay wrong-labelled unless recomputed (recoverable by `fp`↔`fn` swap).
-2. **Scope objection 1 (dataset identity). Now the top priority.** §3.4 shows the Exp A models
-   gain about 10–18 pp over a dataset-prior baseline, all of it on MDD, and sit at base rate on
-   CANE. Candidates, cheapest first:
-   - **Dataset-prior baseline for the Table II runs (free).** Same decomposition as §3.4 from
-     stored `val_metrics["per_dataset"]` (remember the `fp`↔`fn` swap). Tells us immediately
-     whether the headline 8-channel and 4-class results have the same MDD-only pattern.
-   - **Single-dataset CV runs** (CANE only, SAD only, MDD only, same model): does CANE/SAD signal
-     exist when the model isn't shared with MDD? If CANE alone gets clearly above the 72 %
-     majority rate, the combined model is failing to transfer, not the data lacking signal.
-   - **Within-CANE anxiety vs comorbid** (CANE alone: healthy 19 / anxiety 18 / comorbid 26).
-     Above chance means the comorbid result isn't just a dataset fingerprint.
-   - **Linear probe:** logistic regression predicting source dataset (MDD/CANE/SAD) from
-     AllTransformerV4's pooled 64-d features, subject-independent folds, vs the same probe on a
-     randomly initialised model. A large gap means training actively encoded site identity.
-   - **Shuffled-label control** (E9 below): also functions as a CV leakage check.
-3. **Write B's launcher and summary, then launch B** (Metacentrum template exists, §10). Include
-   the §3.4 decomposition in the summary.
-4. **Once B is merged to `main`: write `run-explainability-analysis.sh`**, one script holding
-   every post-training analysis command. It should:
-   - take the runs directory as an argument (e.g. `../sep14`), defaulting to where the launchers
-     write checkpoints;
-   - check every expected run directory exists with 10 `fold_N_best.pth` and a `results.txt`;
-     missing runs are listed and skipped, not crashed on;
-   - **A:** run `helpers-print/bipolar_ablation_summary.py` including the fold-identity check;
-   - **B:** run `helpers-print/freq_cutoff_summary.py` including the 70-vs-30 fold-identity check;
-   - write outputs to one dated folder such as `docs/explainability-results/YYYY-MM-DD/`, one log
-     per analysis, then print which analyses ran, which were skipped, and where outputs are;
-   - leave marked placeholders for C, the asymmetry swap and the objection-1 checks;
-   - use `poetry run python` locally, or the cluster's `ml` / `source activate` setup, whichever
-     matches where checkpoints live.
-5. **Decide on C** once B's 70 Hz AllTransformerV4 checkpoints exist. If yes, build the
-   fold-rebuild harness first and verify against stored `val_metrics`.
+**Needs the user (merging):** mtichavsky/eeg #87 and #88; mtichavsky/thesis-text #4 (then
+`git checkout -- paper/paper.tex` in the thesis checkout). Add Whitham 2007 to
+`thesis-text/paper/references.bib` and replace the red placeholder.
+
+1. **Commit the per-dataset metrics fix as a PR.** The change (`main.py:259`, argument order) and
+   `tests/test_per_dataset_eval.py` exist uncommitted in `.claude/worktrees/fix-per-dataset-metrics-args`.
+   Then regenerate anything using per-dataset sens/spec (`per_dataset_comparison.png` if it uses
+   those columns; the paper caption says accuracy only, so probably unaffected; unverified).
+   `helpers-print/dataset_prior_baseline.py` already handles both orientations.
+2. **Objection 1, cheapest first (the priority).**
+   1. **Single-dataset CV runs** (`run-single-dataset-meta.sh` from #88: CANE / SAD / MDD alone,
+      CNN-AttnS on T8−T7, EC and EO, 6 jobs, about 10 min each). Submit after #88 merges. If CANE
+      alone clearly exceeds its 72 % majority rate the signal exists and the combined model fails
+      to use it. If not, the anxiety result has no support in this setup. MDD is the positive
+      control. **Ask the user before submitting.**
+   2. **Four-class shortcut analysis.** 4-class runs store per-dataset accuracy only, not class
+      balance, so a re-evaluation harness is needed (same harness as C, §9.4), plus a CANE-only
+      anxiety vs comorbid run (CANE has 18 anxiety / 26 comorbid, no shortcut from other datasets).
+   3. **Dataset-identity probe** (logistic regression on AllTransformerV4's pooled 64-d features,
+      subject-independent folds, vs the same probe on an untrained network) and a
+      **shuffled-label retraining** as a CV-protocol check. The 70 Hz AllTransformerV4
+      checkpoints from B (`experiments/all_041_all_ec+eo_f70/`, 10 folds) are the model to probe.
+3. **Extend B only if the paper needs a firmer muscle claim.** Intermediate cutoffs (e.g. 40 and
+   50 Hz; the CNN's floor is ~21 Hz) on the in-ear CNN cost a few minutes each on Metacentrum. A
+   frontal-vs-temporal comparison could help because EMG is strongest frontally. AllTransformerV4's
+   +5.6 pp is under-powered at 10 folds and can't be improved by adding folds (10-fold is
+   mandatory), so lean on the in-ear model for the significant result.
+4. **Build the fold-rebuild harness once, then use it for C, the asymmetry swap, the 4-class
+   decomposition and the probe** (§9.4). Gate: unablated `eval_epoch` must reproduce the stored
+   `val_metrics`.
+5. **Decide on C** (band shuffle). B's checkpoints now exist for AllTransformerV4, so the only
+   remaining blocker is the harness. Report per band **and per dataset**.
 6. **Alpha asymmetry swap:** swap Fp1↔Fp2, C3↔C4, T7↔T8 in AllTransformerV4 inputs (channel
-   indices in §9.1). A drop means it uses lateralization, no drop means bilateral power only; both
-   reportable. Cheap once C's harness exists. (Aug 16 name: E2.)
-7. **Optional:** AllTransformerV4 on T7+T8 only (1 run). Needs multi-channel subset support in
-   `--channel`, which doesn't exist. Referencing must use the average over all 8 channels
-   *before* the subset is selected.
-8. **Clean up untracked leftovers from the Aug 16 session:** `thesis/explain/`,
-   `tests/test_explainability.py`, `run-explainability.sh`, `helpers-print/plot_explainability.py`,
-   `EXPLAINABILITY.md`. Not wired into `main.py`. Reuse parts for C or delete. `EXPLAINABILITY.md`
-   contains the wrong `strict=False` claim and the stale shape/channel facts corrected in §9.1.
-9. **Fix the summary script's eye-movement message** (§3.3 item 3).
-10. **Write Section VII:** one compact table for A, one row pair per model for B, 2–4 sentences
-    each, caveats stated once. Given §3, the section should state plainly that the pooled accuracy
-    is MDD-driven unless the checks in item 2 show otherwise.
+   indices in §9.1). Cheap once the harness exists (Aug 16 name: E2).
+7. **`run-explainability-analysis.sh`:** one script for every post-training analysis, taking the
+   runs directory, checking each run has 10 `fold_N_best.pth` and a `results.txt`, running A's and
+   B's summary scripts (including fold-identity checks) plus the dataset-prior baseline, writing to
+   `docs/explainability-results/YYYY-MM-DD/`, with placeholders for C and the swap.
+8. **Optional:** AllTransformerV4 on T7+T8 only (needs multi-channel subset support in
+   `--channel`, which doesn't exist).
+9. **Housekeeping:** fix the summary script's eye-movement message (§3.3 item 3); clean up the
+   untracked Aug 16 leftovers (`thesis/explain/`, `tests/test_explainability.py`,
+   `run-explainability.sh`, `helpers-print/plot_explainability.py`, `EXPLAINABILITY.md`);
+   there is no `EXPERIMENTS.md` in the repo, although `CLAUDE.md` says to log experiments there.
+10. **Section VII:** already holds A, B and the decomposition (thesis-text PR #4). When items 2 to
+    6 produce results, replace the matching red bullets in `sec:planned`. Print budget in §9.5.
 
 ---
 
@@ -374,6 +449,9 @@ temporal pair is indices 5 and 6. Mirror swap = `(0,1) (2,4) (5,6)`, `Cz` and `O
   `lr=5e-4` run at 75.47/75.93. Hence B's 70 Hz AllTransformerV4 rerun.
 - Exp A checkpoints (`experiments/all_040_*`) are valid current-code CNNAttnS checkpoints, usable
   for C on the single-channel model.
+- B checkpoints (2026-09-19): `experiments/all_041_all_ec+eo_{f70,f30}/` (AllTransformerV4, 10
+  folds each) and `experiments/all_041_inear_ec+eo_{f70,f30}/` (CNN-AttnS). `_f70` AllTransformerV4
+  is a valid current-code replacement for the lost Table II checkpoints (75.4 vs 76.5 chunk acc).
 - `RANDOM_SEED = 42` (`main.py:60`) seeds **only** fold assignment (one `np.random.RandomState`);
   there is no `torch.manual_seed`. If run-to-run noise ever matters more than the ~1–3 pp seen
   here, add torch seeding in `train()`.
@@ -423,7 +501,7 @@ matplotlib PNG at 600 dpi with `bbox_inches="tight"` written to `docs/`, then co
 
 ---
 
-## 10. Metacentrum notes (for launching B there too)
+## 10. Metacentrum notes
 
 Exp A ran on Metacentrum (PBS) because no personal GPU is available. Setup: repo cloned +
 `poetry install`'d into a shared `$STORAGE_HOME/eeg/.venv` on `/storage/brno2` (persistent, not
@@ -441,6 +519,22 @@ using `run-bipolar-meta.sh` (and `run-round1-atv4-meta.sh` for AllTransformerV4)
 - `grogu` (CERIT-SC): `sm_120` (Blackwell) GPUs, no compiled kernels in `torch==2.11.0+cu126`
   (`CUDA error: no kernel image is available`). Revisit if torch is upgraded.
 
+**B run notes (2026-09-19):** `./run-freq-cutoff-meta.sh` submitted 4 jobs (job names with `+`
+are accepted by qsub). Wall times: in-ear CNN-AttnS 6–7 min, AllTransformerV4 `ec+eo` ~28 min.
+Quirks worth knowing:
+- The job template creates `experiments/<name>/` and tees `stdout.log` into it, so `main.py` finds
+  the directory existing and writes checkpoints, `results.txt` and logs to a **random-suffix
+  sibling** (`<name>_buf`, `_xwn`, `_gzn`, `_ubd`). Fetch both:
+  `rsync -a metacentrum:/storage/brno2/home/tichavskym/experiments/<name><suffix>/ experiments/<name>/`
+  and `rsync -a metacentrum:.../experiments/<name>/stdout.log experiments/<name>/`.
+- The cluster clone `/storage/brno2/home/tichavskym/eeg` has 36 untracked files (old PBS `.o`
+  files, `get-pip.py`, `diag_modules.pbs`), so `git_commit` reads `<hash>-dirty`. Harmless.
+  The clone was left on `metacentrum-cluster-exclusions` (`cbdaaf3`), which is now behind `main`:
+  `git fetch && git checkout` the branch to run before launching, and do not switch branches
+  while jobs are queued or running (jobs read the code when they start).
+- Subagents can run this end to end (submit, monitor with `qstat`, rsync), but a long monitor
+  can hit the session usage limit; the jobs themselves are unaffected.
+
 Also: the frontend's local `/tmp` has a tiny per-user quota (977 MB, separate from the large
 `/storage/brno2` quota). `poetry install`'s CUDA wheel downloads will `EDQUOT` there unless
 `TMPDIR` points at `/storage/brno2` first.
@@ -452,11 +546,14 @@ Also: the frontend's local `/tmp` has a tiny per-user quota (977 MB, separate fr
 | Path | What |
 |---|---|
 | `docs/plans/2026-09-14-bipolar-surrogate-ablation.md` | Plan A |
-| `docs/plans/2026-09-14-frequency-cutoff-ablation.md` | Plan B (branch `cutoff`) |
+| `docs/plans/2026-09-14-frequency-cutoff-ablation.md` | Plan B (in `main`) |
 | `run-bipolar.sh`, `helpers-print/bipolar_ablation_summary.py`, `tests/test_bipolar_channels.py` | A implementation |
 | `run-bipolar-meta.sh`, `metacentrum/train_job.pbs` | A launch on Metacentrum (one `qsub` per config) |
 | `experiments/all_040_{fp2-fp1,c4-c3,t8-t7,inear}_{ec,eo}/` | A results (local, synced 2026-09-18) |
-| `tests/test_freq_cutoff.py`, `thesis/stft.py` (`spectrogram_shape`, `num_freq_bins`) | B implementation |
+| `tests/test_freq_cutoff.py`, `thesis/stft.py` (`spectrogram_shape`, `num_freq_bins`) | B implementation (flag) |
+| `run-freq-cutoff-meta.sh`, `helpers-print/freq_cutoff_summary.py`, `tests/test_freq_cutoff_summary.py` | B launcher and summary (PR #89, merged) |
+| `experiments/all_041_{inear,all}_ec+eo_{f70,f30}/` | B results (local, synced 2026-09-19) |
+| `helpers-print/dataset_prior_baseline.py`, `helpers-print/single_dataset_summary.py`, `run-single-dataset-meta.sh` | Objection-1 tools (PR #88, open, not yet run on the cluster) |
 | `thesis/dataset.py` (`BIPOLAR_CHANNELS`, `bipolar_pair`, `CANONICAL_CHANNEL_ORDER`) | Channel specs |
 | `main.py:186` (`eval_epoch`), `main.py:259`, `thesis/metrics.py:321` | Per-dataset metrics and the swapped-argument bug |
 | `../experiments/binary/in-ear/cnnattns-binary_wve/` | Table II in-ear run, 10 checkpoints |
