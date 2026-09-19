@@ -535,6 +535,11 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Fixed `compute_per_dataset_metrics()` argument order** (Sep 2026): `eval_epoch()` in `main.py` was calling `compute_per_dataset_metrics(preds_arr, labels_arr, all_subjects, subject_dataset_map)` against a `(y_true, y_pred, subjects, subject_dataset_map)` signature — predictions and labels were swapped. The call now passes all four arguments by keyword to make the order self-checking
+  - Chunk/subject-level metrics and per-dataset **accuracy** were unaffected (accuracy is symmetric in `y_true`/`y_pred`); only per-dataset sensitivity/specificity and the stored `fp`/`fn` counts were wrong — the printed "sensitivity"/"specificity" were actually PPV/NPV, and stored `fp`/`fn` were exchanged
+  - Every checkpoint's `val_metrics["per_dataset"]` and every `results.txt` "Per-Dataset Chunk Metrics" section from a run trained before this fix carries the swapped values
+  - `helpers-print/dataset_prior_baseline.py` already auto-detects both orientations (by comparing summed per-dataset counts against the chunk-level confusion matrix) and handles pre-fix and post-fix runs transparently — no changes needed there
+  - Added `tests/test_per_dataset_eval.py`, which pins the call site with hand-computed confusion counts and fails against the old swapped call
 - **Frequency-cutoff ablation** (Sep 2026): `--freq-cutoff` (default 70, range `[21, 70]`) makes the spectrogram's upper frequency bound overridable per run, for testing whether results depend on the EMG-dominated gamma range (e.g. `--freq-cutoff 30`)
   - Motivation: scalp EMG from jaw/forehead/neck muscles dominates EEG above ~20 Hz (Whitham et al. 2007); retraining with gamma cropped out — rather than post-hoc occlusion — tests whether accuracy depends on that band without ever showing the model an unnatural input (avoids the ROAR/Hooker extrapolation critique of permutation methods)
   - `thesis/stft.py`: `num_freq_bins(freq_cutoff_hz)` and `spectrogram_shape(freq_cutoff_hz)` compute geometry for any cutoff; `NUM_FREQ_BINS`/`EXPECTED_SPECTROGRAM_SHAPE` are just these evaluated at the 70 Hz default. `compute_log_spectrogram()` takes `freq_cutoff_hz` as its third parameter
