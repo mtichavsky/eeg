@@ -20,14 +20,24 @@ For every present run this script prints
    The statistics functions are imported from ``bipolar_ablation_summary.py`` (not copied), so
    both summaries always use the same procedure. Benjamini-Hochberg over the runs shown is
    applied to the Nadeau-Bengio p-values (the family is "all single-dataset comparisons");
-4. when available, the per-dataset chunk accuracy of the combined-training runs
-   ``all_040_t8-t7_{ec,eo}`` next to it. **Those runs use different folds** (folds of the pooled
-   subject set), so this comparison is descriptive only.
+4. a per-fold paired comparison of balanced accuracy (``(sensitivity + specificity) / 2``)
+   against chance (0.5), using the same Wilcoxon/Nadeau-Bengio/Benjamini-Hochberg procedure as
+   (3). These models are trained class-balanced (focal loss + weighted sampler), so on an
+   imbalanced dataset they don't settle at the majority-class rate: plain accuracy vs. the
+   majority rate (3) is a strict "beats always-guessing-the-majority" bar, while balanced
+   accuracy vs. 50% chance is the comparator that matches how the model was actually trained.
+   CANE is the case where they disagree: accuracy sits *below* the majority rate (~72%
+   pathological) while balanced accuracy is still clearly above chance;
+5. when available, the per-dataset chunk accuracy *and* balanced accuracy of the combined-training
+   runs ``all_040_t8-t7_{ec,eo}`` next to the single-dataset numbers. **Those runs use different
+   folds** (folds of the pooled subject set), so this comparison is descriptive only.
 
 Caveats: with 10 folds a fold holds only a handful of subjects (SAD: 4-6), so per-fold accuracy is
 coarse and the Nadeau-Bengio correction (which assumes equal fold sizes) is only approximate.
 "Above the majority rate" is a low bar for a pooled fold-wise test; read the mean difference and
-the per-fold table (``--per-fold``) alongside the p-values.
+the per-fold table (``--per-fold``) alongside the p-values. A fold with no positives or no
+negatives in its validation set has an undefined balanced accuracy; such folds are dropped from
+the balanced-accuracy-vs-chance statistics (with a logged warning) rather than crashing.
 
 Usage::
 
@@ -188,27 +198,26 @@ class PairedResult:
     n_above: int
 
 
-def paired_vs_majority(run: SingleRun) -> PairedResult:
-    """Paired per-fold comparison of model accuracy against the per-fold majority rate.
+def _paired_significance(diffs: np.ndarray, context: str) -> PairedResult:
+    """Wilcoxon signed-rank + Nadeau-Bengio corrected paired t-test on a diffs array.
 
-    Uses the same Wilcoxon call and Nadeau-Bengio helper as ``bipolar_ablation_summary.py``.
-    Both tests need at least 2 folds (Nadeau-Bengio's variance correction divides by
-    ``n_train = folds - 1``, so a single fold gives a ``ZeroDivisionError``); with fewer, the
-    statistical test is skipped (NaN) and a warning is logged, but the mean difference and
-    ``n_above`` are still meaningful and computed.
+    Shared core of ``paired_vs_majority`` and ``balanced_acc_vs_chance``: both need at least 2
+    diffs (Nadeau-Bengio's variance correction divides by ``n_train = len(diffs) - 1``, a
+    ``ZeroDivisionError`` at a single value). With fewer, the statistical test is skipped (NaN)
+    and a warning is logged, but the mean difference and ``n_above`` are still computed.
 
-    :param SingleRun run: Run to test.
-    :return: Test results (``wilcoxon_p``/``nb_t``/``nb_p`` are NaN if ``run.n_folds < 2``).
+    :param np.ndarray diffs: Per-fold differences to test against zero.
+    :param str context: Text prefixed to the warning/error log lines (e.g. run name).
+    :return: Test results (``wilcoxon_p``/``nb_t``/``nb_p`` are NaN if ``len(diffs) < 2``).
     :rtype: PairedResult
     """
-    diffs = np.asarray(run.chunk_acc) - np.asarray(run.majority)
-    if run.n_folds < 2:
+    if len(diffs) < 2:
         logger.warning(
-            f"{run.run_dir.name}: only {run.n_folds} fold(s), skipping the paired significance "
+            f"{context}: only {len(diffs)} fold(s), skipping the paired significance "
             "test (Wilcoxon/Nadeau-Bengio need at least 2 folds)"
         )
         return PairedResult(
-            mean_diff_pp=float(diffs.mean() * 100),
+            mean_diff_pp=float(diffs.mean() * 100) if len(diffs) else float("nan"),
             wilcoxon_p=float("nan"),
             nb_t=float("nan"),
             nb_p=float("nan"),
@@ -220,7 +229,7 @@ def paired_vs_majority(run: SingleRun) -> PairedResult:
             warnings.simplefilter("ignore", RuntimeWarning)
             wilcoxon_p = float(wilcoxon(diffs)[1])
     except ValueError as exc:
-        logger.warning(f"{run.run_dir.name}: Wilcoxon failed ({exc})")
+        logger.warning(f"{context}: Wilcoxon failed ({exc})")
         wilcoxon_p = float("nan")
     t_stat, nb_p = nadeau_bengio_ttest(diffs, n_train=len(diffs) - 1, n_test=1)
     return PairedResult(
@@ -229,6 +238,94 @@ def paired_vs_majority(run: SingleRun) -> PairedResult:
         nb_t=float(t_stat),
         nb_p=float(nb_p),
         n_above=int((diffs > 0).sum()),
+    )
+
+
+def paired_vs_majority(run: SingleRun) -> PairedResult:
+    """Paired per-fold comparison of model accuracy against the per-fold majority rate.
+
+    Uses the same Wilcoxon call and Nadeau-Bengio helper as ``bipolar_ablation_summary.py``,
+    via the shared ``_paired_significance`` core.
+
+    :param SingleRun run: Run to test.
+    :return: Test results (``wilcoxon_p``/``nb_t``/``nb_p`` are NaN if ``run.n_folds < 2``).
+    :rtype: PairedResult
+    """
+    diffs = np.asarray(run.chunk_acc) - np.asarray(run.majority)
+    return _paired_significance(diffs, run.run_dir.name)
+
+
+@dataclass
+class BalancedAccResult:
+    """Balanced-accuracy-vs-chance results for one run.
+
+    :param float pooled_bal_acc: Balanced accuracy of ``run.pooled`` (``(sensitivity +
+        specificity) / 2``); NaN if the pooled sensitivity or specificity is undefined (no
+        positives or no negatives pooled over all folds).
+    :param float per_fold_mean: Mean of the valid per-fold balanced accuracies (NaN if none are
+        valid).
+    :param float per_fold_std: Sample std (``ddof=1``) of the valid per-fold balanced accuracies
+        (NaN if fewer than 2 valid folds).
+    :param int n_valid_folds: Number of folds with a defined balanced accuracy.
+    :param int n_dropped_folds: Number of folds dropped because sensitivity or specificity was
+        undefined (no positives or no negatives in that fold's validation set).
+    :param PairedResult paired: Paired test of the valid per-fold balanced accuracies against 0.5.
+    """
+
+    pooled_bal_acc: float
+    per_fold_mean: float
+    per_fold_std: float
+    n_valid_folds: int
+    n_dropped_folds: int
+    paired: PairedResult
+
+
+def _valid_balanced_accuracies(run: SingleRun) -> np.ndarray:
+    """Per-fold balanced accuracy, dropping folds where sensitivity or specificity is undefined.
+
+    A fold with no positives (sensitivity undefined) or no negatives (specificity undefined) in
+    its validation set has an undefined balanced accuracy; such folds are dropped here (only from
+    the balanced-accuracy statistics, not from any other section) and a warning is logged.
+
+    :param SingleRun run: Run to compute over.
+    :return: Balanced accuracy of each fold with both sensitivity and specificity defined.
+    :rtype: np.ndarray
+    """
+    values = np.array([(c.sensitivity + c.specificity) / 2 for c in run.counts])
+    valid_mask = ~np.isnan(values)
+    n_dropped = int((~valid_mask).sum())
+    if n_dropped:
+        dropped_folds = [i + 1 for i, ok in enumerate(valid_mask) if not ok]
+        logger.warning(
+            f"{run.run_dir.name}: {n_dropped} fold(s) have undefined balanced accuracy (no "
+            f"positives or no negatives in the validation set), dropping fold(s) "
+            f"{dropped_folds} from the balanced-accuracy-vs-chance statistics"
+        )
+    return np.asarray(values[valid_mask])
+
+
+def balanced_acc_vs_chance(run: SingleRun) -> BalancedAccResult:
+    """Paired per-fold comparison of balanced accuracy against chance (0.5).
+
+    :param SingleRun run: Run to test.
+    :return: Pooled/per-fold balanced accuracy and the paired significance test.
+    :rtype: BalancedAccResult
+    """
+    pooled = run.pooled
+    pooled_bal_acc = (pooled.sensitivity + pooled.specificity) / 2
+    values = _valid_balanced_accuracies(run)
+    n_valid = len(values)
+    per_fold_mean = float(values.mean()) if n_valid else float("nan")
+    per_fold_std = float(values.std(ddof=1)) if n_valid > 1 else float("nan")
+    diffs = values - 0.5
+    paired = _paired_significance(diffs, f"{run.run_dir.name} (balanced acc)")
+    return BalancedAccResult(
+        pooled_bal_acc=float(pooled_bal_acc),
+        per_fold_mean=per_fold_mean,
+        per_fold_std=per_fold_std,
+        n_valid_folds=n_valid,
+        n_dropped_folds=run.n_folds - n_valid,
+        paired=paired,
     )
 
 
@@ -316,23 +413,94 @@ def print_paired_table(runs: dict[tuple[str, str], SingleRun], per_fold: bool = 
             logger.info(f"  {key[0].upper():<5} {key[1]}: {cells}")
 
 
+def print_balanced_vs_chance_table(
+    runs: dict[tuple[str, str], SingleRun], per_fold: bool = False
+) -> None:
+    """Print pooled/per-fold balanced accuracy and its paired test against chance (50%).
+
+    :param dict runs: Single-dataset runs by ``(dataset, condition)``.
+    :param bool per_fold: Also print the fold-by-fold balanced accuracy values.
+    """
+    logger.info("\n=== Balanced accuracy vs chance (50%) ===\n")
+    logger.info(
+        "These models are trained class-balanced (focal loss + weighted sampler), so on an "
+        "imbalanced dataset they don't settle at the majority-class rate; balanced accuracy vs. "
+        "50% chance is the comparator that matches how the model was actually trained, while the "
+        "majority-rate test above is a stricter 'beats always-guessing-the-majority' bar. CANE is "
+        "the case where they disagree: chunk accuracy can sit below the majority rate while "
+        "balanced accuracy is still clearly above chance.\n"
+        "Folds with no positives or no negatives in validation have an undefined balanced "
+        "accuracy and are dropped from the per-fold statistics below (see warnings above).\n"
+        "Wilcoxon signed-rank and the Nadeau-Bengio corrected t-test, as in "
+        "bipolar_ablation_summary.py (equal fold sizes assumed: n_test/n_train = 1/(k-1)).\n"
+        "BH is applied over the runs listed, to the Nadeau-Bengio p-values.\n"
+    )
+    keys = list(runs)
+    results = {key: balanced_acc_vs_chance(runs[key]) for key in keys}
+    if not results:
+        return
+    # Same NaN-safe exclusion as print_paired_table: runs with fewer than 2 valid folds get a
+    # NaN nb_p and are excluded from the correction (a NaN would otherwise poison every other
+    # adjusted p-value via np.minimum.accumulate), not just displayed as "n/a".
+    testable = [k for k in keys if not np.isnan(results[k].paired.nb_p)]
+    bh_by_key = dict(zip(testable, benjamini_hochberg([results[k].paired.nb_p for k in testable])))
+    adjusted = [bh_by_key.get(k, float("nan")) for k in keys]
+    header = (
+        f"{'Dataset':<8} {'Cond':<4} {'Pooled':>7} {'Fold mean':>16} {'Valid':>7} "
+        f"{'Wilcoxon p':>11} {'NB t':>8} {'NB p':>8} {'BH p':>8}"
+    )
+    logger.info(header)
+    logger.info("-" * len(header))
+    for key, adj in zip(keys, adjusted):
+        r = results[key]
+        run = runs[key]
+        pooled_str = (
+            "n/a".rjust(7) if np.isnan(r.pooled_bal_acc) else f"{r.pooled_bal_acc * 100:>7.1f}"
+        )
+        if r.n_valid_folds == 0:
+            fold_str = "n/a".rjust(16)
+        elif r.n_valid_folds == 1:
+            fold_str = f"{r.per_fold_mean * 100:>16.1f}"
+        else:
+            fold_str = f"{r.per_fold_mean * 100:>6.1f} +/- {r.per_fold_std * 100:<4.2f}"
+        valid_str = f"{r.n_valid_folds:>3}/{run.n_folds:<3}"
+        wilcoxon_p = (
+            "n/a".rjust(11) if np.isnan(r.paired.wilcoxon_p) else f"{r.paired.wilcoxon_p:>11.4f}"
+        )
+        nb_t = "n/a".rjust(8) if np.isnan(r.paired.nb_t) else f"{r.paired.nb_t:>+8.3f}"
+        nb_p = "n/a".rjust(8) if np.isnan(r.paired.nb_p) else f"{r.paired.nb_p:>8.4f}"
+        bh_p = "n/a".rjust(8) if np.isnan(adj) else f"{adj:>8.4f}"
+        logger.info(
+            f"{key[0].upper():<8} {key[1]:<4} {pooled_str} {fold_str:>16} {valid_str:>7} "
+            f"{wilcoxon_p} {nb_t} {nb_p} {bh_p}"
+        )
+    if per_fold:
+        logger.info("\nPer fold (balanced accuracy %, 'nan' = undefined for that fold):")
+        for key in keys:
+            run = runs[key]
+            cells = []
+            for c in run.counts:
+                bal = (c.sensitivity + c.specificity) / 2
+                cells.append("  nan" if np.isnan(bal) else f"{bal * 100:5.1f}")
+            logger.info(f"  {key[0].upper():<5} {key[1]}: {' '.join(cells)}")
+
+
 def print_combined_comparison(runs: dict[tuple[str, str], SingleRun], combined_root: Path) -> None:
     """Print single-dataset vs combined-training per-dataset accuracy (descriptive only).
 
     :param dict runs: Single-dataset runs by ``(dataset, condition)``.
     :param Path combined_root: Directory containing ``all_040_t8-t7_{ec,eo}``.
     """
-    logger.info(
-        "\n=== Single-dataset vs combined training (all_040), per-dataset chunk accuracy ===\n"
-    )
+    logger.info("\n=== Single-dataset vs combined training (all_040), per-dataset accuracy ===\n")
     logger.info(
         "DESCRIPTIVE ONLY: the combined runs use different folds (folds of the pooled MDD+CANE+SAD "
         "subject set), so no paired test is possible. Combined per-dataset counts have their "
-        "fp/fn orientation resolved by dataset_prior_baseline.py.\n"
+        "fp/fn orientation resolved by dataset_prior_baseline.py, so their sensitivity/specificity "
+        "(and thus balanced accuracy) are already orientation-corrected.\n"
     )
     header = (
-        f"{'Dataset':<8} {'Cond':<4} | {'single acc':>10} {'base':>6} {'gain':>7} | "
-        f"{'combined acc':>12} {'base':>6} {'gain':>7}"
+        f"{'Dataset':<8} {'Cond':<4} | {'single acc':>10} {'base':>6} {'gain':>7} {'bal':>6} | "
+        f"{'combined acc':>12} {'base':>6} {'gain':>7} {'bal':>6}"
     )
     logger.info(header)
     logger.info("-" * len(header))
@@ -356,14 +524,18 @@ def print_combined_comparison(runs: dict[tuple[str, str], SingleRun], combined_r
             if single is not None:
                 p = single.pooled
                 s_acc, s_base = p.accuracy * 100, p.baseline * 100
-                s_cells = f"{s_acc:>10.1f} {s_base:>6.1f} {s_acc - s_base:>+7.1f}"
+                s_bal = (p.sensitivity + p.specificity) / 2 * 100
+                s_bal_str = "n/a" if np.isnan(s_bal) else f"{s_bal:.1f}"
+                s_cells = f"{s_acc:>10.1f} {s_base:>6.1f} {s_acc - s_base:>+7.1f} {s_bal_str:>6}"
             else:
-                s_cells = f"{'n/a':>10} {'':>6} {'':>7}"
+                s_cells = f"{'n/a':>10} {'':>6} {'':>7} {'':>6}"
             if comb is not None:
                 c_acc, c_base = comb.accuracy * 100, comb.baseline * 100
-                c_cells = f"{c_acc:>12.1f} {c_base:>6.1f} {c_acc - c_base:>+7.1f}"
+                c_bal = (comb.sensitivity + comb.specificity) / 2 * 100
+                c_bal_str = "n/a" if np.isnan(c_bal) else f"{c_bal:.1f}"
+                c_cells = f"{c_acc:>12.1f} {c_base:>6.1f} {c_acc - c_base:>+7.1f} {c_bal_str:>6}"
             else:
-                c_cells = f"{'n/a':>12} {'':>6} {'':>7}"
+                c_cells = f"{'n/a':>12} {'':>6} {'':>7} {'':>6}"
             logger.info(f"{dataset.upper():<8} {condition:<4} | {s_cells} | {c_cells}")
     if not any_row:
         logger.info("  (nothing to compare)")
@@ -421,6 +593,7 @@ def main(argv: Optional[list[str]] = None, configure_logging: bool = True) -> in
     print_main_table(runs)
     print_baseline_table(runs)
     print_paired_table(runs, per_fold=args.per_fold)
+    print_balanced_vs_chance_table(runs, per_fold=args.per_fold)
     print_combined_comparison(runs, args.combined_root or args.root)
     return 0
 
