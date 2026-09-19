@@ -10,7 +10,7 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -113,3 +113,54 @@ def write_run(
             swapped=swapped,
             subject_acc=subject_accs[i - 1] if subject_accs else 0.5,
         )
+
+
+def metrics_from_matrices(
+    matrices: dict[str, np.ndarray],
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Build the ``(chunk, per_dataset)`` metrics ``eval_epoch`` would return for ``matrices``.
+
+    The metrics are produced by the real ``classification_metrics`` and
+    ``compute_per_dataset_metrics`` from chunk labels expanded out of ``matrices``, so they carry
+    exactly what ``main.py`` stores (including the meaningless-for-4-class ``tp``/``tn``/``fp``/
+    ``fn``).
+
+    :param dict matrices: ``{dataset: K x K confusion matrix}`` with rows = true class and
+        columns = predicted class; K = 2 gives binary metrics, K = 4 4-class ones.
+    :return: ``(chunk metrics, per-dataset metrics)``.
+    :rtype: tuple[dict, dict]
+    """
+    from thesis.metrics import classification_metrics, compute_per_dataset_metrics
+
+    num_classes = next(iter(matrices.values())).shape[0]
+    y_true: list[int] = []
+    y_pred: list[int] = []
+    subjects: list[str] = []
+    for dataset, matrix in matrices.items():
+        for true_class, pred_class in np.ndindex(matrix.shape):
+            count = int(matrix[true_class, pred_class])
+            y_true += [true_class] * count
+            y_pred += [pred_class] * count
+            subjects += [f"{dataset}-subject"] * count
+    true_arr, pred_arr = np.array(y_true), np.array(y_pred)
+    chunk = classification_metrics(true_arr, pred_arr, num_classes=num_classes)
+    per_dataset = compute_per_dataset_metrics(
+        y_true=true_arr,
+        y_pred=pred_arr,
+        subjects=subjects,
+        subject_dataset_map={f"{d}-subject": d for d in matrices},
+        num_classes=num_classes,
+    )
+    return chunk, per_dataset
+
+
+def write_matrix_fold_checkpoint(path: Path, matrices: dict[str, np.ndarray]) -> None:
+    """Write a synthetic ``fold_N_best.pth`` whose ``per_dataset`` holds confusion matrices.
+
+    :param Path path: Checkpoint file to create.
+    :param dict matrices: ``{dataset: K x K confusion matrix}``, see :func:`metrics_from_matrices`.
+    """
+    chunk, per_dataset = metrics_from_matrices(matrices)
+    val_metrics = {"chunk": chunk, "subject": {"accuracy": 0.5}, "per_dataset": per_dataset}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save({"epoch": 1, "chunk_acc": chunk["accuracy"], "val_metrics": val_metrics}, path)
