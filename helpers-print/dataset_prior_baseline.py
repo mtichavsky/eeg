@@ -31,7 +31,12 @@ folds (``--assume`` overrides this). Which case was detected is logged.
 4-class runs
 ------------
 For 4-class checkpoints the per-dataset ``tp/tn/fp/fn`` are not meaningful and the class balance of
-a dataset is not stored, so only per-dataset accuracy is printed and no baseline is computed.
+a dataset is not stored, so only per-dataset accuracy is printed and no baseline is computed. A
+4-class ``results.txt`` (detected from its ``class_mode`` config line or, failing that, from a
+confusion-matrix row only a >2-class run can have) gets the same accuracy-only treatment in
+``--from-results-txt`` mode -- its "Per-Dataset Chunk Metrics" sens/spec columns cover only the
+chunks where both true and predicted label happen to be 0 or 1, so they are not a real binary
+breakdown and are never fed to :func:`reconstruct_counts`.
 
 ``--from-results-txt`` (best effort, no checkpoints needed)
 -----------------------------------------------------------
@@ -43,9 +48,19 @@ table is built from counts pooled over folds, so with ``N`` chunks the four equa
 
 determine the four counts. What "sens" and "spec" mean depends on the code version:
 
-* ``--results-orientation swapped`` (default; every run that predates the fix): they are really
-  ``TP / (TP + FP)`` (PPV) and ``TN / (TN + FN)`` (NPV).
-* ``--results-orientation fixed``: they are the true ``TP / (TP + FN)`` and ``TN / (TN + FP)``.
+* every run that predates the ``main.py`` argument-order fix: they are really ``TP / (TP + FP)``
+  (PPV) and ``TN / (TN + FN)`` (NPV) -- ``--results-orientation swapped``.
+* after the fix: they are the true ``TP / (TP + FN)`` and ``TN / (TN + FP)`` --
+  ``--results-orientation fixed``.
+
+``--results-orientation`` defaults to ``auto``: it reconstructs the per-dataset counts under both
+readings and keeps whichever pooled sum best matches the file's own aggregated confusion matrix
+(the same TN/FP/FN/TP table :func:`detect_orientation` uses in checkpoint mode). If that matrix is
+missing, or both readings fit equally well (a tie, e.g. every dataset happens to have FP == FN so
+swapping fp/fn changes nothing), the run is skipped with a hint to pass ``--results-orientation
+swapped|fixed`` explicitly. A run whose printed percentages don't uniquely determine a dataset's
+counts under the chosen orientation (e.g. sens == spec, or both are exactly 0.00%, see
+:func:`reconstruct_counts`) is skipped the same way, rather than aborting the whole command.
 
 The percentages are printed with two decimals, so the reconstructed counts carry a rounding error
 (a few chunks per dataset for typical sizes). The reconstruction is validated against the
@@ -103,8 +118,16 @@ class CountMismatchError(ValueError):
     """The per-dataset counts of a checkpoint are inconsistent with its chunk confusion matrix."""
 
 
+class UnidentifiableCountsError(ValueError):
+    """A results.txt table's rounded percentages don't pin down a unique (tp, tn, fp, fn)."""
+
+
 class SkipRunError(Exception):
     """A run directory cannot be analysed (no checkpoints, or checkpoints lack per_dataset)."""
+
+
+# Per-run failures that main() reports as a skipped run instead of aborting the whole command.
+SKIPPABLE_ERRORS = (SkipRunError, CountMismatchError, UnidentifiableCountsError)
 
 
 @dataclass(frozen=True)
@@ -405,6 +428,13 @@ def reconstruct_counts(
 ) -> Counts:
     """Rebuild ``(tp, tn, fp, fn)`` of one dataset from its rounded results.txt percentages.
 
+    A printed sens/spec of 0.00% (e.g. a model that predicts all-pathological, so NPV = 0) is
+    usually still identifiable: a 0 numerator pins ``tp`` (or ``tn``) to exactly 0, and the other
+    of the pair together with ``accuracy``/``n`` then pins the rest. See the two special-cased
+    branches below. The genuinely unidentifiable cases are: both printed values 0 (``correct``
+    itself is then 0 and the ``wrong`` count can't be split), and the two values being equal
+    (PPV == NPV, or sens == spec), where the linear system is singular.
+
     :param float accuracy: Chunk accuracy as a fraction in [0, 1].
     :param float sens: Printed "sensitivity" as a fraction.
     :param float spec: Printed "specificity" as a fraction.
@@ -413,13 +443,22 @@ def reconstruct_counts(
         ``TN/(TN+FN)`` (pre-fix runs). ``"fixed"``: they are ``TP/(TP+FN)`` and ``TN/(TN+FP)``.
     :return: Reconstructed oriented counts (rounded to integers, summing to ``n``).
     :rtype: Counts
-    :raises ValueError: If the equations are degenerate (equal, zero or unit sens/spec).
+    :raises ValueError: If ``sens``/``spec`` are outside ``[0, 1]`` or ``orientation`` is invalid.
+    :raises UnidentifiableCountsError: If the counts can't be recovered (sens == spec, including
+        both 0).
     """
+    if not (0 <= sens <= 1 and 0 <= spec <= 1):
+        raise ValueError(f"sens/spec out of [0, 1]: sens={sens}, spec={spec}")
     correct = round(accuracy * n)
     wrong = n - correct
     if orientation == "fixed":
+        # True sens = TP/(TP+FN), spec = TN/(TN+FP); the linear system in (P = TP+FN) is solved
+        # directly, so it degrades gracefully to sens == 0 or spec == 0 without special-casing --
+        # only sens == spec (including both 0, since correct == 0 forces that) is singular.
         if abs(sens - spec) < 1e-9:
-            raise ValueError("sensitivity == specificity: positives/negatives are not identifiable")
+            raise UnidentifiableCountsError(
+                "sensitivity == specificity: positives/negatives are not identifiable"
+            )
         positives = (correct - spec * n) / (sens - spec)
         tp = round(sens * positives)
         tn = correct - tp
@@ -428,12 +467,29 @@ def reconstruct_counts(
         return Counts(tp, tn, fp, fn)
     if orientation != "swapped":
         raise ValueError(f"unknown orientation {orientation!r}")
-    if not (0 < sens <= 1 and 0 < spec <= 1):
-        raise ValueError("PPV/NPV of 0 make the equations degenerate")
+    # PPV = TP/(TP+FP), NPV = TN/(TN+FN). Unlike "fixed", these are ratios of tp/tn to the
+    # *wrong* counts, which blow up at tp == 0 or tn == 0 -- handle those two cases directly.
+    if sens <= 0 and spec <= 0:
+        raise UnidentifiableCountsError(
+            "PPV and NPV both 0: tp == tn == 0, and the wrong count can't be split into fp/fn"
+        )
+    if sens <= 0:
+        # PPV == 0 forces tp == 0 (whether from a genuine 0 numerator or the 0/0 default in
+        # write_per_dataset_table), so tn == correct; fn then follows from NPV.
+        tn = correct
+        fn = round(tn * (1 - spec) / spec)
+        fp = wrong - fn
+        return Counts(tp=0, tn=tn, fp=fp, fn=fn)
+    if spec <= 0:
+        # NPV == 0 forces tn == 0, symmetric to the case above.
+        tp = correct
+        fp = round(tp * (1 - sens) / sens)
+        fn = wrong - fp
+        return Counts(tp=tp, tn=0, fp=fp, fn=fn)
+    if abs(sens - spec) < 1e-9:
+        raise UnidentifiableCountsError("PPV == NPV: counts are not identifiable")
     ratio_p = (1 - sens) / sens  # FP / TP
     ratio_n = (1 - spec) / spec  # FN / TN
-    if abs(ratio_p - ratio_n) < 1e-9:
-        raise ValueError("PPV == NPV: counts are not identifiable")
     tp_float = (wrong - correct * ratio_n) / (ratio_p - ratio_n)
     tp = round(tp_float)
     tn = correct - tp
@@ -442,18 +498,41 @@ def reconstruct_counts(
     return Counts(tp, tn, fp, fn)
 
 
-def parse_results_txt(
-    path: Path,
+# A multi-class run is detected from its config dump ("class_mode: 4") or, failing that, from a
+# row of the aggregated confusion matrix that only a >2-class run can have (see
+# thesis.labels.CANONICAL_DISPLAY_NAMES / thesis.metrics._format_confusion_matrix).
+CLASS_MODE_RE = re.compile(r"^\s*class_mode:\s*(\S+)\s*$")
+MULTICLASS_CM_ROW_RE = re.compile(r"^\s*(Anxiety|Depression|Comorbid)\s+\d+(?:\s+\d+)*\s*$")
+
+
+def _detect_multiclass(lines: list[str]) -> bool:
+    """Detect a >2-class run from the config dump or confusion matrix of a results.txt.
+
+    :param list[str] lines: Lines of the results.txt file.
+    :return: True if the run was not 2-class (binary).
+    :rtype: bool
+    """
+    for line in lines:
+        match = CLASS_MODE_RE.match(line)
+        if match:
+            try:
+                return int(match[1]) != 2
+            except ValueError:
+                break  # non-numeric class_mode: fall back to the confusion-matrix check
+    return any(MULTICLASS_CM_ROW_RE.match(line) for line in lines)
+
+
+def _parse_results_lines(
+    lines: list[str],
 ) -> tuple[dict[str, tuple[float, float, float, int]], Optional[np.ndarray]]:
     """Parse the aggregated per-dataset table (and confusion matrix) of a results.txt.
 
-    :param Path path: results.txt written by ``main.py train``.
+    :param list[str] lines: Lines of the results.txt file.
     :return: ``({dataset: (acc, sens, spec, chunks)}, confusion_matrix or None)``, the
         percentages converted to fractions and the matrix as ``[[TN, FP], [FN, TP]]``.
     :rtype: tuple
     :raises SkipRunError: If the file has no per-dataset table.
     """
-    lines = path.read_text().splitlines()
     rows: dict[str, tuple[float, float, float, int]] = {}
     in_table = False
     healthy: Optional[tuple[int, int]] = None
@@ -483,28 +562,147 @@ def parse_results_txt(
     return rows, matrix
 
 
-def load_from_results_txt(path: Path, orientation: str = "swapped") -> RunCounts:
+def parse_results_txt(
+    path: Path,
+) -> tuple[dict[str, tuple[float, float, float, int]], Optional[np.ndarray]]:
+    """Parse the aggregated per-dataset table (and confusion matrix) of a results.txt.
+
+    :param Path path: results.txt written by ``main.py train``.
+    :return: ``({dataset: (acc, sens, spec, chunks)}, confusion_matrix or None)``, the
+        percentages converted to fractions and the matrix as ``[[TN, FP], [FN, TP]]``.
+    :rtype: tuple
+    :raises SkipRunError: If the file has no per-dataset table.
+    """
+    return _parse_results_lines(path.read_text().splitlines())
+
+
+def _load_multiclass_results_txt(path: Path, lines: list[str]) -> RunCounts:
+    """Build an accuracy-only ``RunCounts`` for a >2-class results.txt.
+
+    The per-dataset tp/tn/fp/fn stored by a multi-class run only cover the chunks where both the
+    true and predicted label happen to be 0 or 1 (see ``compute_per_dataset_metrics``), so its
+    printed sens/spec columns are not a real binary breakdown and must not be reconstructed with
+    :func:`reconstruct_counts`. Only accuracy and chunk counts are trustworthy, matching what
+    checkpoint mode (:func:`load_run`) reports for a 4-class checkpoint.
+
+    :param Path path: results.txt path, used as the resulting ``RunCounts.path``.
+    :param list[str] lines: Lines of the results.txt file.
+    :return: Accuracy-only, non-binary run counts (``counts`` is empty).
+    :rtype: RunCounts
+    :raises SkipRunError: If the file has no per-dataset table.
+    """
+    rows, _ = _parse_results_lines(lines)
+    correct = {ds: round(acc * n) for ds, (acc, _sens, _spec, n) in rows.items()}
+    total = {ds: n for ds, (_acc, _sens, _spec, n) in rows.items()}
+    note = "multi-class run: only per-dataset accuracy is available (from results.txt)"
+    return RunCounts(
+        path=path, source="results.txt", correct=correct, total=total, counts={}, note=note
+    )
+
+
+def _matrix_deviation(counts: dict[str, Counts], matrix: np.ndarray) -> int:
+    """Largest per-field gap between pooled reconstructed counts and the file's confusion matrix.
+
+    :param dict counts: Reconstructed per-dataset counts.
+    :param np.ndarray matrix: Aggregated confusion matrix, ``[[TN, FP], [FN, TP]]``.
+    :return: ``max(|dTP|, |dTN|, |dFP|, |dFN|)`` in chunks.
+    :rtype: int
+    """
+    summed = sum(counts.values(), Counts())
+    tn, fp, fn, tp = (int(v) for v in matrix.ravel())
+    return max(abs(summed.tp - tp), abs(summed.tn - tn), abs(summed.fp - fp), abs(summed.fn - fn))
+
+
+def _resolve_results_orientation(
+    path: Path,
+    rows: dict[str, tuple[float, float, float, int]],
+    matrix: Optional[np.ndarray],
+    orientation: str,
+) -> tuple[str, str]:
+    """Decide (``"auto"``) or validate (explicit) the swapped/fixed reading of a results.txt.
+
+    :param Path path: results.txt path, for error messages.
+    :param dict rows: Parsed per-dataset ``(acc, sens, spec, n)`` rows.
+    :param Optional[np.ndarray] matrix: Aggregated binary confusion matrix, or None if absent.
+    :param str orientation: ``"auto"``, ``"swapped"`` or ``"fixed"``.
+    :return: ``(resolved_orientation, note_suffix)``; ``note_suffix`` is appended to the run note
+        (empty when there is nothing extra to say, e.g. no confusion matrix to check against).
+    :rtype: tuple[str, str]
+    :raises UnidentifiableCountsError: If ``orientation == "auto"`` and it can't be determined
+        (no confusion matrix to compare against, both orientations unidentifiable, or a tie).
+    """
+    if orientation != "auto":
+        if matrix is None:
+            return orientation, ""
+        counts = {
+            ds: reconstruct_counts(acc, sens, spec, n, orientation)
+            for ds, (acc, sens, spec, n) in rows.items()
+        }
+        deviation = _matrix_deviation(counts, matrix)
+        return orientation, f"; max |reconstructed - confusion matrix| = {deviation} chunks"
+
+    if matrix is None:
+        raise UnidentifiableCountsError(
+            f"{path}: no aggregated confusion matrix in results.txt to auto-detect the sens/spec "
+            "orientation against; pass --results-orientation swapped|fixed explicitly"
+        )
+    deviations: dict[str, int] = {}
+    for candidate in ("swapped", "fixed"):
+        try:
+            counts = {
+                ds: reconstruct_counts(acc, sens, spec, n, candidate)
+                for ds, (acc, sens, spec, n) in rows.items()
+            }
+        except UnidentifiableCountsError:
+            continue
+        deviations[candidate] = _matrix_deviation(counts, matrix)
+    if not deviations:
+        raise UnidentifiableCountsError(
+            f"{path}: neither swapped nor fixed orientation gives identifiable per-dataset "
+            "counts; pass --results-orientation swapped|fixed explicitly"
+        )
+    if len(deviations) == 2 and deviations["swapped"] == deviations["fixed"]:
+        raise UnidentifiableCountsError(
+            f"{path}: swapped and fixed orientations fit the aggregated confusion matrix equally "
+            f"well (deviation {deviations['swapped']} chunks each, e.g. FP == FN); pass "
+            "--results-orientation swapped|fixed explicitly"
+        )
+    best = min(deviations, key=lambda o: deviations[o])
+    others = ", ".join(f"{o}={d}" for o, d in deviations.items() if o != best)
+    detail = f" vs {others}" if others else " (other orientation unidentifiable)"
+    return best, f"; auto-detected {best} orientation (deviation {deviations[best]} chunks{detail})"
+
+
+def load_from_results_txt(path: Path, orientation: str = "auto") -> RunCounts:
     """Reconstruct pooled per-dataset counts from a results.txt (best effort).
 
     :param Path path: results.txt path.
-    :param str orientation: ``"swapped"`` or ``"fixed"``, see :func:`reconstruct_counts`.
-    :return: Pooled per-dataset counts.
+    :param str orientation: ``"auto"`` (default) picks whichever of ``"swapped"``/``"fixed"``
+        makes the pooled reconstructed counts best match the file's own aggregated confusion
+        matrix; ``"swapped"``/``"fixed"`` force a reading, see :func:`reconstruct_counts`.
+    :return: Pooled per-dataset counts. For a >2-class run, ``counts`` is empty and only
+        per-dataset accuracy/chunk totals are populated (see :func:`_load_multiclass_results_txt`).
     :rtype: RunCounts
+    :raises SkipRunError: If the file has no per-dataset table.
+    :raises UnidentifiableCountsError: If a dataset's counts aren't identifiable under the chosen
+        orientation, or (``"auto"``) the orientation itself can't be determined.
     """
-    rows, matrix = parse_results_txt(path)
-    counts: dict[str, Counts] = {}
-    for dataset, (accuracy, sens, spec, n) in rows.items():
-        counts[dataset] = reconstruct_counts(accuracy, sens, spec, n, orientation)
+    lines = path.read_text().splitlines()
+    if _detect_multiclass(lines):
+        return _load_multiclass_results_txt(path, lines)
+    rows, matrix = _parse_results_lines(lines)
+    resolved, note_suffix = _resolve_results_orientation(path, rows, matrix, orientation)
+    counts = {
+        ds: reconstruct_counts(acc, sens, spec, n, resolved)
+        for ds, (acc, sens, spec, n) in rows.items()
+    }
     total = {d: c.total for d, c in counts.items()}
     correct = {d: c.correct for d, c in counts.items()}
-    note = f"reconstructed from rounded results.txt percentages (printed sens/spec: {orientation})"
+    note = (
+        f"reconstructed from rounded results.txt percentages (printed sens/spec: {resolved})"
+        f"{note_suffix}"
+    )
     if matrix is not None:
-        summed = sum(counts.values(), Counts())
-        tn, fp, fn, tp = (int(v) for v in matrix.ravel())
-        deviation = max(
-            abs(summed.tp - tp), abs(summed.tn - tn), abs(summed.fp - fp), abs(summed.fn - fn)
-        )
-        note += f"; max |reconstructed - confusion matrix| = {deviation} chunks"
         logger.info(f"[{path.parent.name}] {note}")
     return RunCounts(
         path=path, source="results.txt", correct=correct, total=total, counts=counts, note=note
@@ -719,10 +917,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--results-orientation",
-        choices=["swapped", "fixed"],
-        default="swapped",
-        help="Meaning of the printed sens/spec columns of results.txt (default: swapped, i.e. "
-        "PPV/NPV, for every run that predates the main.py argument-order fix).",
+        choices=["auto", "swapped", "fixed"],
+        default="auto",
+        help="Meaning of the printed sens/spec columns of results.txt: 'swapped' (PPV/NPV, every "
+        "run that predates the main.py argument-order fix) or 'fixed' (true sens/spec, after the "
+        "fix). Default 'auto' reconstructs both and keeps whichever best matches the file's own "
+        "aggregated confusion matrix, skipping the run (with a hint to set this explicitly) if "
+        "that matrix is missing or both orientations fit equally well.",
     )
     return parser
 
@@ -755,7 +956,7 @@ def main(argv: Optional[list[str]] = None, configure_logging: bool = True) -> in
                 if not path.is_dir():
                     continue
                 run = load_run(path, args.assume, args.expect_folds)
-        except SkipRunError as exc:
+        except SKIPPABLE_ERRORS as exc:
             skipped.append((str(path), str(exc)))
             continue
         report = report_run(run)

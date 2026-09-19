@@ -149,3 +149,62 @@ class TestCli:
 
     def test_no_runs_returns_error(self, tmp_path: Path) -> None:
         assert summary.main(["--root", str(tmp_path)], configure_logging=False) == 1
+
+
+class TestSingleFoldRun:
+    """A run with a single fold checkpoint must not crash ``nadeau_bengio_ttest``.
+
+    ``nadeau_bengio_ttest(diffs, n_train=len(diffs) - 1, n_test=1)`` divides by ``n_train``, which
+    is 0 for a single fold -- a bare ``ZeroDivisionError`` before the fix.
+    """
+
+    def test_paired_vs_majority_skips_stats_without_crashing(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        write_run(tmp_path / "sad_041_t8-t7_ec", [_fold("sad", 30, 20, 10, 40)])
+        run = summary.load_single_run(tmp_path / "sad_041_t8-t7_ec", "sad", "ec")
+        assert run.n_folds == 1
+
+        with caplog.at_level(logging.WARNING):
+            result = summary.paired_vs_majority(run)
+
+        assert "only 1 fold" in caplog.text
+        assert np.isnan(result.wilcoxon_p)
+        assert np.isnan(result.nb_t)
+        assert np.isnan(result.nb_p)
+        # chunk_acc = (30+20)/100 = 0.5; majority = max(70, 30)/100 = 0.7.
+        assert result.mean_diff_pp == pytest.approx((0.5 - 0.7) * 100)
+        assert result.n_above == 0
+
+    def test_end_to_end_with_one_fold_and_ten_fold_runs(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # cane: 10 folds, clearly above the majority rate (a real, non-NaN BH p-value).
+        cane_folds = []
+        for shift in range(10):
+            cane_folds.append(_fold("cane", 52 + shift % 3, 36, 4, 8 - shift % 3))
+        write_run(tmp_path / "cane_041_t8-t7_ec", cane_folds)
+        # sad: only one fold checkpoint kept -- the case that used to crash.
+        write_run(tmp_path / "sad_041_t8-t7_ec", [_fold("sad", 30, 20, 10, 40)])
+
+        with caplog.at_level(logging.INFO):
+            code = summary.main(["--root", str(tmp_path)], configure_logging=False)
+        text = "\n".join(caplog.messages)
+
+        assert code == 0
+        # Main/baseline/combined tables still print for both runs.
+        assert "CANE" in text and "SAD" in text
+        assert "Majority-class baseline" in text
+        assert "DESCRIPTIVE ONLY" in text
+        assert "only 1 fold" in text
+
+        # Within the paired-test section: the 1-fold SAD row shows n/a, the 10-fold CANE row
+        # still gets a real (non-NaN-poisoned) BH-adjusted p-value.
+        lines = text.splitlines()
+        start = next(i for i, line in enumerate(lines) if "Per-fold paired test" in line)
+        end = next(i for i, line in enumerate(lines[start:], start) if "combined training" in line)
+        section = lines[start:end]
+        sad_line = next(line for line in section if line.startswith("SAD"))
+        cane_line = next(line for line in section if line.startswith("CANE"))
+        assert "n/a" in sad_line
+        assert "n/a" not in cane_line
