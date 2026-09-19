@@ -37,7 +37,7 @@ and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83)
 5. **Paper Section VII is up to date for A, B, the decomposition and the single-dataset runs**
    (thesis-text PR #4, open). Whitham 2007 is cited. Everything still to do is in red.
 6. **Known bug:** per-dataset sensitivity/specificity are mislabelled (§3.5). Fix is PR #91
-   (open, by the parallel session code-c0); accuracy numbers are unaffected.
+   (merged, by the parallel session code-c0); accuracy numbers are unaffected.
 7. **Cutoff curve (50 / 40 Hz, in-ear CNN-AttnS)** was submitted (jobs 23807556 / 23807557,
    PR #90 merged). Results not yet analysed.
 
@@ -66,10 +66,12 @@ answer one of these:
 | **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ In `main` (PR #83 flag, PR #89 launcher + summary) | ✅ 4 runs, 2026-09-19, ~30 min wall. `experiments/all_041_*`. ⏳ curve points 50 / 40 Hz (in-ear CNN-AttnS, `all_042_inear_ec+eo_f{50,40}`, jobs 23807556/57, PR #90) | §4: 30 Hz costs 5.6 to 9.5 pp; curve pending |
 | **C** | Post-hoc band shuffle on saved checkpoints | ❌ | n/a (inference only) | Undecided (§6). Now unblocked: B saved 70 Hz AllTransformerV4 checkpoints |
 | Obj. 1 | Dataset-identity checks | ✅ Prior-baseline script, single-dataset launcher and summary in `main` (PR #88, merged) | ✅ 6 single-dataset runs `{cane,sad,mdd}_041_t8-t7_{ec,eo}` (jobs 23807482–87, run by code-c0) done, synced to `experiments/`. Probe / shuffled labels / 4-class not built | §3.4, §3.6, §4.3 |
-| Bug | `main.py:259` swapped args | ⚠️ Fix + `tests/test_per_dataset_eval.py` in PR #91 (open, branch `fix/per-dataset-metrics-arg-order`) | n/a; the 6 single-dataset runs predate the fix (their summary uses chunk metrics, unaffected) | §3.5 |
+| Bug | `main.py:259` swapped args | ✅ Fix + `tests/test_per_dataset_eval.py` in PR #91 (merged) | n/a; the 6 single-dataset runs predate the fix (their summary uses chunk metrics, unaffected) | §3.5 |
 
-**PRs (mtichavsky/eeg):** #87 docs (this file + CLAUDE.md Metacentrum section) open; #91 per-dataset
-metrics fix open; #88 objection-1 tools, #89 cutoff launcher and #90 cutoff-curve launcher **merged**.
+**PRs (mtichavsky/eeg):** #87 docs (this file + CLAUDE.md Metacentrum section) open; #88 objection-1 tools, #89 cutoff launcher, #90
+cutoff-curve launcher and #91 per-dataset metrics fix **merged**; code-c0 is preparing a PR
+(`feat/single-dataset-balanced-accuracy`) adding the balanced-accuracy test of §3.6 to
+`single_dataset_summary.py`.
 **PR (mtichavsky/thesis-text):** #4 open, holds Section VII (shortcut, montage, cutoff, planned)
 plus the user's own prose edits. After #4 merges the user must
 `git checkout -- paper/paper.tex` in their checkout before switching branches.
@@ -193,7 +195,7 @@ signature is `(y_true, y_pred, subjects, subject_dataset_map)` (`thesis/metrics.
 - Anything that reports per-dataset sens/spec (the `Per-Dataset Chunk Metrics` table in every
   `results.txt`, `docs/per_dataset_comparison.png` if it uses those columns, any paper text)
   should be recomputed. It is recoverable from stored checkpoints by swapping `fp`↔`fn` (that is
-  what §3.4 did). **Fix is PR #91** (open; branch `fix/per-dataset-metrics-arg-order`, §7 item 1).
+  what §3.4 did). **Fix is PR #91** (merged, §7 item 1).
 
 ### 3.6 Single-dataset runs (objection 1; run by code-c0, analysed 2026-09-19 late evening)
 
@@ -403,12 +405,12 @@ Reading:
 
 ## 7. Open items and suggested next steps (in order, as of 2026-09-19 evening)
 
-**Needs the user (merging):** mtichavsky/eeg #87 and #91; mtichavsky/thesis-text #4 (then
+**Needs the user (merging):** mtichavsky/eeg #87; mtichavsky/thesis-text #4 (then
 `git checkout -- paper/paper.tex` in the thesis checkout). Whitham 2007 is already in
 `references.bib` and cited in `sec:cutoff` (done in PR #4).
 
-1. **Per-dataset metrics fix: PR #91 is open** (code-c0: `main.py:259` argument order, tests, and
-   the single-fold crash in `bipolar_ablation_summary.py`). After it merges, regenerate anything using per-dataset sens/spec (`per_dataset_comparison.png` if it uses
+1. **Per-dataset metrics fix: PR #91 is merged** (code-c0: `main.py:259` argument order, tests, and
+   the single-fold crash in `bipolar_ablation_summary.py`). Regenerate anything using per-dataset sens/spec (`per_dataset_comparison.png` if it uses
    those columns; the paper caption says accuracy only, so probably unaffected; unverified).
    `helpers-print/dataset_prior_baseline.py` already handles both orientations.
 2. **Objection 1, cheapest first (the priority).**
@@ -416,8 +418,9 @@ Reading:
       `all_041_*_f{70,30}` runs by coincidence; the families are told apart by the dataset prefix and
       the `_f70`/`_f30` suffix. Result: MDD alone ≈ 90 % (positive control), CANE alone
       68.4 / 66.9 % balanced accuracy (weak signal, same as in the combined model), SAD alone
-      70.5 / 65.7 %. Optional follow-up: put the balanced-accuracy test into
-      `single_dataset_summary.py` so the numbers are reproducible from a committed script.
+      70.5 / 65.7 %. The balanced-accuracy test is being added to
+      `single_dataset_summary.py` by code-c0 (branch `feat/single-dataset-balanced-accuracy`), so
+      Table V reproduces from a committed script once that merges.
    2. **Four-class shortcut analysis.** 4-class runs store per-dataset accuracy only, not class
       balance, so a re-evaluation harness is needed (same harness as C, §9.4), plus a CANE-only
       anxiety vs comorbid run (CANE has 18 anxiety / 26 comorbid, no shortcut from other datasets).
@@ -434,8 +437,8 @@ Reading:
    mandatory), so lean on the in-ear model for the significant result.
 4. **Fold-rebuild harness: DROPPED (user decision 2026-09-19).** A post-hoc harness that
    rebuilds folds and re-evaluates checkpoints adds code complexity. Preferred route for any new
-   metric is to add it to the training/eval code and rerun on Metacentrum. **Open suggestion,
-   on hold until PR #91 merges** (both touch `compute_per_dataset_metrics`): store the full
+   metric is to add it to the training/eval code and rerun on Metacentrum. **Open suggestion
+   (PR #91 has merged, so it is no longer blocked; awaiting the user's go-ahead):** store the full
    per-dataset confusion matrix (and class counts) in `results.txt`/checkpoints and rerun the
    4-class ATv4 / in-ear CNN-AttnS (optionally the binary ATv4). That would enable the 4-class
    decomposition without a harness. C, the asymmetry swap and the probe are dropped with the
