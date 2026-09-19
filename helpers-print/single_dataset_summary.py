@@ -192,12 +192,28 @@ def paired_vs_majority(run: SingleRun) -> PairedResult:
     """Paired per-fold comparison of model accuracy against the per-fold majority rate.
 
     Uses the same Wilcoxon call and Nadeau-Bengio helper as ``bipolar_ablation_summary.py``.
+    Both tests need at least 2 folds (Nadeau-Bengio's variance correction divides by
+    ``n_train = folds - 1``, so a single fold gives a ``ZeroDivisionError``); with fewer, the
+    statistical test is skipped (NaN) and a warning is logged, but the mean difference and
+    ``n_above`` are still meaningful and computed.
 
     :param SingleRun run: Run to test.
-    :return: Test results.
+    :return: Test results (``wilcoxon_p``/``nb_t``/``nb_p`` are NaN if ``run.n_folds < 2``).
     :rtype: PairedResult
     """
     diffs = np.asarray(run.chunk_acc) - np.asarray(run.majority)
+    if run.n_folds < 2:
+        logger.warning(
+            f"{run.run_dir.name}: only {run.n_folds} fold(s), skipping the paired significance "
+            "test (Wilcoxon/Nadeau-Bengio need at least 2 folds)"
+        )
+        return PairedResult(
+            mean_diff_pp=float(diffs.mean() * 100),
+            wilcoxon_p=float("nan"),
+            nb_t=float("nan"),
+            nb_p=float("nan"),
+            n_above=int((diffs > 0).sum()),
+        )
     try:
         with warnings.catch_warnings():
             # scipy warns (and returns p = 1) when every difference is exactly zero.
@@ -267,7 +283,13 @@ def print_paired_table(runs: dict[tuple[str, str], SingleRun], per_fold: bool = 
     results = {key: paired_vs_majority(runs[key]) for key in keys}
     if not results:
         return
-    adjusted = benjamini_hochberg([results[k].nb_p for k in keys])
+    # benjamini_hochberg sorts its input with np.argsort, which puts NaN last but does not drop
+    # it; np.minimum.accumulate then propagates that NaN backwards into every other adjusted
+    # p-value. Runs with too few folds for a significance test (nb_p NaN, see paired_vs_majority)
+    # are therefore excluded from the correction, not just displayed as "n/a".
+    testable = [k for k in keys if not np.isnan(results[k].nb_p)]
+    bh_by_key = dict(zip(testable, benjamini_hochberg([results[k].nb_p for k in testable])))
+    adjusted = [bh_by_key.get(k, float("nan")) for k in keys]
     header = (
         f"{'Dataset':<8} {'Cond':<4} {'Mean diff':>10} {'Folds >':>8} {'Wilcoxon p':>11} "
         f"{'NB t':>8} {'NB p':>8} {'BH p':>8}"
@@ -276,10 +298,13 @@ def print_paired_table(runs: dict[tuple[str, str], SingleRun], per_fold: bool = 
     logger.info("-" * len(header))
     for key, adj in zip(keys, adjusted):
         r = results[key]
+        wilcoxon_p = "n/a".rjust(11) if np.isnan(r.wilcoxon_p) else f"{r.wilcoxon_p:>11.4f}"
+        nb_t = "n/a".rjust(8) if np.isnan(r.nb_t) else f"{r.nb_t:>+8.3f}"
+        nb_p = "n/a".rjust(8) if np.isnan(r.nb_p) else f"{r.nb_p:>8.4f}"
+        bh_p = "n/a".rjust(8) if np.isnan(adj) else f"{adj:>8.4f}"
         logger.info(
             f"{key[0].upper():<8} {key[1]:<4} {r.mean_diff_pp:>+8.2f}pp "
-            f"{r.n_above:>3}/{runs[key].n_folds:<4} {r.wilcoxon_p:>11.4f} {r.nb_t:>+8.3f} "
-            f"{r.nb_p:>8.4f} {adj:>8.4f}"
+            f"{r.n_above:>3}/{runs[key].n_folds:<4} {wilcoxon_p} {nb_t} {nb_p} {bh_p}"
         )
     if per_fold:
         logger.info("\nPer fold (accuracy / majority rate, %):")

@@ -253,3 +253,243 @@ class TestFromResultsTxt:
         txt.write_text("no table here\n")
         with pytest.raises(prior.SkipRunError, match="Per-Dataset"):
             prior.load_from_results_txt(txt)
+
+    @staticmethod
+    def _cm_lines(counts: Any) -> list[str]:
+        """Aggregated confusion matrix lines (see ``thesis.metrics._format_confusion_matrix``)."""
+        return [
+            f"      Healthy      {counts.tn:>10}      {counts.fp:>10}\n",
+            f" Pathological      {counts.fn:>10}      {counts.tp:>10}\n",
+        ]
+
+
+class TestReconstructDegenerateCounts:
+    """Round-trips through the printed-percentage formula of ``write_per_dataset_table``."""
+
+    @staticmethod
+    def _round2(value: float) -> float:
+        return round(value * 100, 2) / 100
+
+    @pytest.mark.parametrize(
+        "tp, tn, fp, fn",
+        [
+            (0, 700, 300, 0),  # PPV == 0 (tp == 0), NPV == 1 (well-defined, non-degenerate)
+            (400, 0, 0, 600),  # NPV == 0 (tn == 0), PPV == 1
+            (0, 500, 0, 500),  # PPV == 0 via the tp+fp == 0 default in write_per_dataset_table
+        ],
+    )
+    def test_swapped_round_trip_with_zero_ppv_or_npv(
+        self, tp: int, tn: int, fp: int, fn: int
+    ) -> None:
+        n = tp + tn + fp + fn
+        accuracy = self._round2((tp + tn) / n)
+        ppv = self._round2(tp / (tp + fp)) if (tp + fp) else 0.0
+        npv = self._round2(tn / (tn + fn)) if (tn + fn) else 0.0
+        got = prior.reconstruct_counts(accuracy, ppv, npv, n, "swapped")
+        assert got.total == n
+        for field_name, truth in (("tp", tp), ("tn", tn), ("fp", fp), ("fn", fn)):
+            assert abs(getattr(got, field_name) - truth) <= 1, field_name
+
+    def test_ppv_and_npv_both_zero_is_truly_unidentifiable(self) -> None:
+        # tp == 0 and tn == 0: correct == 0, so wrong == n can't be split into fp/fn at all.
+        with pytest.raises(prior.UnidentifiableCountsError, match="both 0"):
+            prior.reconstruct_counts(0.0, 0.0, 0.0, 1000, "swapped")
+
+    def test_equal_nonzero_ppv_npv_still_raises_unidentifiable(self) -> None:
+        with pytest.raises(prior.UnidentifiableCountsError, match="not identifiable"):
+            prior.reconstruct_counts(0.75, 0.8, 0.8, 1000, "swapped")
+
+    def test_out_of_range_sens_raises_plain_valueerror(self) -> None:
+        # Not a "counts are unidentifiable" situation -- a caller bug -- so a plain ValueError,
+        # not the dedicated UnidentifiableCountsError that main() treats as a per-run skip.
+        with pytest.raises(ValueError, match=r"\[0, 1\]"):
+            prior.reconstruct_counts(0.5, 1.5, 0.5, 100, "swapped")
+        with pytest.raises(Exception) as exc_info:
+            prior.reconstruct_counts(0.5, 1.5, 0.5, 100, "swapped")
+        assert not isinstance(exc_info.value, prior.UnidentifiableCountsError)
+
+    def test_fixed_orientation_handles_zero_sens_without_special_casing(self) -> None:
+        # The "fixed" linear system doesn't divide by sens/spec directly, so a 0 value on either
+        # side degrades gracefully -- only sens == spec (the "swapped" test above) is singular.
+        tp, tn, fp, fn = 0, 700, 300, 0
+        n = tp + tn + fp + fn
+        accuracy = self._round2((tp + tn) / n)
+        sens = self._round2(tp / (tp + fn)) if (tp + fn) else 0.0
+        spec = self._round2(tn / (tn + fp)) if (tn + fp) else 0.0
+        got = prior.reconstruct_counts(accuracy, sens, spec, n, "fixed")
+        assert got.total == n
+        for field_name, truth in (("tp", tp), ("tn", tn), ("fp", fp), ("fn", fn)):
+            assert abs(getattr(got, field_name) - truth) <= 1, field_name
+
+
+class TestMulticlassResultsTxt:
+    """A >2-class results.txt must not be reconstructed as a binary dataset-prior baseline."""
+
+    def test_detected_from_class_mode_config_line(self, tmp_path: Path) -> None:
+        fold_metrics: list[dict[str, dict[str, float | int]]] = [
+            {
+                "mdd": {"tp": 30, "tn": 40, "fp": 10, "fn": 20, "correct": 70, "total": 100},
+                "cane": {"tp": 50, "tn": 20, "fp": 10, "fn": 20, "correct": 70, "total": 100},
+            }
+        ]
+        lines: list[str] = ["Configuration:\n", "  command: train\n", "  class_mode: 4\n"]
+        write_per_dataset_table(lines.append, fold_metrics)
+        txt = tmp_path / "results.txt"
+        txt.write_text("".join(lines))
+
+        run = prior.load_from_results_txt(txt)
+        assert not run.binary
+        assert run.counts == {}
+        assert run.correct == {"mdd": 70, "cane": 70}
+        assert run.total == {"mdd": 100, "cane": 100}
+        assert "multi-class" in run.note
+
+    def test_detected_from_confusion_matrix_without_class_mode_line(self, tmp_path: Path) -> None:
+        # No "class_mode" config line at all (e.g. an older results.txt) -- fall back to the
+        # confusion-matrix row labels, which only a >2-class run has.
+        lines = [
+            "ACTUAL v/PRED ->        Healthy         Anxiety      Depression        Comorbid \n",
+            "        Healthy             100              10               5               2 \n",
+            "        Anxiety              10             100               1               1 \n",
+            "     Depression               2               1             100               1 \n",
+            "       Comorbid               1               1               1             100 \n",
+        ]
+        fold_metrics: list[dict[str, dict[str, float | int]]] = [
+            {"sad": {"tp": 1, "tn": 1, "fp": 1, "fn": 1, "correct": 45, "total": 50}}
+        ]
+        write_per_dataset_table(lines.append, fold_metrics)
+        txt = tmp_path / "results.txt"
+        txt.write_text("".join(lines))
+
+        run = prior.load_from_results_txt(txt)
+        assert not run.binary
+        assert run.correct == {"sad": 45}
+        assert run.total == {"sad": 50}
+
+    def test_binary_results_txt_is_not_flagged_multiclass(self, tmp_path: Path) -> None:
+        txt = tmp_path / "results.txt"
+        TestFromResultsTxt._results_txt([FOLD_1], swapped=True, path=txt)
+        run = prior.load_from_results_txt(txt, "swapped")
+        assert run.binary
+
+
+class TestAutoResultsOrientation:
+    """``--results-orientation auto`` (default): pick the reading that fits the file's own CM."""
+
+    def test_auto_detects_swapped(self, tmp_path: Path) -> None:
+        big = {"mdd": (900, 700, 150, 120), "cane": (1300, 350, 400, 300)}
+        txt = tmp_path / "results.txt"
+        TestFromResultsTxt._results_txt([big], swapped=True, path=txt)
+        with txt.open("a") as f:
+            f.writelines(
+                TestFromResultsTxt._cm_lines(sum((Counts(*v) for v in big.values()), Counts()))
+            )
+
+        run = prior.load_from_results_txt(txt)
+        assert "auto-detected swapped" in run.note
+        truth = _true_pooled([big])
+        for name, true_counts in truth.items():
+            for field_name in ("tp", "tn", "fp", "fn"):
+                assert (
+                    abs(getattr(run.counts[name], field_name) - getattr(true_counts, field_name))
+                    <= 4
+                )
+
+    def test_auto_detects_fixed(self, tmp_path: Path) -> None:
+        big = {"mdd": (900, 700, 150, 120), "cane": (1300, 350, 400, 300)}
+        txt = tmp_path / "results.txt"
+        TestFromResultsTxt._results_txt([big], swapped=False, path=txt)
+        with txt.open("a") as f:
+            f.writelines(
+                TestFromResultsTxt._cm_lines(sum((Counts(*v) for v in big.values()), Counts()))
+            )
+
+        run = prior.load_from_results_txt(txt)
+        assert "auto-detected fixed" in run.note
+        truth = _true_pooled([big])
+        for name, true_counts in truth.items():
+            for field_name in ("tp", "tn", "fp", "fn"):
+                assert (
+                    abs(getattr(run.counts[name], field_name) - getattr(true_counts, field_name))
+                    <= 4
+                )
+
+    def test_missing_confusion_matrix_is_skipped_with_hint(self, tmp_path: Path) -> None:
+        txt = tmp_path / "results.txt"
+        TestFromResultsTxt._results_txt([FOLD_1], swapped=True, path=txt)
+        with pytest.raises(prior.UnidentifiableCountsError, match="--results-orientation"):
+            prior.load_from_results_txt(txt)
+
+    def test_tie_is_skipped_with_hint(self, tmp_path: Path) -> None:
+        # Both orientations reconstruct these counts with zero deviation from the aggregated
+        # matrix (found by search) -- neither is preferred, so auto-detection can't choose.
+        fold = {"mdd": (4, 46, 16, 17), "cane": (50, 5, 29, 28)}
+        txt = tmp_path / "results.txt"
+        TestFromResultsTxt._results_txt([fold], swapped=True, path=txt)
+        total = sum((Counts(*v) for v in fold.values()), Counts())
+        with txt.open("a") as f:
+            f.writelines(TestFromResultsTxt._cm_lines(total))
+
+        with pytest.raises(prior.UnidentifiableCountsError, match="equally well"):
+            prior.load_from_results_txt(txt)
+
+
+class TestSkippedRunsDoNotAbort:
+    """A bad run (checkpoint or results.txt) must not prevent the rest of the command running."""
+
+    def test_checkpoint_count_mismatch_is_skipped(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        import torch
+
+        write_run(tmp_path / "good", [FOLD_1, FOLD_2], swapped=True)
+        bad_path = tmp_path / "bad" / "fold_1_best.pth"
+        write_fold_checkpoint(bad_path, FOLD_1, swapped=True)
+        ckpt = torch.load(bad_path, weights_only=False)
+        ckpt["val_metrics"]["per_dataset"]["mdd"]["tn"] += 1  # corrupt one count
+        torch.save(ckpt, bad_path)
+
+        with caplog.at_level(logging.INFO):
+            code = prior.main(
+                ["--root", str(tmp_path), "--expect-folds", "2", "good", "bad"],
+                configure_logging=False,
+            )
+        assert code == 0
+        assert "=== good" in caplog.text
+        assert "Skipped runs" in caplog.text
+        assert "bad" in caplog.text
+
+    def test_results_txt_unidentifiable_run_is_skipped(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        good_dir = tmp_path / "good"
+        good_dir.mkdir()
+        TestFromResultsTxt._results_txt([FOLD_1], swapped=True, path=good_dir / "results.txt")
+
+        bad_dir = tmp_path / "bad"
+        bad_dir.mkdir()
+        # sens == spec (both 0.5): unidentifiable under the forced "swapped" orientation.
+        fold_metrics: list[dict[str, dict[str, float | int]]] = [
+            {"mdd": {"tp": 50, "tn": 50, "fp": 50, "fn": 50, "correct": 100, "total": 200}}
+        ]
+        lines: list[str] = []
+        write_per_dataset_table(lines.append, fold_metrics)
+        (bad_dir / "results.txt").write_text("".join(lines))
+
+        with caplog.at_level(logging.INFO):
+            code = prior.main(
+                [
+                    "--root",
+                    str(tmp_path),
+                    "--from-results-txt",
+                    "--results-orientation",
+                    "swapped",
+                    "good",
+                    "bad",
+                ],
+                configure_logging=False,
+            )
+        assert code == 0
+        assert "=== good" in caplog.text
+        assert "Skipped runs" in caplog.text
+        assert "bad" in caplog.text
