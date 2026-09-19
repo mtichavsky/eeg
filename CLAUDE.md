@@ -650,6 +650,31 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 - Saves plots to `loss_curves/` directory in checkpoint folder
 - Usage: `poetry run python plot_training_curves.py <checkpoint_dir>/<log file>`
 
+## Remote Compute: Metacentrum (PBS)
+
+There is no local GPU; full 10-fold training runs go to Metacentrum (Czech national grid, PBS Pro).
+
+**SSH access**
+- Host alias `metacentrum` (in `~/.ssh/config`, symlinked from the user's dotfiles) → `skirit.ics.muni.cz`, user `tichavskym`, key `~/.ssh/id_ed25519` (served by the agent at `SSH_AUTH_SOCK`). Use `ssh metacentrum '<cmd>'`.
+- Skirit is a **frontend**: submit jobs and move files there, never run training on it.
+- `ssh metacentrum` is expected to work from Claude sessions. If it fails (e.g. `Permission denied (publickey,...)`, seen once on 2026-09-19 right after it had worked on 2026-09-18), the user most likely just needs to log in once from a separate terminal window. Do not debug SSH or try passwords; stop and ask the user to re-establish access, then retry.
+- Always verify with a cheap read-only call first: `ssh -o BatchMode=yes -o ConnectTimeout=15 metacentrum 'hostname; qstat -u $USER | head'`.
+
+**Layout on the cluster** (`STORAGE_HOME=/storage/brno2/home/tichavskym`, persistent; `$SCRATCHDIR` is wiped per job)
+- Repo clone with shared venv: `$STORAGE_HOME/eeg` (`.venv` inside; job template activates it). It is the only clone: jobs run the code checked out there, so `git checkout main && git pull --ff-only` in it before submitting (it has been left on stale side branches before).
+- Datasets: `CANE/ MDD/ SAD/ IDUN_IN_EAR/` directly under `$STORAGE_HOME` (`EEG_DATA_DIR` is set to it by the job).
+- Results: `$STORAGE_HOME/experiments/<exp_name>/` (checkpoints, `results.txt`, logs, `stdout.log`).
+
+**Submitting a sweep**
+- One `qsub` per experiment via `metacentrum/train_job.pbs` (`qsub -N "$name" -v "EXP_NAME=$name,MAIN_ARGS=$args" metacentrum/train_job.pbs`); see `run-bipolar-meta.sh` / `run-round1-atv4-meta.sh` for the pattern. 5 h walltime, 1 GPU (`gpu_mem=20gb`). Monitor with `qstat -u $USER`; job stdout lands next to the results.
+- The job template excludes `cl_fobos` (shared venv invisible there) and `cl_grogu` (Blackwell GPUs, no kernels in `torch==2.11.0+cu126`). Keep those exclusions.
+- The frontend `/tmp` quota is only ~977 MB; point `TMPDIR` at `/storage/brno2/...` before `poetry install`.
+
+**Fetching results**
+- `rsync -av metacentrum:/storage/brno2/home/tichavskym/experiments/<exp_name>/ experiments/<exp_name>/` (local copies go under `experiments/` following the naming convention above).
+
+**Confirm before acting:** submitting jobs, rsyncing large data, or deleting anything on the cluster is outward-facing/hard to reverse. Only do it when the user has asked for that specific run.
+
 ## Plan Mode
 
 When executing in plan mode, save the generated plan to `docs/plans/` using the filename format:
