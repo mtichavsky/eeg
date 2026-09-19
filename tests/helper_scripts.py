@@ -79,7 +79,10 @@ def write_fold_checkpoint(
             "specificity": tn / (tn + fp) if tn + fp else 0.0,
             "confusion_matrix": cm,
         },
-        "subject": {"accuracy": subject_acc},
+        # recall/specificity are not derived from real subject-level counts (this helper only
+        # tracks a single synthetic accuracy per fold); they default to the accuracy so that
+        # consumers reading all three keys (e.g. bipolar_ablation_summary.load_run) don't KeyError.
+        "subject": {"accuracy": subject_acc, "recall": subject_acc, "specificity": subject_acc},
         "condition": {},
         "loss": 0.1,
     }
