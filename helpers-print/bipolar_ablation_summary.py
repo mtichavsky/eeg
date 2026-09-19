@@ -201,7 +201,6 @@ def print_paired_stats(runs: dict[str, dict[str, RunMetrics]], n_folds: int = 10
     ]
     for condition in CONDITIONS:
         print(f"-- condition: {condition} --")
-        raw_p_values = []
         rows = []
         for a, b in pairs:
             run_a = runs.get(a, {}).get(condition)
@@ -214,24 +213,47 @@ def print_paired_stats(runs: dict[str, dict[str, RunMetrics]], n_folds: int = 10
                 print(f"  {a} vs {b}: SKIPPED (fold count mismatch: {len(acc_a)} vs {len(acc_b)})")
                 continue
             diffs = acc_a - acc_b
-            try:
-                _, wilcoxon_p = wilcoxon(diffs)
-            except ValueError as exc:
-                wilcoxon_p = float("nan")
-                print(f"  {a} vs {b}: Wilcoxon failed ({exc})")
             n_folds_here = len(diffs)
-            t_stat, nb_p = nadeau_bengio_ttest(diffs, n_train=n_folds_here - 1, n_test=1)
+            # Both tests need at least 2 folds: Wilcoxon needs >1 sample and Nadeau-Bengio's
+            # variance correction divides by n_train = folds - 1, which is a ZeroDivisionError
+            # at 1 fold. Skip the test (NaN) rather than crash the whole summary.
+            if n_folds_here < 2:
+                print(
+                    f"  {a} vs {b}: only {n_folds_here} fold(s), skipping the paired "
+                    "significance test (Wilcoxon/Nadeau-Bengio need at least 2 folds)"
+                )
+                wilcoxon_p = float("nan")
+                t_stat = float("nan")
+                nb_p = float("nan")
+            else:
+                try:
+                    _, wilcoxon_p = wilcoxon(diffs)
+                except ValueError as exc:
+                    wilcoxon_p = float("nan")
+                    print(f"  {a} vs {b}: Wilcoxon failed ({exc})")
+                t_stat, nb_p = nadeau_bengio_ttest(diffs, n_train=n_folds_here - 1, n_test=1)
             rows.append((a, b, diffs.mean() * 100, wilcoxon_p, t_stat, nb_p))
-            raw_p_values.append(nb_p)
 
         if not rows:
             continue
-        adjusted = benjamini_hochberg(raw_p_values)
+        # benjamini_hochberg sorts its input with np.argsort, which puts NaN last but does not
+        # drop it; np.minimum.accumulate then propagates that NaN backwards into every other
+        # adjusted p-value. Pairs with too few folds for a significance test (nb_p NaN, above)
+        # are therefore excluded from the correction, not just displayed as "n/a".
+        keys = [(a, b) for a, b, *_rest in rows]
+        nb_p_by_key = {(a, b): nb_p for a, b, _, _, _, nb_p in rows}
+        testable = [k for k in keys if not np.isnan(nb_p_by_key[k])]
+        bh_by_key = dict(zip(testable, benjamini_hochberg([nb_p_by_key[k] for k in testable])))
+        adjusted = [bh_by_key.get(k, float("nan")) for k in keys]
         for (a, b, mean_diff_pct, wilcoxon_p, t_stat, nb_p), nb_p_adj in zip(rows, adjusted):
+            wilcoxon_str = "n/a" if np.isnan(wilcoxon_p) else f"{wilcoxon_p:.4f}"
+            t_str = "n/a" if np.isnan(t_stat) else f"{t_stat:+.3f}"
+            nb_p_str = "n/a" if np.isnan(nb_p) else f"{nb_p:.4f}"
+            nb_p_adj_str = "n/a" if np.isnan(nb_p_adj) else f"{nb_p_adj:.4f}"
             print(
                 f"  {a:>8} - {b:<8}: mean diff = {mean_diff_pct:+.2f}pp, "
-                f"Wilcoxon p = {wilcoxon_p:.4f}, "
-                f"NB t = {t_stat:+.3f} (p = {nb_p:.4f}, BH-adjusted p = {nb_p_adj:.4f})"
+                f"Wilcoxon p = {wilcoxon_str}, "
+                f"NB t = {t_str} (p = {nb_p_str}, BH-adjusted p = {nb_p_adj_str})"
             )
 
 
