@@ -656,7 +656,7 @@ There is no local GPU; full 10-fold training runs go to Metacentrum (Czech natio
 - Always verify with a cheap read-only call first: `ssh -o BatchMode=yes -o ConnectTimeout=15 metacentrum 'hostname; qstat -u $USER | head'`.
 
 **Layout on the cluster** (`STORAGE_HOME=/storage/brno2/home/tichavskym`, persistent; `$SCRATCHDIR` is wiped per job)
-- Repo clone with shared venv: `$STORAGE_HOME/eeg` (`.venv` inside; job template activates it). A second clone at `$STORAGE_HOME/eeg-code` has been used for launching sweeps from the frontend, so `git pull` in the clone the launcher is run from before submitting.
+- Repo clone with shared venv: `$STORAGE_HOME/eeg` (`.venv` inside; job template activates it). It is the only clone: jobs run the code checked out there, so `git checkout main && git pull --ff-only` in it before submitting (it has been left on stale side branches before).
 - Datasets: `CANE/ MDD/ SAD/ IDUN_IN_EAR/` directly under `$STORAGE_HOME` (`EEG_DATA_DIR` is set to it by the job).
 - Results: `$STORAGE_HOME/experiments/<exp_name>/` (checkpoints, `results.txt`, logs, `stdout.log`).
 

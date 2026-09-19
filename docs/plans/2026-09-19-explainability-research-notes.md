@@ -56,8 +56,8 @@ answer one of these:
 | **A** | Bipolar surrogate ablation (Fp2−Fp1 / C4−C3 / T8−T7 / in-ear) × EC / EO | ✅ In `main` (PR #82) | ✅ 8 runs, 2026-09-18. `experiments/all_040_*` | §3: no montage significantly better |
 | **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ In `main` (PR #83 flag, PR #89 launcher + summary) | ✅ 4 runs, 2026-09-19, ~30 min wall. `experiments/all_041_*` | §4: 30 Hz costs 5.6 to 9.5 pp |
 | **C** | Post-hoc band shuffle on saved checkpoints | ❌ | n/a (inference only) | Undecided (§6). Now unblocked: B saved 70 Hz AllTransformerV4 checkpoints |
-| Obj. 1 | Dataset-identity checks | ⚠️ Prior-baseline script and single-dataset launcher written (PR #88, open) | ❌ Single-dataset runs not submitted; probe / shuffled labels / 4-class not built | §3.4, §4.3 (decomposition only) |
-| Bug | `main.py:259` swapped args | ⚠️ Fix + `tests/test_per_dataset_eval.py` written, **uncommitted** in worktree `fix-per-dataset-metrics-args` (branch `worktree-fix-per-dataset-metrics-args`) | n/a | §3.5 |
+| Obj. 1 | Dataset-identity checks | ✅ Prior-baseline script, single-dataset launcher and summary in `main` (PR #88) | ⏳ 6 single-dataset runs `{cane,sad,mdd}_041_t8-t7_{ec,eo}` submitted 2026-09-19 (jobs 23807482–87); probe / shuffled labels / 4-class not built | §3.4, §4.3 (decomposition only) |
+| Bug | `main.py:259` swapped args | ⚠️ Fix + `tests/test_per_dataset_eval.py` being opened as a PR (branch `fix/per-dataset-metrics-arg-order`) | n/a; the 6 single-dataset runs predate the fix (their summary uses chunk metrics, unaffected) | §3.5 |
 
 **PRs (mtichavsky/eeg):** #87 docs (this file + CLAUDE.md Metacentrum section) open; #88 objection-1
 tools open; #89 cutoff launcher **merged**. **PR (mtichavsky/thesis-text):** #4 open, holds Section VII
@@ -354,7 +354,10 @@ Reading:
    `helpers-print/dataset_prior_baseline.py` already handles both orientations.
 2. **Objection 1, cheapest first (the priority).**
    1. **Single-dataset CV runs** (`run-single-dataset-meta.sh` from #88: CANE / SAD / MDD alone,
-      CNN-AttnS on T8−T7, EC and EO, 6 jobs, about 10 min each). Submit after #88 merges. If CANE
+      CNN-AttnS on T8−T7, EC and EO, 6 jobs, about 10 min each). **Submitted 2026-09-19** as
+      `{cane,sad,mdd}_041_t8-t7_{ec,eo}`; summarise with `helpers-print/single_dataset_summary.py`.
+      Version `041` is shared with B's `all_041_*_f{70,30}` runs by coincidence; the two families
+      are unrelated experiments, told apart by the dataset prefix and the `_f70`/`_f30` suffix. If CANE
       alone clearly exceeds its 72 % majority rate the signal exists and the combined model fails
       to use it. If not, the anxiety result has no support in this setup. MDD is the positive
       control. **Ask the user before submitting.**
@@ -553,7 +556,7 @@ Also: the frontend's local `/tmp` has a tiny per-user quota (977 MB, separate fr
 | `tests/test_freq_cutoff.py`, `thesis/stft.py` (`spectrogram_shape`, `num_freq_bins`) | B implementation (flag) |
 | `run-freq-cutoff-meta.sh`, `helpers-print/freq_cutoff_summary.py`, `tests/test_freq_cutoff_summary.py` | B launcher and summary (PR #89, merged) |
 | `experiments/all_041_{inear,all}_ec+eo_{f70,f30}/` | B results (local, synced 2026-09-19) |
-| `helpers-print/dataset_prior_baseline.py`, `helpers-print/single_dataset_summary.py`, `run-single-dataset-meta.sh` | Objection-1 tools (PR #88, open, not yet run on the cluster) |
+| `helpers-print/dataset_prior_baseline.py`, `helpers-print/single_dataset_summary.py`, `run-single-dataset-meta.sh` | Objection-1 tools (PR #88, merged; single-dataset runs submitted 2026-09-19) |
 | `thesis/dataset.py` (`BIPOLAR_CHANNELS`, `bipolar_pair`, `CANONICAL_CHANNEL_ORDER`) | Channel specs |
 | `main.py:186` (`eval_epoch`), `main.py:259`, `thesis/metrics.py:321` | Per-dataset metrics and the swapped-argument bug |
 | `../experiments/binary/in-ear/cnnattns-binary_wve/` | Table II in-ear run, 10 checkpoints |
