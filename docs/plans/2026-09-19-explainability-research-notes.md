@@ -31,9 +31,13 @@ and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83)
    the combined model. SAD alone: 69.6 / 65.3 % (p = 0.020 / 0.009), 5 to 8 pp above its combined
    value. So a weak anxiety signal exists in both setups; "at or below the majority rate" was a
    statement about a metric the model is not trained for.
-4. **Still open for objection 1:** dataset-identity probe, shuffled labels, four-class
-   decomposition. The fold-rebuild harness they need was **dropped** (user decision: too much
-   code complexity); see §7.
+4. **Still open for objection 1: the four-class decomposition only.** Approved 2026-09-19: add the
+   per-dataset confusion matrix to the training code (branch `feat/per-dataset-confusion-matrix`,
+   implemented by a subagent, PR pending) and rerun the 4-class models on Metacentrum after it
+   merges. The dataset-identity probe and shuffled-label control are **not planned** (§7 item 2.3).
+   The fold-rebuild harness was **dropped** (user decision: too much code complexity).
+   **Objection 4 (biomarkers: band shuffle, asymmetry swap) is out of scope for today**; the user
+   may pick it up in a later session.
 5. **Paper Section VII is up to date for A, B, the decomposition and the single-dataset runs**
    (thesis-text PR #4, open). Whitham 2007 is cited. Everything still to do is in red.
 6. **Known bug:** per-dataset sensitivity/specificity are mislabelled (§3.5). Fix is PR #91
@@ -55,7 +59,7 @@ answer one of these:
 | 1 | "The model learned which dataset a recording came from, not pathology." | Every accuracy, 4-class especially | Prior-baseline decomposition (§3.4, §4.3) and single-dataset runs (§3.6); probe, shuffled labels and 4-class still open (§7) |
 | 2 | "Why would one in-ear channel match 8 channels?" | Headline in-ear result | A (done: §3) |
 | 3 | "It's reading artifacts (muscle, eye movement), not brain." | Clinical validity | B (muscle, partly: §4.4), A's EC/EO split (eye movement, not a valid test: §3.3) |
-| 4 | "Does it use the known biomarkers (alpha asymmetry, beta power)?" | Scientific credibility | C (candidate), asymmetry swap (candidate) |
+| 4 | "Does it use the known biomarkers (alpha asymmetry, beta power)?" | Scientific credibility | C (candidate), asymmetry swap (candidate); **out of scope for today** |
 
 ---
 
@@ -448,30 +452,38 @@ Reading:
       70.5 / 65.7 %. The balanced-accuracy test is in PR #92
       (`feat/single-dataset-balanced-accuracy`, code-c0, merged; output verified), so Table V
       reproduces from the committed script.
-   2. **Four-class shortcut analysis.** 4-class runs store per-dataset accuracy only, not class
-      balance, so a re-evaluation harness is needed (same harness as C, §9.4), plus a CANE-only
-      anxiety vs comorbid run (CANE has 18 anxiety / 26 comorbid, no shortcut from other datasets).
-   3. **Dataset-identity probe** (logistic regression on AllTransformerV4's pooled 64-d features,
-      subject-independent folds, vs the same probe on an untrained network) and a
-      **shuffled-label retraining** as a CV-protocol check. The 70 Hz AllTransformerV4
-      checkpoints from B (`experiments/all_041_all_ec+eo_f70/`, 10 folds) are the model to probe.
+   2. **Four-class shortcut analysis: IN PROGRESS (approved 2026-09-19).** 4-class runs stored
+      per-dataset accuracy only, not class balance. Route chosen (no harness): store the full
+      per-dataset confusion matrix and class counts at training time, extend
+      `dataset_prior_baseline.py` to print the 4-class decomposition, and rerun the 4-class
+      AllTransformerV4 and in-ear CNN-AttnS (10-fold) on Metacentrum. A subagent is implementing it
+      on branch `feat/per-dataset-confusion-matrix` (PR to follow, with a launcher
+      `run-fourclass-perdataset-meta.sh`). **Jobs are submitted only after that PR is merged**
+      (the cluster clone runs `main`). Optional, not started: a CANE-only anxiety vs comorbid run
+      (CANE has 18 anxiety / 26 comorbid, no shortcut from other datasets).
+   3. **Dataset-identity probe and shuffled-label retraining: NOT PLANNED (user, 2026-09-19).**
+      Objection 1 is considered covered by the prior-baseline decomposition, the single-dataset
+      runs (§3.6) and, once done, the 4-class decomposition. My reasoning: a linear probe would very
+      likely find the source dataset trivially decodable from pooled features (recording equipment
+      differs), which is uninformative about whether the classifier *uses* it, and it needs the
+      dropped harness. A shuffled-label retraining (a CV-protocol sanity check, needs one training
+      flag) remains an optional cheap extra. The paper says both were not run.
 3. **Extend B: intermediate cutoffs DONE** (50 and 40 Hz, in-ear CNN-AttnS; §4.5, fetched to
    `experiments/all_042_inear_ec+eo_f{50,40}`, summary with
-   `helpers-print/freq_cutoff_curve_summary.py --root experiments`). Remaining option: A
-   frontal-vs-temporal comparison could help because EMG is strongest frontally. AllTransformerV4's
-   +5.6 pp is under-powered at 10 folds and can't be improved by adding folds (10-fold is
-   mandatory), so lean on the in-ear model for the significant result.
+   `helpers-print/freq_cutoff_curve_summary.py --root experiments`). **No further cutoff experiments
+   planned (user, 2026-09-19):** the curve is reported together with the muscle discussion in the
+   paper (`sec:cutoff`), and a frontal-vs-temporal comparison (EMG is strongest frontally) and a
+   cutoff below 30 Hz are listed there as untested. AllTransformerV4's +5.6 pp is under-powered at
+   10 folds and can't be improved by adding folds (10-fold is mandatory), so the in-ear model
+   carries the significant result.
 4. **Fold-rebuild harness: DROPPED (user decision 2026-09-19).** A post-hoc harness that
    rebuilds folds and re-evaluates checkpoints adds code complexity. Preferred route for any new
-   metric is to add it to the training/eval code and rerun on Metacentrum. **Open suggestion
-   (PR #91 has merged, so it is no longer blocked; awaiting the user's go-ahead):** store the full
-   per-dataset confusion matrix (and class counts) in `results.txt`/checkpoints and rerun the
-   4-class ATv4 / in-ear CNN-AttnS (optionally the binary ATv4). That would enable the 4-class
-   decomposition without a harness. C, the asymmetry swap and the probe are dropped with the
-   harness unless the user asks again (§9.4 kept for reference).
-5. **C (band shuffle): dropped with the harness** (see item 4). If revived: report per band
-   **and per dataset**.
-6. **Alpha asymmetry swap (dropped with the harness, item 4):** swap Fp1↔Fp2, C3↔C4, T7↔T8 in AllTransformerV4 inputs (channel
+   metric is to add it to the training/eval code and rerun on Metacentrum; that is what item 2.2
+   does for the per-dataset confusion matrix. C, the asymmetry swap and the probe are dropped with
+   the harness unless the user asks again (§9.4 kept for reference).
+5. **OUT OF SCOPE FOR TODAY (2026-09-19; the user may pick it up in another session), objection 4:**
+   C (band shuffle). If revived: report per band **and per dataset**.
+6. **OUT OF SCOPE FOR TODAY (same), alpha asymmetry swap:** swap Fp1↔Fp2, C3↔C4, T7↔T8 in AllTransformerV4 inputs (channel
    indices in §9.1). Cheap once the harness exists (Aug 16 name: E2).
 7. **`run-explainability-analysis.sh`:** one script for every post-training analysis, taking the
    runs directory, checking each run has 10 `fold_N_best.pth` and a `results.txt`, running A's and
@@ -484,7 +496,8 @@ Reading:
    `run-explainability.sh`, `helpers-print/plot_explainability.py`, `EXPLAINABILITY.md`);
    there is no `EXPERIMENTS.md` in the repo, although `CLAUDE.md` says to log experiments there.
 10. **Section VII:** already holds A, B, the decomposition and the single-dataset runs
-    (thesis-text PR #4). When items 2 to 6 produce results, replace the matching red bullets in `sec:planned`. Print budget in §9.5.
+    (thesis-text PR #4). When item 2.2 produces results, replace the matching red bullet in `sec:planned`; the
+    biomarker bullet (objection 4) stays red as out of scope for now. Print budget in §9.5.
 
 ---
 
