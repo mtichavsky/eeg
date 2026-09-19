@@ -562,20 +562,6 @@ def _parse_results_lines(
     return rows, matrix
 
 
-def parse_results_txt(
-    path: Path,
-) -> tuple[dict[str, tuple[float, float, float, int]], Optional[np.ndarray]]:
-    """Parse the aggregated per-dataset table (and confusion matrix) of a results.txt.
-
-    :param Path path: results.txt written by ``main.py train``.
-    :return: ``({dataset: (acc, sens, spec, chunks)}, confusion_matrix or None)``, the
-        percentages converted to fractions and the matrix as ``[[TN, FP], [FN, TP]]``.
-    :rtype: tuple
-    :raises SkipRunError: If the file has no per-dataset table.
-    """
-    return _parse_results_lines(path.read_text().splitlines())
-
-
 def _load_multiclass_results_txt(path: Path, lines: list[str]) -> RunCounts:
     """Build an accuracy-only ``RunCounts`` for a >2-class results.txt.
 
@@ -613,49 +599,58 @@ def _matrix_deviation(counts: dict[str, Counts], matrix: np.ndarray) -> int:
     return max(abs(summed.tp - tp), abs(summed.tn - tn), abs(summed.fp - fp), abs(summed.fn - fn))
 
 
+def _reconstruct_all(
+    rows: dict[str, tuple[float, float, float, int]], orientation: str
+) -> dict[str, Counts]:
+    return {
+        ds: reconstruct_counts(acc, sens, spec, n, orientation)
+        for ds, (acc, sens, spec, n) in rows.items()
+    }
+
+
 def _resolve_results_orientation(
     path: Path,
     rows: dict[str, tuple[float, float, float, int]],
     matrix: Optional[np.ndarray],
     orientation: str,
-) -> tuple[str, str]:
+) -> tuple[str, dict[str, Counts], str]:
     """Decide (``"auto"``) or validate (explicit) the swapped/fixed reading of a results.txt.
 
     :param Path path: results.txt path, for error messages.
     :param dict rows: Parsed per-dataset ``(acc, sens, spec, n)`` rows.
     :param Optional[np.ndarray] matrix: Aggregated binary confusion matrix, or None if absent.
     :param str orientation: ``"auto"``, ``"swapped"`` or ``"fixed"``.
-    :return: ``(resolved_orientation, note_suffix)``; ``note_suffix`` is appended to the run note
+    :return: ``(resolved_orientation, counts, note_suffix)``; ``counts`` are the per-dataset counts
+        reconstructed under that orientation and ``note_suffix`` is appended to the run note
         (empty when there is nothing extra to say, e.g. no confusion matrix to check against).
-    :rtype: tuple[str, str]
+    :rtype: tuple[str, dict[str, Counts], str]
     :raises UnidentifiableCountsError: If ``orientation == "auto"`` and it can't be determined
         (no confusion matrix to compare against, both orientations unidentifiable, or a tie).
     """
     if orientation != "auto":
+        counts = _reconstruct_all(rows, orientation)
         if matrix is None:
-            return orientation, ""
-        counts = {
-            ds: reconstruct_counts(acc, sens, spec, n, orientation)
-            for ds, (acc, sens, spec, n) in rows.items()
-        }
+            return orientation, counts, ""
         deviation = _matrix_deviation(counts, matrix)
-        return orientation, f"; max |reconstructed - confusion matrix| = {deviation} chunks"
+        return (
+            orientation,
+            counts,
+            f"; max |reconstructed - confusion matrix| = {deviation} chunks",
+        )
 
     if matrix is None:
         raise UnidentifiableCountsError(
             f"{path}: no aggregated confusion matrix in results.txt to auto-detect the sens/spec "
             "orientation against; pass --results-orientation swapped|fixed explicitly"
         )
+    candidates: dict[str, dict[str, Counts]] = {}
     deviations: dict[str, int] = {}
     for candidate in ("swapped", "fixed"):
         try:
-            counts = {
-                ds: reconstruct_counts(acc, sens, spec, n, candidate)
-                for ds, (acc, sens, spec, n) in rows.items()
-            }
+            candidates[candidate] = _reconstruct_all(rows, candidate)
         except UnidentifiableCountsError:
             continue
-        deviations[candidate] = _matrix_deviation(counts, matrix)
+        deviations[candidate] = _matrix_deviation(candidates[candidate], matrix)
     if not deviations:
         raise UnidentifiableCountsError(
             f"{path}: neither swapped nor fixed orientation gives identifiable per-dataset "
@@ -670,7 +665,10 @@ def _resolve_results_orientation(
     best = min(deviations, key=lambda o: deviations[o])
     others = ", ".join(f"{o}={d}" for o, d in deviations.items() if o != best)
     detail = f" vs {others}" if others else " (other orientation unidentifiable)"
-    return best, f"; auto-detected {best} orientation (deviation {deviations[best]} chunks{detail})"
+    note_suffix = (
+        f"; auto-detected {best} orientation (deviation {deviations[best]} chunks{detail})"
+    )
+    return best, candidates[best], note_suffix
 
 
 def load_from_results_txt(path: Path, orientation: str = "auto") -> RunCounts:
@@ -691,11 +689,7 @@ def load_from_results_txt(path: Path, orientation: str = "auto") -> RunCounts:
     if _detect_multiclass(lines):
         return _load_multiclass_results_txt(path, lines)
     rows, matrix = _parse_results_lines(lines)
-    resolved, note_suffix = _resolve_results_orientation(path, rows, matrix, orientation)
-    counts = {
-        ds: reconstruct_counts(acc, sens, spec, n, resolved)
-        for ds, (acc, sens, spec, n) in rows.items()
-    }
+    resolved, counts, note_suffix = _resolve_results_orientation(path, rows, matrix, orientation)
     total = {d: c.total for d, c in counts.items()}
     correct = {d: c.correct for d, c in counts.items()}
     note = (
