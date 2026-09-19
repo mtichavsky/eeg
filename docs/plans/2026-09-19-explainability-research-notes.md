@@ -32,9 +32,9 @@ and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83)
    value. So a weak anxiety signal exists in both setups; "at or below the majority rate" was a
    statement about a metric the model is not trained for.
 4. **Still open for objection 1: the four-class decomposition only.** Approved 2026-09-19: add the
-   per-dataset confusion matrix to the training code (branch `feat/per-dataset-confusion-matrix`,
-   implemented by a subagent, PR pending) and rerun the 4-class models on Metacentrum after it
-   merges. The dataset-identity probe and shuffled-label control are **not planned** (§7 item 2.3).
+   per-dataset confusion matrix to the training code (PR #93, open, branch `feat/per-dataset-confusion-matrix`,
+   implemented by a subagent, reviewed and tests run by me) and rerun the 4-class models on
+   Metacentrum after it merges. The dataset-identity probe and shuffled-label control are **not planned** (§7 item 2.3).
    The fold-rebuild harness was **dropped** (user decision: too much code complexity).
    **Objection 4 (biomarkers: band shuffle, asymmetry swap) is out of scope for today**; the user
    may pick it up in a later session.
@@ -436,7 +436,7 @@ Reading:
 
 ## 7. Open items and suggested next steps (in order, as of 2026-09-19 evening)
 
-**Needs the user (merging):** mtichavsky/eeg #87; mtichavsky/thesis-text #4 (then
+**Needs the user (merging):** mtichavsky/eeg #87 and #93; mtichavsky/thesis-text #4 (then
 `git checkout -- paper/paper.tex` in the thesis checkout). Whitham 2007 is already in
 `references.bib` and cited in `sec:cutoff` (done in PR #4).
 
@@ -456,10 +456,20 @@ Reading:
       per-dataset accuracy only, not class balance. Route chosen (no harness): store the full
       per-dataset confusion matrix and class counts at training time, extend
       `dataset_prior_baseline.py` to print the 4-class decomposition, and rerun the 4-class
-      AllTransformerV4 and in-ear CNN-AttnS (10-fold) on Metacentrum. A subagent is implementing it
-      on branch `feat/per-dataset-confusion-matrix` (PR to follow, with a launcher
-      `run-fourclass-perdataset-meta.sh`). **Jobs are submitted only after that PR is merged**
-      (the cluster clone runs `main`). Optional, not started: a CANE-only anxiety vs comorbid run
+      AllTransformerV4 and in-ear CNN-AttnS (10-fold) on Metacentrum. **PR #93** (open) holds:
+      `compute_per_dataset_metrics(..., num_classes)` storing a K×K `confusion_matrix` per dataset
+      (row sums = class counts), a "Per-Dataset Chunk Confusion Matrices" section in `results.txt`,
+      the 4-class decomposition in `dataset_prior_baseline.py` (old-run output verified
+      byte-identical by the subagent), tests (78 pass when I ran them), and the launcher
+      `run-fourclass-perdataset-meta.sh` (runs `all_043_all_ec+eo_4class`, AllTransformerV4 8-ch,
+      lr 5e-4, dropout 0.1, wd 1e-4; and `all_043_inear_ec+eo_4class`, CNN-AttnS in-ear, lr 1e-4,
+      dropout 0.05, wd 5e-5; both ec+eo, 10 folds, 100 epochs, patience 20, focal γ 2). Configs
+      copied from the paper's runs `/home/milan/eeg/experiments/4class/{8channel/alltransformer-4class,
+      in-ear/cnnattns-4class-inear}/results.txt` (outside the repo; I spot-checked lr/dropout/wd).
+      Expect a point or two of run-to-run noise (training is unseeded; folds are identical).
+      After the rerun: `poetry run python helpers-print/dataset_prior_baseline.py
+      --confusion-matrices --root experiments 'all_043_*'`. **Jobs are submitted only after #93 is
+      merged** (the cluster clone runs `main`). Optional, not started: a CANE-only anxiety vs comorbid run
       (CANE has 18 anxiety / 26 comorbid, no shortcut from other datasets).
    3. **Dataset-identity probe and shuffled-label retraining: NOT PLANNED (user, 2026-09-19).**
       Objection 1 is considered covered by the prior-baseline decomposition, the single-dataset
