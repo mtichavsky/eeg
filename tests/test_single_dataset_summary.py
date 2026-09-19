@@ -31,10 +31,12 @@ def _cane_folds() -> list[dict[str, tuple[int, int, int, int]]]:
 
 class TestMajorityRate:
     def test_pathological_majority(self) -> None:
-        assert summary.majority_rate(np.array([[20, 10], [5, 65]])) == pytest.approx(0.70)
+        # TN=20, FP=10, FN=5, TP=65
+        assert summary.Counts(tp=65, tn=20, fp=10, fn=5).baseline == pytest.approx(0.70)
 
     def test_healthy_majority(self) -> None:
-        assert summary.majority_rate(np.array([[60, 10], [5, 25]])) == pytest.approx(0.70)
+        # TN=60, FP=10, FN=5, TP=25
+        assert summary.Counts(tp=25, tn=60, fp=10, fn=5).baseline == pytest.approx(0.70)
 
 
 class TestLoadSingleRun:

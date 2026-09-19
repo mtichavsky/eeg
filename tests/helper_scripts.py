@@ -53,10 +53,7 @@ def write_fold_checkpoint(
     :return: The chunk confusion matrix ``[[TN, FP], [FN, TP]]``.
     :rtype: np.ndarray
     """
-    tp = sum(c[0] for c in per_dataset_true.values())
-    tn = sum(c[1] for c in per_dataset_true.values())
-    fp = sum(c[2] for c in per_dataset_true.values())
-    fn = sum(c[3] for c in per_dataset_true.values())
+    tp, tn, fp, fn = (sum(col) for col in zip(*per_dataset_true.values()))
     total = tp + tn + fp + fn
     cm = np.array([[tn, fp], [fn, tp]])
     per_dataset: dict[str, dict[str, float | int]] = {}

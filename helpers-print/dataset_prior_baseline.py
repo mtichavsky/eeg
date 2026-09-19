@@ -145,6 +145,15 @@ class Counts:
         return max(self.positives, self.negatives)
 
     @property
+    def accuracy(self) -> float:
+        return self.correct / self.total
+
+    @property
+    def baseline(self) -> float:
+        """Accuracy of the majority-class predictor (dataset prior)."""
+        return self.majority_correct / self.total
+
+    @property
     def sensitivity(self) -> float:
         return self.tp / self.positives if self.positives else float("nan")
 
@@ -162,7 +171,6 @@ class FoldRecord:
     """Oriented per-dataset numbers of one fold checkpoint.
 
     :param int fold: 1-based fold number.
-    :param np.ndarray confusion_matrix: Chunk confusion matrix, rows = actual.
     :param dict correct: Per-dataset correct chunk counts.
     :param dict total: Per-dataset chunk counts.
     :param dict counts: Per-dataset oriented binary counts (empty for multi-class runs).
@@ -170,7 +178,6 @@ class FoldRecord:
     """
 
     fold: int
-    confusion_matrix: np.ndarray
     correct: dict[str, int]
     total: dict[str, int]
     counts: dict[str, Counts] = field(default_factory=dict)
@@ -279,7 +286,8 @@ def load_run(run_dir: Path, assume: str = "auto", expect_folds: int = 10) -> Run
             f"(missing folds {missing}); the pooled numbers below cover a partial run"
         )
 
-    raw: list[tuple[int, np.ndarray, dict[str, dict[str, float]]]] = []
+    binary: Optional[bool] = None
+    folds: list[FoldRecord] = []
     for fold, path in checkpoints:
         ckpt = torch.load(path, map_location="cpu", weights_only=False)
         val_metrics = ckpt.get("val_metrics", {})
@@ -287,14 +295,10 @@ def load_run(run_dir: Path, assume: str = "auto", expect_folds: int = 10) -> Run
         if not per_dataset:
             raise SkipRunError(f"{path.name} has no val_metrics['per_dataset']")
         confusion_matrix = np.asarray(val_metrics["chunk"]["confusion_matrix"])
-        raw.append((fold, confusion_matrix, per_dataset))
-
-    binary = raw[0][1].shape == (2, 2)
-    folds: list[FoldRecord] = []
-    for fold, confusion_matrix, per_dataset in raw:
+        if binary is None:
+            binary = confusion_matrix.shape == (2, 2)
         record = FoldRecord(
             fold=fold,
-            confusion_matrix=confusion_matrix,
             correct={d: int(m["correct"]) for d, m in per_dataset.items()},
             total={d: int(m["total"]) for d, m in per_dataset.items()},
         )
@@ -303,11 +307,10 @@ def load_run(run_dir: Path, assume: str = "auto", expect_folds: int = 10) -> Run
                 d: Counts(int(m["tp"]), int(m["tn"]), int(m["fp"]), int(m["fn"]))
                 for d, m in per_dataset.items()
             }
-            summed = Counts()
-            for counts in stored.values():
-                summed = summed + counts
             try:
-                record.orientation = detect_orientation(summed, confusion_matrix)
+                record.orientation = detect_orientation(
+                    sum(stored.values(), Counts()), confusion_matrix
+                )
             except CountMismatchError as exc:
                 raise CountMismatchError(f"{run_dir.name} fold {fold}: {exc}") from exc
             record.counts = stored  # re-oriented below once the run-level decision is known
@@ -357,19 +360,17 @@ def _resolve_orientations(run_dir: Path, folds: list[FoldRecord], assume: str) -
             )
         description = f"forced by --assume {assume}"
     else:
-        decided = {}
+        if not detected:
+            raise CountMismatchError(
+                f"{run_dir.name}: every fold has FP == FN, so the fp/fn orientation cannot be "
+                "detected. Re-run with --assume swapped (pre-fix runs) or --assume unswapped."
+            )
         if len(detected) > 1:
             logger.warning(
                 f"{run_dir.name}: mixed orientations across folds "
                 f"({sorted(detected)}); handling each fold by its own detection"
             )
-        if detected:
-            fallback = "swapped" if "swapped" in detected else next(iter(detected))
-        else:
-            raise CountMismatchError(
-                f"{run_dir.name}: every fold has FP == FN, so the fp/fn orientation cannot be "
-                "detected. Re-run with --assume swapped (pre-fix runs) or --assume unswapped."
-            )
+        fallback = "swapped" if "swapped" in detected else "unswapped"
         decided = {
             f.fold: (f.orientation if f.orientation != "ambiguous" else fallback) for f in folds
         }
@@ -389,7 +390,8 @@ def _resolve_orientations(run_dir: Path, folds: list[FoldRecord], assume: str) -
 # results.txt mode
 # --------------------------------------------------------------------------------------------
 
-PER_DATASET_HEADER_RE = re.compile(r"Per-Dataset Chunk Metrics")
+# Parses the table written by thesis.metrics.write_per_dataset_table; keep the two in sync.
+PER_DATASET_HEADER = "Per-Dataset Chunk Metrics"
 PER_DATASET_ROW_RE = re.compile(
     r"^\s*(?P<ds>[A-Za-z0-9_]+)\s+(?P<acc>\d+(?:\.\d+)?)%\s+(?P<sens>\d+(?:\.\d+)?)%\s+"
     r"(?P<spec>\d+(?:\.\d+)?)%\s+(?P<n>\d+)\s*$"
@@ -457,7 +459,7 @@ def parse_results_txt(
     healthy: Optional[tuple[int, int]] = None
     pathological: Optional[tuple[int, int]] = None
     for line in lines:
-        if PER_DATASET_HEADER_RE.search(line):
+        if PER_DATASET_HEADER in line:
             in_table = True
             continue
         if in_table:
@@ -497,9 +499,7 @@ def load_from_results_txt(path: Path, orientation: str = "swapped") -> RunCounts
     correct = {d: c.correct for d, c in counts.items()}
     note = f"reconstructed from rounded results.txt percentages (printed sens/spec: {orientation})"
     if matrix is not None:
-        summed = Counts()
-        for c in counts.values():
-            summed = summed + c
+        summed = sum(counts.values(), Counts())
         tn, fp, fn, tp = (int(v) for v in matrix.ravel())
         deviation = max(
             abs(summed.tp - tp), abs(summed.tn - tn), abs(summed.fp - fp), abs(summed.fn - fn)
@@ -556,14 +556,13 @@ def prior_baseline(counts: dict[str, Counts]) -> tuple[list[PriorRow], PriorRow]
     rows = []
     for dataset in ordered_datasets(list(counts)):
         c = counts[dataset]
-        baseline = c.majority_correct / c.total
         rows.append(
             PriorRow(
                 dataset=dataset,
                 chunks=c.total,
                 pathological=c.positives / c.total,
-                accuracy=c.correct / c.total,
-                baseline=baseline,
+                accuracy=c.accuracy,
+                baseline=c.baseline,
                 gain_pp=(c.correct - c.majority_correct) / c.total * 100,
                 contribution_pp=(c.correct - c.majority_correct) / grand_total * 100,
                 majority="P" if c.positives >= c.negatives else "H",
@@ -571,18 +570,17 @@ def prior_baseline(counts: dict[str, Counts]) -> tuple[list[PriorRow], PriorRow]
                 specificity=c.specificity,
             )
         )
-    overall = Counts()
-    for c in counts.values():
-        overall = overall + c
+    overall = sum(counts.values(), Counts())
     majority_total = sum(c.majority_correct for c in counts.values())
+    gain_pp = (overall.correct - majority_total) / grand_total * 100
     overall_row = PriorRow(
         dataset="overall",
         chunks=grand_total,
         pathological=overall.positives / grand_total,
-        accuracy=overall.correct / grand_total,
+        accuracy=overall.accuracy,
         baseline=majority_total / grand_total,
-        gain_pp=(overall.correct - majority_total) / grand_total * 100,
-        contribution_pp=(overall.correct - majority_total) / grand_total * 100,
+        gain_pp=gain_pp,
+        contribution_pp=gain_pp,
         majority="-",
         sensitivity=overall.sensitivity,
         specificity=overall.specificity,
@@ -686,11 +684,7 @@ def expand_patterns(root: Path, patterns: list[str]) -> list[Path]:
         if not matches:
             logger.warning(f"pattern {pattern!r} matched nothing under {root}")
         found.extend(Path(m) for m in matches)
-    unique: list[Path] = []
-    for path in found:
-        if path not in unique:
-            unique.append(path)
-    return unique
+    return list(dict.fromkeys(found))
 
 
 def build_parser() -> argparse.ArgumentParser:

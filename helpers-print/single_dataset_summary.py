@@ -37,7 +37,6 @@ Usage::
 import argparse
 import importlib.util
 import logging
-import re
 import sys
 import warnings
 from dataclasses import dataclass, field
@@ -83,7 +82,6 @@ logger = logging.getLogger("single_dataset_summary")
 
 DATASETS = ["mdd", "cane", "sad"]
 CONDITIONS = ["ec", "eo"]
-FOLD_FILE_RE = re.compile(r"fold_(\d+)_best\.pth$")
 
 
 @dataclass
@@ -97,7 +95,6 @@ class SingleRun:
     :param list chunk_sens: Per-fold chunk sensitivity.
     :param list chunk_spec: Per-fold chunk specificity.
     :param list subject_acc: Per-fold subject accuracy.
-    :param list majority: Per-fold majority-class rate of the validation chunks.
     :param list counts: Per-fold chunk confusion counts (label 1 = pathological).
     """
 
@@ -108,16 +105,17 @@ class SingleRun:
     chunk_sens: list[float] = field(default_factory=list)
     chunk_spec: list[float] = field(default_factory=list)
     subject_acc: list[float] = field(default_factory=list)
-    majority: list[float] = field(default_factory=list)
     counts: list[Any] = field(default_factory=list)
+
+    @property
+    def majority(self) -> list[float]:
+        """Per-fold majority-class rate of the validation chunks."""
+        return [c.baseline for c in self.counts]
 
     @property
     def pooled(self) -> Any:
         """Confusion counts summed over folds."""
-        total = Counts()
-        for c in self.counts:
-            total = total + c
-        return total
+        return sum(self.counts, Counts())
 
     @property
     def n_folds(self) -> int:
@@ -137,17 +135,6 @@ def run_name(dataset: str, condition: str, version: str = "041", channel: str = 
     return f"{dataset}_{version}_{channel}_{condition}"
 
 
-def majority_rate(confusion_matrix: np.ndarray) -> float:
-    """Accuracy of always predicting the more frequent true class.
-
-    :param np.ndarray confusion_matrix: ``[[TN, FP], [FN, TP]]`` with rows = actual class.
-    :return: ``max(#healthy, #pathological) / total``.
-    :rtype: float
-    """
-    cm = np.asarray(confusion_matrix)
-    return float(max(cm[0].sum(), cm[1].sum()) / cm.sum())
-
-
 def load_single_run(run_dir: Path, dataset: str, condition: str) -> SingleRun:
     """Load per-fold chunk/subject metrics of a single-dataset run from its checkpoints.
 
@@ -158,11 +145,7 @@ def load_single_run(run_dir: Path, dataset: str, condition: str) -> SingleRun:
     :rtype: SingleRun
     :raises FileNotFoundError: If no checkpoints are found.
     """
-    folds = sorted(
-        (int(m.group(1)), p)
-        for p in run_dir.glob("fold_*_best.pth")
-        if (m := FOLD_FILE_RE.search(p.name))
-    )
+    folds = _bipolar._fold_checkpoints(run_dir)
     if not folds:
         raise FileNotFoundError(f"No fold_N_best.pth files found in {run_dir}")
 
@@ -181,7 +164,6 @@ def load_single_run(run_dir: Path, dataset: str, condition: str) -> SingleRun:
         run.chunk_sens.append(float(chunk["recall"]))
         run.chunk_spec.append(float(chunk["specificity"]))
         run.subject_acc.append(float(subject["accuracy"]))
-        run.majority.append(majority_rate(cm))
         run.counts.append(
             Counts(tp=int(cm[1, 1]), tn=int(cm[0, 0]), fp=int(cm[0, 1]), fn=int(cm[1, 0]))
         )
@@ -244,16 +226,12 @@ def print_main_table(runs: dict[tuple[str, str], SingleRun]) -> None:
     )
     logger.info(header)
     logger.info("-" * len(header))
-    for dataset in DATASETS:
-        for condition in CONDITIONS:
-            run = runs.get((dataset, condition))
-            if run is None:
-                continue
-            logger.info(
-                f"{dataset.upper():<8} {condition:<4} {run.n_folds:>5} "
-                f"{_fmt(run.chunk_acc):>14} {_fmt(run.subject_acc):>14} "
-                f"{_fmt(run.chunk_sens):>14} {_fmt(run.chunk_spec):>14}"
-            )
+    for (dataset, condition), run in runs.items():
+        logger.info(
+            f"{dataset.upper():<8} {condition:<4} {run.n_folds:>5} "
+            f"{_fmt(run.chunk_acc):>14} {_fmt(run.subject_acc):>14} "
+            f"{_fmt(run.chunk_sens):>14} {_fmt(run.chunk_spec):>14}"
+        )
 
 
 def print_baseline_table(runs: dict[tuple[str, str], SingleRun]) -> None:
@@ -266,20 +244,15 @@ def print_baseline_table(runs: dict[tuple[str, str], SingleRun]) -> None:
     )
     logger.info(header)
     logger.info("-" * len(header))
-    for dataset in DATASETS:
-        for condition in CONDITIONS:
-            run = runs.get((dataset, condition))
-            if run is None:
-                continue
-            pooled = run.pooled
-            base = pooled.majority_correct / pooled.total
-            acc = pooled.correct / pooled.total
-            path_pct = pooled.positives / pooled.total * 100
-            logger.info(
-                f"{dataset.upper():<8} {condition:<4} {path_pct:>6.1f} "
-                f"{base * 100:>13.1f} {_fmt(run.majority):>14} {acc * 100:>12.1f} "
-                f"{(acc - base) * 100:>+8.1f}"
-            )
+    for (dataset, condition), run in runs.items():
+        pooled = run.pooled
+        base, acc = pooled.baseline, pooled.accuracy
+        path_pct = pooled.positives / pooled.total * 100
+        logger.info(
+            f"{dataset.upper():<8} {condition:<4} {path_pct:>6.1f} "
+            f"{base * 100:>13.1f} {_fmt(run.majority):>14} {acc * 100:>12.1f} "
+            f"{(acc - base) * 100:>+8.1f}"
+        )
 
 
 def print_paired_table(runs: dict[tuple[str, str], SingleRun], per_fold: bool = False) -> None:
@@ -290,7 +263,7 @@ def print_paired_table(runs: dict[tuple[str, str], SingleRun], per_fold: bool = 
         "BH is applied over the runs listed, to the Nadeau-Bengio p-values.\n"
         "Folds are small (SAD: 4-6 subjects), so per-fold accuracy is coarse.\n"
     )
-    keys = [(d, c) for d in DATASETS for c in CONDITIONS if (d, c) in runs]
+    keys = list(runs)
     results = {key: paired_vs_majority(runs[key]) for key in keys}
     if not results:
         return
@@ -318,14 +291,11 @@ def print_paired_table(runs: dict[tuple[str, str], SingleRun], per_fold: bool = 
             logger.info(f"  {key[0].upper():<5} {key[1]}: {cells}")
 
 
-def print_combined_comparison(
-    runs: dict[tuple[str, str], SingleRun], combined_root: Path, channel: str = "t8-t7"
-) -> None:
+def print_combined_comparison(runs: dict[tuple[str, str], SingleRun], combined_root: Path) -> None:
     """Print single-dataset vs combined-training per-dataset accuracy (descriptive only).
 
     :param dict runs: Single-dataset runs by ``(dataset, condition)``.
     :param Path combined_root: Directory containing ``all_040_t8-t7_{ec,eo}``.
-    :param str channel: Lower-cased channel name in the combined run directory names.
     """
     logger.info(
         "\n=== Single-dataset vs combined training (all_040), per-dataset chunk accuracy ===\n"
@@ -343,7 +313,7 @@ def print_combined_comparison(
     logger.info("-" * len(header))
     any_row = False
     for condition in CONDITIONS:
-        combined_dir = combined_root / run_name("all", condition, "040", channel)
+        combined_dir = combined_root / run_name("all", condition, "040")
         combined: dict[str, Any] = {}
         if combined_dir.exists():
             try:
@@ -360,16 +330,13 @@ def print_combined_comparison(
             any_row = True
             if single is not None:
                 p = single.pooled
-                s_acc, s_base = p.correct / p.total * 100, p.majority_correct / p.total * 100
+                s_acc, s_base = p.accuracy * 100, p.baseline * 100
                 s_cells = f"{s_acc:>10.1f} {s_base:>6.1f} {s_acc - s_base:>+7.1f}"
             else:
                 s_cells = f"{'n/a':>10} {'':>6} {'':>7}"
             if comb is not None:
-                c_cells = (
-                    f"{comb.correct / comb.total * 100:>12.1f} "
-                    f"{comb.majority_correct / comb.total * 100:>6.1f} "
-                    f"{(comb.correct - comb.majority_correct) / comb.total * 100:>+7.1f}"
-                )
+                c_acc, c_base = comb.accuracy * 100, comb.baseline * 100
+                c_cells = f"{c_acc:>12.1f} {c_base:>6.1f} {c_acc - c_base:>+7.1f}"
             else:
                 c_cells = f"{'n/a':>12} {'':>6} {'':>7}"
             logger.info(f"{dataset.upper():<8} {condition:<4} | {s_cells} | {c_cells}")
@@ -415,13 +382,13 @@ def main(argv: Optional[list[str]] = None, configure_logging: bool = True) -> in
                 logger.warning(f"[skip] {run_dir} does not exist")
                 continue
             try:
-                runs[(dataset, condition)] = load_single_run(run_dir, dataset, condition)
+                run = load_single_run(run_dir, dataset, condition)
             except FileNotFoundError as exc:
                 logger.warning(f"[skip] {exc}")
-            if (dataset, condition) in runs and runs[(dataset, condition)].n_folds != 10:
-                logger.warning(
-                    f"{run_dir.name}: {runs[(dataset, condition)].n_folds} folds found, expected 10"
-                )
+                continue
+            if run.n_folds != 10:
+                logger.warning(f"{run_dir.name}: {run.n_folds} folds found, expected 10")
+            runs[(dataset, condition)] = run
 
     if not runs:
         logger.error("no single-dataset runs found")
