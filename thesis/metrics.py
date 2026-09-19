@@ -8,6 +8,12 @@ from sklearn.metrics import confusion_matrix
 
 from thesis.labels import get_display_names
 
+#: Per-dataset metrics: ``{dataset: {metric name: scalar or ``confusion_matrix`` array}}``.
+PerDatasetMetrics = dict[str, dict[str, Any]]
+
+#: Section title written above the per-dataset confusion matrices in ``results.txt``.
+PER_DATASET_CM_HEADER = "Per-Dataset Chunk Confusion Matrices"
+
 
 def classification_metrics(
     y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 2
@@ -323,21 +329,32 @@ def compute_per_dataset_metrics(
     y_pred: np.ndarray,
     subjects: list[str],
     subject_dataset_map: dict[str, str],
-) -> dict[str, dict[str, float | int]]:
+    num_classes: int = 2,
+) -> PerDatasetMetrics:
     """
-    Compute chunk-level accuracy, sensitivity, and specificity grouped by source dataset.
+    Compute chunk-level accuracy, sensitivity, specificity and confusion matrix per dataset.
 
-    Sensitivity and specificity are computed for binary classification only (labels 0 and 1),
-    where 0 is healthy and 1 is pathological.
+    Sensitivity, specificity and the ``tp``/``tn``/``fp``/``fn`` counts are binary quantities
+    (labels 0 and 1, where 0 is healthy and 1 is pathological). In a multi-class run they only
+    cover the chunks whose true and predicted labels are both 0 or 1 and are not meaningful; use
+    ``accuracy``/``correct``/``total`` and ``confusion_matrix`` instead.
+
+    ``confusion_matrix`` is the full ``num_classes`` x ``num_classes`` chunk confusion matrix of
+    the dataset, rows = true class and columns = predicted class (the same orientation as the
+    pooled ``confusion_matrix`` of :func:`classification_metrics`). Its row sums are the
+    per-true-class chunk counts, so a consumer can derive a dataset's class balance and the
+    accuracy of an always-predict-the-majority-class baseline from it.
 
     :param np.ndarray y_true: True labels for each chunk.
     :param np.ndarray y_pred: Predicted labels for each chunk.
     :param list[str] subjects: Subject ID for each chunk.
     :param dict[str, str] subject_dataset_map: Mapping from subject ID to dataset label.
+    :param int num_classes: Number of classes (2 or 4); sets the size of ``confusion_matrix``.
     :return: Per-dataset metrics, e.g. {"mdd": {"accuracy": 0.85, "sensitivity": 0.80,
         "specificity": 0.90, "tp": 400, "tn": 450, "fp": 50, "fn": 100, "correct": 850,
-        "total": 1000}}.
-    :rtype: dict[str, dict[str, float | int]]
+        "total": 1000, "confusion_matrix": array([[450, 50], [100, 400]])}}.
+    :rtype: PerDatasetMetrics
+    :raises ValueError: If a true or predicted label is outside ``[0, num_classes)``.
     """
     dataset_correct: dict[str, int] = {}
     dataset_total: dict[str, int] = {}
@@ -345,12 +362,20 @@ def compute_per_dataset_metrics(
     dataset_tn: dict[str, int] = {}
     dataset_fp: dict[str, int] = {}
     dataset_fn: dict[str, int] = {}
+    dataset_cm: dict[str, NDArray[np.int64]] = {}
 
     for true, pred, subj in zip(y_true, y_pred, subjects):
+        if not (0 <= int(true) < num_classes and 0 <= int(pred) < num_classes):
+            raise ValueError(
+                f"Label out of range for num_classes={num_classes}: true={true}, pred={pred}"
+            )
         ds = subject_dataset_map.get(subj, "unknown")
         dataset_total[ds] = dataset_total.get(ds, 0) + 1
         if true == pred:
             dataset_correct[ds] = dataset_correct.get(ds, 0) + 1
+        if ds not in dataset_cm:
+            dataset_cm[ds] = np.zeros((num_classes, num_classes), dtype=np.int64)
+        dataset_cm[ds][int(true), int(pred)] += 1
         # Binary confusion matrix components (label 1 = positive/pathological)
         if int(true) == 1 and int(pred) == 1:
             dataset_tp[ds] = dataset_tp.get(ds, 0) + 1
@@ -361,7 +386,7 @@ def compute_per_dataset_metrics(
         elif int(true) == 1 and int(pred) == 0:
             dataset_fn[ds] = dataset_fn.get(ds, 0) + 1
 
-    result: dict[str, dict[str, float | int]] = {}
+    result: PerDatasetMetrics = {}
     for ds in sorted(dataset_total.keys()):
         total = dataset_total[ds]
         correct = dataset_correct.get(ds, 0)
@@ -381,16 +406,20 @@ def compute_per_dataset_metrics(
             "fn": fn,
             "correct": correct,
             "total": total,
+            "confusion_matrix": dataset_cm[ds],
         }
     return result
 
 
 def write_per_dataset_table(
     writer: Callable[[str], Any],
-    fold_per_dataset_metrics: list[dict[str, dict[str, float | int]]],
+    fold_per_dataset_metrics: list[PerDatasetMetrics],
 ) -> None:
     """
     Write aggregated per-dataset chunk accuracy table across all folds.
+
+    When the metrics carry per-dataset confusion matrices, a "Per-Dataset Chunk Confusion
+    Matrices" section follows the table (see :func:`_write_per_dataset_confusion_matrices`).
 
     :param Callable[[str], Any] writer: Function to write output.
     :param list fold_per_dataset_metrics: List of per-dataset metric dicts, one per fold.
@@ -464,6 +493,54 @@ def write_per_dataset_table(
         f"  {grand_spec * 100:>11.2f}%  {grand_total:>8}\n"
     )
     writer(total_row)
+    _write_per_dataset_confusion_matrices(writer, fold_per_dataset_metrics)
+
+
+def _write_per_dataset_confusion_matrices(
+    writer: Callable[[str], Any],
+    fold_per_dataset_metrics: list[PerDatasetMetrics],
+) -> None:
+    """
+    Write each dataset's chunk confusion matrix, summed across folds.
+
+    Written after (and separate from) the per-dataset accuracy table so parsers of that table
+    are unaffected. Nothing is written for results that carry no ``confusion_matrix`` (runs from
+    before it was stored). The dataset header lines have the form ``NAME (N chunks)`` and the
+    matrix rows start with the class display name, which
+    ``helpers-print/dataset_prior_baseline.py`` relies on; keep the two in sync.
+
+    :param Callable[[str], Any] writer: Function to write output.
+    :param list fold_per_dataset_metrics: List of per-dataset metric dicts, one per fold.
+    :return: None
+    :rtype: None
+    """
+    aggregated: dict[str, NDArray[np.int64]] = {}
+    for fold_metrics in fold_per_dataset_metrics:
+        for ds, metrics in fold_metrics.items():
+            cm = metrics.get("confusion_matrix")
+            if cm is None:
+                continue
+            aggregated[ds] = aggregated.get(ds, 0) + np.asarray(cm, dtype=np.int64)
+    if not aggregated:
+        return
+
+    num_classes = next(iter(aggregated.values())).shape[0]
+    display_names = get_display_names(num_classes)
+    class_names = [display_names.get(i, f"Class {i}") for i in range(num_classes)]
+
+    writer(
+        f"\n{PER_DATASET_CM_HEADER} (aggregated across folds; "
+        "rows = actual, columns = predicted):\n"
+    )
+    for ds in sorted(aggregated):
+        cm = aggregated[ds]
+        writer(f"\n  {ds.upper()} ({int(cm.sum())} chunks)\n")
+        writer(
+            "  " + "ACTUAL v/PRED ->".ljust(16) + "".join(f"{n:>15} " for n in class_names) + "\n"
+        )
+        for i, row_name in enumerate(class_names):
+            row = "".join(f"{int(cm[i, j]):>15} " for j in range(num_classes))
+            writer(f"  {row_name:>15} {row}\n")
 
 
 def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> None:
