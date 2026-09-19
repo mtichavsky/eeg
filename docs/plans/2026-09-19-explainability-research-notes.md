@@ -133,6 +133,13 @@ Reading:
   pathological. Hypothesis, not tested: MDD's high accuracy might reflect a site or recording
   effect as much as pathology, which is what objection 1 is about.
 
+**Update (same day, from `helpers-print/dataset_prior_baseline.py`, PR #88):** the Table II binary
+runs show the same pattern. 7 binary runs with per-dataset checkpoint data gain +7 to +18 pp over
+the dataset-prior baseline, MDD contributes +12 to +17 pp, and CANE is at or below its base rate in
+every one. The headline `atv4-lowlr_oex` (no checkpoints; counts reconstructed from `results.txt`)
+gains +14.2 pp: MDD +13.7, CANE −1.4, SAD +1.8. **4-class runs cannot be decomposed from stored
+metrics**: they store per-dataset accuracy only, not per-dataset class balance.
+
 ### 3.5 Bug found: per-dataset sensitivity/specificity are wrong (accuracy is fine)
 
 `main.py:259` calls `compute_per_dataset_metrics(preds_arr, labels_arr, ...)`, but the function
@@ -359,8 +366,9 @@ temporal pair is indices 5 and 6. Mirror swap = `(0,1) (2,4) (5,6)`, `Cz` and `O
 
 - `code/models/*.pth` and everything under `/home/milan/eeg/experiments/` predate the Jul-30 STFT
   fix (`proj.weight` is `(64, 864)`, current code needs `(64, 416)`). **Unusable.**
-- `thesis-text/paper/experiments/` holds the valid paper runs (10/10 folds for every model of
-  interest), **except** the headline 8-channel binary row (76.5/78.6, Table II) from
+- `/home/milan/eeg/experiments/{binary,4class}/` holds the valid paper runs (10/10 folds for every
+  model of interest; `thesis-text/paper/experiments/` does not exist, an earlier version of these
+  notes had the wrong path), **except** the headline 8-channel binary row (76.5/78.6, Table II) from
   `atv4-lowlr_oex` (`lr=1e-4, epochs=200, patience=50`): its checkpoints were **not kept**, only
   `results.txt`. The dir with checkpoints (`binary/8channel/alltransformer-binary`) is the earlier
   `lr=5e-4` run at 75.47/75.93. Hence B's 70 Hz AllTransformerV4 rerun.
