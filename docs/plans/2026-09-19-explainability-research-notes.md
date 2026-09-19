@@ -70,7 +70,7 @@ answer one of these:
 | Bug | `main.py:259` swapped args | ✅ Fix + `tests/test_per_dataset_eval.py` in PR #91 (merged) | n/a; the 6 single-dataset runs predate the fix (their summary uses chunk metrics, unaffected) | §3.5 |
 
 **PRs (mtichavsky/eeg):** #87 docs (this file + CLAUDE.md Metacentrum section) open; #88 objection-1 tools, #89 cutoff launcher, #90
-cutoff-curve launcher and #91 per-dataset metrics fix **merged**; #92 (code-c0, open) adds the
+cutoff-curve launcher, #91 per-dataset metrics fix and #92 balanced-accuracy summary **merged**; #92 (code-c0) adds the
 balanced-accuracy test of §3.6 to `single_dataset_summary.py`.
 **PR (mtichavsky/thesis-text):** #4 open, holds Section VII (shortcut, montage, cutoff, planned)
 plus the user's own prose edits. After #4 merges the user must
@@ -202,7 +202,7 @@ signature is `(y_true, y_pred, subjects, subject_dataset_map)` (`thesis/metrics.
 CNN-AttnS, `--channel T8-T7`, Exp A hyperparameters, one dataset per run, EC and EO separately,
 10-fold (`{mdd,cane,sad}_041_t8-t7_{ec,eo}`, jobs 23807482–87; CANE from the headset, as in
 `all_040_t8-t7_*`). Summary script: `helpers-print/single_dataset_summary.py`: plain accuracy vs the fold's majority
-rate (in `main`) and, since PR #92 (open, by code-c0), a "Balanced accuracy vs chance (50%)" section
+rate (in `main`) and, since PR #92 (merged, by code-c0), a "Balanced accuracy vs chance (50%)" section
 (pooled value, fold mean ± sd, Wilcoxon, Nadeau–Bengio, BH over these 6 runs). The balanced-accuracy
 columns below come from that section: I recomputed them independently first, and ran PR #92's
 script on the synced data, which reproduces them exactly (fold means and BH p-values).
@@ -432,7 +432,7 @@ Reading:
 
 ## 7. Open items and suggested next steps (in order, as of 2026-09-19 evening)
 
-**Needs the user (merging):** mtichavsky/eeg #87 and #92; mtichavsky/thesis-text #4 (then
+**Needs the user (merging):** mtichavsky/eeg #87; mtichavsky/thesis-text #4 (then
 `git checkout -- paper/paper.tex` in the thesis checkout). Whitham 2007 is already in
 `references.bib` and cited in `sec:cutoff` (done in PR #4).
 
@@ -446,8 +446,8 @@ Reading:
       the `_f70`/`_f30` suffix. Result: MDD alone ≈ 90 % (positive control), CANE alone
       68.4 / 66.9 % balanced accuracy (weak signal, same as in the combined model), SAD alone
       70.5 / 65.7 %. The balanced-accuracy test is in PR #92
-      (`feat/single-dataset-balanced-accuracy`, code-c0, open; verified), so Table V reproduces
-      from a committed script once that merges.
+      (`feat/single-dataset-balanced-accuracy`, code-c0, merged; output verified), so Table V
+      reproduces from the committed script.
    2. **Four-class shortcut analysis.** 4-class runs store per-dataset accuracy only, not class
       balance, so a re-evaluation harness is needed (same harness as C, §9.4), plus a CANE-only
       anxiety vs comorbid run (CANE has 18 anxiety / 26 comorbid, no shortcut from other datasets).
