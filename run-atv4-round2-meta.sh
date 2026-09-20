@@ -13,6 +13,7 @@
 # jobs running from it) is never switched. Usage: ./run-atv4-round2-meta.sh <batch>
 #   batch 1: schedule-length / regularization / lr / loss / selection-metric probes (6 runs)
 #   batch 2: higher lr + lighter regularization at the full 200-epoch schedule (5 runs)
+#   batch 3: one-factor moves around the batch-2 winner 051b (4 runs)
 
 set -uo pipefail
 
@@ -54,9 +55,21 @@ batch2() {
     submit all_051e_all_ec+eo --optimizer adamw --dropout 0.3 --weight-decay 1e-2 --lr 3e-4 --epochs 200 --patience 50 --focal-gamma 0
 }
 
+batch3() {
+    # Batch 2: 051b (adamw, dropout 0.1, wd 1e-2, lr 3e-4, gamma 2) = 78.75%, best so far.
+    # gamma 0 (051e) cost 4 pts vs gamma 2 (051a) -> try a stronger focal exponent; also probe
+    # wd up (lower wd 051d was worse) and dropout down. lr 1e-3 (051c) was worse: not revisited.
+    local BASE="--optimizer adamw --lr 3e-4 --epochs 200 --patience 50"
+    submit all_052a_all_ec+eo $BASE --dropout 0.1 --weight-decay 1e-2 --focal-gamma 3
+    submit all_052b_all_ec+eo $BASE --dropout 0.1 --weight-decay 1e-2 --focal-gamma 4
+    submit all_052c_all_ec+eo $BASE --dropout 0.1 --weight-decay 3e-2 --focal-gamma 2
+    submit all_052d_all_ec+eo $BASE --dropout 0.0 --weight-decay 1e-2 --focal-gamma 2
+}
+
 case "${1:-}" in
+    3) batch3 ;;
     2) batch2 ;;
     1) batch1 ;;
-    *) echo "usage: $0 <batch: 1|2>"; exit 1 ;;
+    *) echo "usage: $0 <batch: 1|2|3>"; exit 1 ;;
 esac
 echo "[submit] queued - check with: qstat -u \$USER"
