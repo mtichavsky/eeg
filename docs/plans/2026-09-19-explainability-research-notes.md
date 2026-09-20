@@ -13,7 +13,7 @@ facts from the Aug 16 catalogue, so nothing has to be re-derived.
 Companion plans that are **not** merged here: `2026-09-14-bipolar-surrogate-ablation.md` (plan A)
 and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83).
 
-**Last updated: 2026-09-19 (late evening), after experiments A and B and the six single-dataset runs finished.**
+**Last updated: 2026-09-20, after the four-class per-dataset rerun finished (§3.7).**
 
 ## TL;DR (2026-09-19 late evening)
 
@@ -31,13 +31,15 @@ and `2026-09-14-frequency-cutoff-ablation.md` (plan B, now in `main` via PR #83)
    the combined model. SAD alone: 69.6 / 65.3 % (p = 0.020 / 0.009), 5 to 8 pp above its combined
    value. So a weak anxiety signal exists in both setups; "at or below the majority rate" was a
    statement about a metric the model is not trained for.
-4. **Still open for objection 1: the four-class decomposition only.** Approved 2026-09-19: add the
-   per-dataset confusion matrix to the training code (PR #93, open, branch `feat/per-dataset-confusion-matrix`,
-   implemented by a subagent, reviewed and tests run by me) and rerun the 4-class models on
-   the GPU cluster after it merges. The dataset-identity probe and shuffled-label control are **not planned** (§7 item 2.3).
-   The fold-rebuild harness was **dropped** (user decision: too much code complexity).
-   **Objection 4 (biomarkers: band shuffle, asymmetry swap) is out of scope for today**; the user
-   may pick it up in a later session.
+4. **Four-class decomposition is done (§3.7; jobs 23818740/41, 2026-09-20, from `main` `061d288`).**
+   The 4-class gain over the dataset prior is +15.3 pp (AllTransformerV4) and +18.9 pp (in-ear
+   CNN-AttnS). **MDD supplies +14.0 / +16.4 of it; CANE +0.4 / +1.4 and SAD +0.9 / +1.1**, i.e.
+   the anxiety and comorbid distinctions add almost nothing beyond knowing the dataset. The
+   models separate the datasets almost perfectly (MDD chunks are predicted as anxiety or comorbid
+   0.1 % of the time; SAD chunks as depression or comorbid about 3 %). The dataset-identity probe
+   and shuffled-label control are **not planned** (§7 item 2.3). The fold-rebuild harness was
+   **dropped** (user decision). **Objection 4 (biomarkers: band shuffle, asymmetry swap) is out of
+   scope for today**; the user may pick it up in a later session.
 5. **Paper Section VII is up to date for A, B, the decomposition and the single-dataset runs**
    (thesis-text PR #4, open). Whitham 2007 is cited. Everything still to do is in red.
 6. **Known bug:** per-dataset sensitivity/specificity are mislabelled (§3.5). Fix is PR #91
@@ -56,7 +58,7 @@ answer one of these:
 
 | # | Reviewer objection | Claim it threatens | Covered by |
 |---|---|---|---|
-| 1 | "The model learned which dataset a recording came from, not pathology." | Every accuracy, 4-class especially | Prior-baseline decomposition (§3.4, §4.3) and single-dataset runs (§3.6); probe, shuffled labels and 4-class still open (§7) |
+| 1 | "The model learned which dataset a recording came from, not pathology." | Every accuracy, 4-class especially | Prior-baseline decomposition (§3.4, §4.3), single-dataset runs (§3.6) and the four-class decomposition (§3.7); probe and shuffled labels not planned (§7) |
 | 2 | "Why would one in-ear channel match 8 channels?" | Headline in-ear result | A (done: §3) |
 | 3 | "It's reading artifacts (muscle, eye movement), not brain." | Clinical validity | B (muscle, partly: §4.4), A's EC/EO split (eye movement, not a valid test: §3.3) |
 | 4 | "Does it use the known biomarkers (alpha asymmetry, beta power)?" | Scientific credibility | C (candidate), asymmetry swap (candidate); **out of scope for today** |
@@ -70,12 +72,13 @@ answer one of these:
 | **A** | Bipolar surrogate ablation (Fp2−Fp1 / C4−C3 / T8−T7 / in-ear) × EC / EO | ✅ In `main` (PR #82) | ✅ 8 runs, 2026-09-18. `experiments/all_040_*` | §3: no montage significantly better |
 | **B** | Retrain at 30 Hz spectrogram cutoff vs 70 Hz | ✅ In `main` (PR #83 flag, PR #89 launcher + summary) | ✅ 4 runs, 2026-09-19, ~30 min wall. `experiments/all_041_*`. ✅ curve points 50 / 40 Hz (in-ear CNN-AttnS, `all_042_inear_ec+eo_f{50,40}`, jobs 23807556/57, PR #90; done 2026-09-19) | §4: 30 Hz costs 5.6 to 9.5 pp; §4.5: 50 Hz −3.1, 40 Hz −4.4 pp |
 | **C** | Post-hoc band shuffle on saved checkpoints | ❌ | n/a (inference only) | Undecided (§6). Now unblocked: B saved 70 Hz AllTransformerV4 checkpoints |
-| Obj. 1 | Dataset-identity checks | ✅ Prior-baseline script, single-dataset launcher and summary in `main` (PR #88, merged) | ✅ 6 single-dataset runs `{cane,sad,mdd}_041_t8-t7_{ec,eo}` (jobs 23807482–87, run by code-c0) done, synced to `experiments/`. Probe / shuffled labels / 4-class not built | §3.4, §3.6, §4.3 |
+| Obj. 1 | Dataset-identity checks | ✅ Prior-baseline script, single-dataset launcher and summary in `main` (PR #88, merged) | ✅ 6 single-dataset runs `{cane,sad,mdd}_041_t8-t7_{ec,eo}` (jobs 23807482–87, run by code-c0) done, synced to `experiments/`. ✅ 4-class per-dataset rerun (`experiments/all_043_*`, jobs 23818740/41, PR #93 merged, 2026-09-20). Probe / shuffled labels not planned | §3.4, §3.6, §3.7, §4.3 |
 | Bug | `main.py:259` swapped args | ✅ Fix + `tests/test_per_dataset_eval.py` in PR #91 (merged) | n/a; the 6 single-dataset runs predate the fix (their summary uses chunk metrics, unaffected) | §3.5 |
 
-**PRs (mtichavsky/eeg):** #87 docs (this file) open; #88 objection-1 tools, #89 cutoff launcher, #90
-cutoff-curve launcher, #91 per-dataset metrics fix and #92 balanced-accuracy summary **merged**; #92 (code-c0) adds the
-balanced-accuracy test of §3.6 to `single_dataset_summary.py`.
+**PRs (mtichavsky/eeg):** #87 (this file), #88 objection-1 tools, #89 cutoff launcher, #90
+cutoff-curve launcher, #91 per-dataset metrics fix, #92 balanced-accuracy summary (code-c0; adds
+the test of §3.6 to `single_dataset_summary.py`) and #93 per-dataset confusion matrices +
+four-class decomposition + launcher **merged**; #94 (notes corrections and §3.7) open.
 **PR (mtichavsky/thesis-text):** #4 open, holds Section VII (shortcut, montage, cutoff, planned)
 plus the user's own prose edits. After #4 merges the user must
 `git checkout -- paper/paper.tex` in their checkout before switching branches.
@@ -184,8 +187,9 @@ Reading:
 runs show the same pattern. 7 binary runs with per-dataset checkpoint data gain +7 to +18 pp over
 the dataset-prior baseline, MDD contributes +12 to +17 pp, and CANE is at or below its base rate in
 every one. The headline `atv4-lowlr_oex` (no checkpoints; counts reconstructed from `results.txt`)
-gains +14.2 pp: MDD +13.7, CANE −1.4, SAD +1.8. **4-class runs cannot be decomposed from stored
-metrics**: they store per-dataset accuracy only, not per-dataset class balance.
+gains +14.2 pp: MDD +13.7, CANE −1.4, SAD +1.8. **The old 4-class runs could not be decomposed from stored
+metrics** (per-dataset accuracy only, no class balance); the rerun with stored per-dataset
+confusion matrices is in §3.7.
 
 ### 3.5 Bug found: per-dataset sensitivity/specificity are wrong (accuracy is fine)
 
@@ -253,6 +257,65 @@ Reading:
    metrics, not the buggy per-dataset ones). A model that reads the *recording session*
    (equipment, site) within a single dataset would also pass this test; the test removes only the
    between-dataset shortcut.
+
+### 3.7 Four-class decomposition (objection 1; run 2026-09-20)
+
+PR #93 stores a K×K confusion matrix per dataset, so the 4-class runs can now be decomposed like
+the binary ones. Reruns of the paper's two 4-class configurations (`all_043_all_ec+eo_4class`,
+AllTransformerV4 8-ch, job 23818740; `all_043_inear_ec+eo_4class`, CNN-AttnS in-ear, job 23818741;
+10 folds, both exit 0, cluster clone at `main` `061d288`). Training is unseeded, so a point of
+noise is expected: chunk / subject accuracy is 63.7 / 64.0 (paper 64.6 / 64.8) and 67.4 / 66.4
+(paper 67.3 / 67.3). Checkpoints were not fetched; the table comes from the matrices in
+`results.txt` (`--from-results-txt`), pooled over the 10 validation folds.
+
+```
+poetry run python helpers-print/dataset_prior_baseline.py --confusion-matrices \
+    --from-results-txt --root experiments 'all_043_*'
+```
+
+Accuracy vs the dataset-prior baseline (always predict each dataset's majority class), pooled over
+folds. Gain = accuracy − baseline; Contrib = the dataset's share of the overall gain in pp.
+
+| Run | Dataset | Chunks | Acc % | Prior % | Gain pp | Contrib pp |
+|---|---|---|---|---|---|---|
+| AllTransformerV4 | MDD | 3370 | 88.7 | 53.8 (D) | +34.9 | **+14.0** |
+| | CANE | 3901 | 42.1 | 41.2 (C) | +0.9 | +0.4 |
+| | SAD | 1133 | 62.4 | 55.5 (H) | +6.9 | +0.9 |
+| | overall | 8404 | 63.5 | 48.2 | +15.3 | +15.3 |
+| CNN-AttnS in-ear | MDD | 3400 | 87.5 | 53.3 (D) | +34.1 | **+16.4** |
+| | CANE (IDUN) | 2566 | 43.0 | 39.2 (A) | +3.9 | +1.4 |
+| | SAD | 1103 | 61.5 | 54.3 (H) | +7.2 | +1.1 |
+| | overall | 7069 | 67.3 | 48.3 | +18.9 | +18.9 |
+
+Within-dataset balanced recall (mean per-class recall over the classes present in that dataset;
+computed from the same matrices, pooled, no significance test):
+
+| Run | MDD (chance 50) | CANE / IDUN (chance 25, four classes) | SAD (chance 50) |
+|---|---|---|---|
+| AllTransformerV4 | 88.1 (H 80.7, D 95.5) | 27.8 (H 0.4, A 30.2, D 0.0, C 80.6) | 65.8 (H 34.8, A 96.8) |
+| CNN-AttnS in-ear | 87.2 (H 82.4, D 91.9) | 33.7 (H 6.5, A 53.3, D 0.0, C 75.0) | 63.6 (H 38.7, A 88.5) |
+
+Findings:
+
+1. **The four-class headline is MDD.** MDD supplies +14.0 of +15.3 pp (91 %) and +16.4 of +18.9 pp
+   (87 %). MDD contains only healthy and depressed subjects, so once the dataset is known the
+   four-class problem reduces to the MDD binary problem, on which the single-dataset run reaches
+   about 90 % (§3.6). The within-MDD balanced recall (87–88 %) agrees with that, so the MDD gain is
+   a real healthy-vs-depressed signal, not a shortcut.
+2. **Anxiety and comorbid add almost nothing beyond the dataset.** CANE/IDUN sits at its
+   majority rate (+0.9 pp) or 3.9 pp above it, and healthy CANE chunks are almost never called
+   healthy (recall 0.4 % and 6.5 %; most go to comorbid). The depression class inside CANE
+   (59–60 chunks) is never recognised. SAD is 6.9 / 7.2 pp above its base
+   rate, driven by the anxious class (recall 97 % / 89 %) while healthy recall is 35 % / 39 %.
+3. **The models identify the dataset almost perfectly.** Predictions in a class that the source
+   dataset does not contain: MDD 0.12 % / 0.09 % (anxiety or comorbid), SAD 3.0 % / 2.6 %
+   (depression or comorbid). The dataset is decodable from the input (recording equipment
+   differs), and it accounts for the 48 % baseline. This confirms that the four-class accuracy
+   level owes a good deal to dataset identity (the baseline alone gives 48 %), but the *gain
+   over* that baseline is a within-dataset effect concentrated in MDD.
+4. **Caveats.** Pooled over folds, so no per-fold spread or test; CANE's depression class is only
+   59–60 chunks; for in-ear the CANE slot is IDUN (53 subjects), for AllTransformerV4 it is the CANE
+   headset data. The balanced-recall numbers are descriptive.
 
 ---
 
@@ -441,7 +504,7 @@ Reading:
 
 ## 7. Open items and suggested next steps (in order, as of 2026-09-19 evening)
 
-**Needs the user (merging):** mtichavsky/eeg #87 and #93; mtichavsky/thesis-text #4 (then
+**Needs the user (merging):** mtichavsky/eeg #94 (#87 and #93 are merged); mtichavsky/thesis-text #4 (then
 `git checkout -- paper/paper.tex` in the thesis checkout). Whitham 2007 is already in
 `references.bib` and cited in `sec:cutoff` (done in PR #4).
 
@@ -457,28 +520,18 @@ Reading:
       70.5 / 65.7 %. The balanced-accuracy test is in PR #92
       (`feat/single-dataset-balanced-accuracy`, code-c0, merged; output verified), so Table V
       reproduces from the committed script.
-   2. **Four-class shortcut analysis: IN PROGRESS (approved 2026-09-19).** 4-class runs stored
-      per-dataset accuracy only, not class balance. Route chosen (no harness): store the full
-      per-dataset confusion matrix and class counts at training time, extend
-      `dataset_prior_baseline.py` to print the 4-class decomposition, and rerun the 4-class
-      AllTransformerV4 and in-ear CNN-AttnS (10-fold) on the GPU cluster. **PR #93** (open) holds:
-      `compute_per_dataset_metrics(..., num_classes)` storing a K×K `confusion_matrix` per dataset
-      (row sums = class counts), a "Per-Dataset Chunk Confusion Matrices" section in `results.txt`,
-      the 4-class decomposition in `dataset_prior_baseline.py` (old-run output verified
-      byte-identical by the subagent), tests (78 pass when I ran them), and the launcher
-      `run-fourclass-perdataset-meta.sh` (runs `all_043_all_ec+eo_4class`, AllTransformerV4 8-ch,
-      lr 5e-4, dropout 0.1, wd 1e-4; and `all_043_inear_ec+eo_4class`, CNN-AttnS in-ear, lr 1e-4,
-      dropout 0.05, wd 5e-5; both ec+eo, 10 folds, 100 epochs, patience 20, focal γ 2). Configs
-      copied from the paper's runs `/home/milan/eeg/experiments/4class/{8channel/alltransformer-4class,
-      in-ear/cnnattns-4class-inear}/results.txt` (outside the repo; I spot-checked lr/dropout/wd).
-      Expect a point or two of run-to-run noise (training is unseeded; folds are identical).
-      After the rerun: `poetry run python helpers-print/dataset_prior_baseline.py
-      --confusion-matrices --root experiments 'all_043_*'`. **Jobs are submitted only after #93 is
-      merged** (the cluster clone runs `main`). Optional, not started: a CANE-only anxiety vs comorbid run
+   2. **Four-class shortcut analysis: DONE (2026-09-20, §3.7).** PR #93 (merged) stores the full
+      per-dataset confusion matrix at training time and extends `dataset_prior_baseline.py`;
+      `run-fourclass-perdataset-meta.sh` reran the paper's 4-class configs as
+      `all_043_all_ec+eo_4class` (job 23818740) and `all_043_inear_ec+eo_4class` (23818741),
+      both 10 folds, exit 0. Reproduce with `poetry run python helpers-print/dataset_prior_baseline.py
+      --confusion-matrices --from-results-txt --root experiments 'all_043_*'` (or without
+      `--from-results-txt` if the checkpoints are fetched). Result: MDD supplies 87–91 % of the
+      gain over the dataset prior. Optional, not started: a CANE-only anxiety vs comorbid run
       (CANE has 18 anxiety / 26 comorbid, no shortcut from other datasets).
    3. **Dataset-identity probe and shuffled-label retraining: NOT PLANNED (user, 2026-09-19).**
       Objection 1 is considered covered by the prior-baseline decomposition, the single-dataset
-      runs (§3.6) and, once done, the 4-class decomposition. My reasoning: a linear probe would very
+      runs (§3.6) and the 4-class decomposition (§3.7). My reasoning: a linear probe would very
       likely find the source dataset trivially decodable from pooled features (recording equipment
       differs), which is uninformative about whether the classifier *uses* it, and it needs the
       dropped harness. A shuffled-label retraining (a CV-protocol sanity check, needs one training
