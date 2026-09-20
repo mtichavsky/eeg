@@ -19,11 +19,13 @@
 #   shared $REPO_DIR/.venv (numpy/torch missing there despite the venv being
 #   verified intact from the frontend) - a storage-visibility issue specific
 #   to that cluster, not a transient one (reproduced on both fobos2 and fobos19).
+# cl_luna=False: the luna (FZU) cluster has the same problem as fobos (job 23818881 on
+#   luna201.fzu.cz died with "No module named numpy" from the shared venv).
 # cl_grogu=False: grogu (CERIT-SC) nodes carry sm_120 (Blackwell) GPUs, which
 #   our installed torch==2.11.0+cu126 wheel has no compiled kernels for
 #   ("CUDA error: no kernel image is available for execution on the device").
 #   Drop this once torch is upgraded to a build with Blackwell support.
-#PBS -l select=1:ncpus=2:ngpus=1:gpu_mem=20gb:mem=24gb:scratch_local=10gb:cl_fobos=False:cl_grogu=False
+#PBS -l select=1:ncpus=2:ngpus=1:gpu_mem=20gb:mem=24gb:scratch_local=10gb:cl_fobos=False:cl_grogu=False:cl_luna=False
 #PBS -l walltime=05:00:00
 #PBS -j oe
 #PBS -m ae
