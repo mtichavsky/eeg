@@ -176,6 +176,14 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     train_parser.add_argument("--patience", type=int, default=20, help="Early stopping patience")
     train_parser.add_argument(
+        "--select-metric",
+        choices=["accuracy", "balanced"],
+        default="accuracy",
+        help="Validation metric for best-checkpoint selection and early stopping: chunk "
+        "accuracy (default) or balanced accuracy = (sensitivity + specificity) / 2. "
+        "Binary classification only.",
+    )
+    train_parser.add_argument(
         "--checkpoint-dir",
         type=str,
         default="checkpoints",

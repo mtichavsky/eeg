@@ -44,6 +44,7 @@ from thesis.metrics import (
     classification_metrics,
     compute_per_dataset_metrics,
     extract_classification_metrics,
+    selection_score,
     write_results,
 )
 from thesis.model import RAW_EEG_MODELS
@@ -308,6 +309,7 @@ def train_one_fold(
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
     l1_lambda: float = 0.0,
     freq_cutoff_hz: float | None = FREQ_CUTOFF_HZ,
+    select_metric: str = "accuracy",
 ) -> dict:
     """
     Train model for one-fold with comprehensive logging, checkpointing, and early stopping.
@@ -323,6 +325,9 @@ def train_one_fold(
     :param int save_every: Save checkpoint every N epochs.
     :param int val_every: Validate every N epochs.
     :param int patience: Early stopping patience.
+    :param str select_metric: Validation metric that picks the best checkpoint and drives early
+        stopping: ``"accuracy"`` (chunk accuracy) or ``"balanced"`` (mean of sensitivity and
+        specificity).
     :param Path checkpoint_dir: Directory to save checkpoints.
     :param dict[str, str] | None val_subject_dataset_map: Optional mapping from validation subject
         IDs to dataset labels for per-dataset metrics.
@@ -338,6 +343,7 @@ def train_one_fold(
     """
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     early_stopping = EarlyStopping(patience=patience, maximize=True)
+    best_score = 0.0
     best_chunk_acc = 0.0
     corr_combined_acc = 0.0
     best_epoch = 0
@@ -416,8 +422,10 @@ def train_one_fold(
             fold_history["chunk_acc"].append(chunk_metrics["accuracy"])
             fold_history["subject_acc"].append(subject_metrics["accuracy"])
 
-            # Save the best model (based on chunk accuracy - PRIMARY METRIC)
-            if chunk_metrics["accuracy"] > best_chunk_acc:
+            # Save the best model (chunk accuracy by default, see ``select_metric``)
+            score = selection_score(chunk_metrics, select_metric)
+            if score > best_score:
+                best_score = score
                 best_chunk_acc = chunk_metrics["accuracy"]
                 corr_combined_acc = chunk_metrics["accuracy"] * subject_metrics["accuracy"]
                 best_epoch = epoch
@@ -451,7 +459,7 @@ def train_one_fold(
                 )
 
             # Early stopping check
-            if early_stopping(chunk_metrics["accuracy"], epoch):
+            if early_stopping(score, epoch):
                 logger.info(f"Early stopping triggered at epoch {epoch}")
                 break
 
@@ -559,6 +567,7 @@ def train_cross_validation(
     l1_lambda: float = 0.0,
     optimizer_name: Literal["adam", "adamw"] = "adam",
     freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
+    select_metric: str = "accuracy",
 ) -> dict:
     """
     Train model using n-fold cross-validation with comprehensive logging and checkpointing.
@@ -593,6 +602,8 @@ def train_cross_validation(
     :param Path | None log_file: Path to the log file for JSON metrics output.
     :param Literal["adam", "adamw"] optimizer_name: Optimizer to use. "adam" (default) applies
         weight decay coupled into the gradient; "adamw" decouples it from the gradient update.
+    :param str select_metric: Validation metric that picks each fold's best checkpoint and drives
+        early stopping: ``"accuracy"`` or ``"balanced"`` (binary classification only).
     :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz. Ignored for
         raw-EEG models.
     :return: Dictionary with cross-validation results. Subject accuracy corresponds to the
@@ -952,6 +963,7 @@ def train_cross_validation(
             scheduler=fold_scheduler,
             l1_lambda=l1_lambda,
             freq_cutoff_hz=None if use_raw_eeg else freq_cutoff_hz,
+            select_metric=select_metric,
         )
 
         cv_results["fold_eval_combined_acc"].append(fold_result["eval_combined_acc"])
@@ -1050,6 +1062,9 @@ def train(args: argparse.Namespace) -> None:
             "(no spectrogram is computed)"
         )
 
+    if args.select_metric == "balanced" and args.class_mode != "2":
+        raise ValueError("--select-metric balanced is only defined for --class-mode 2")
+
     # Run cross-validation training
     results = train_cross_validation(
         dataset_type=args.dataset,
@@ -1083,6 +1098,7 @@ def train(args: argparse.Namespace) -> None:
         l1_lambda=args.l1_lambda,
         optimizer_name=args.optimizer,
         freq_cutoff_hz=args.freq_cutoff,
+        select_metric=args.select_metric,
     )
 
     # Save final results to file
