@@ -12,6 +12,7 @@
 # Runs from a separate git worktree of this branch so the shared clone's checkout (and any
 # jobs running from it) is never switched. Usage: ./run-atv4-round2-meta.sh <batch>
 #   batch 1: schedule-length / regularization / lr / loss / selection-metric probes (6 runs)
+#   batch 2: higher lr + lighter regularization at the full 200-epoch schedule (5 runs)
 
 set -uo pipefail
 
@@ -42,8 +43,20 @@ batch1() {
     submit all_050f_all_ec+eo --optimizer adamw --dropout 0.3 --weight-decay 1e-2 --lr 1e-4 --focal-gamma 2.0 --epochs 60 --patience 60 --select-metric balanced
 }
 
+batch2() {
+    # Batch 1: shorter schedule hurt (a<baseline, b<032a); lr 3e-4 (d) and lighter dropout (c)
+    # helped; balanced selection (f) hurt. Now: those levers at the full 200-epoch schedule.
+    local FULL="--epochs 200 --patience 50 --focal-gamma 2.0"
+    submit all_051a_all_ec+eo --optimizer adamw --dropout 0.3 --weight-decay 1e-2 --lr 3e-4 $FULL
+    submit all_051b_all_ec+eo --optimizer adamw --dropout 0.1 --weight-decay 1e-2 --lr 3e-4 $FULL
+    submit all_051c_all_ec+eo --optimizer adamw --dropout 0.3 --weight-decay 1e-2 --lr 1e-3 $FULL
+    submit all_051d_all_ec+eo --optimizer adamw --dropout 0.1 --weight-decay 1e-3 --lr 3e-4 $FULL
+    submit all_051e_all_ec+eo --optimizer adamw --dropout 0.3 --weight-decay 1e-2 --lr 3e-4 --epochs 200 --patience 50 --focal-gamma 0
+}
+
 case "${1:-}" in
+    2) batch2 ;;
     1) batch1 ;;
-    *) echo "usage: $0 <batch: 1>"; exit 1 ;;
+    *) echo "usage: $0 <batch: 1|2>"; exit 1 ;;
 esac
 echo "[submit] queued - check with: qstat -u \$USER"
