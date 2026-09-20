@@ -277,6 +277,52 @@ def _write_metrics_block(
             writer(_format_metric_line(f"{level} Recall ({class_name.capitalize()}) Mean", values))
 
 
+def _class_names(num_classes: int) -> list[str]:
+    """
+    Return the display name of every class index, falling back to ``Class N``.
+
+    :param int num_classes: Number of classes (2 or 4).
+    :return: One display name per class index.
+    :rtype: list[str]
+    """
+    display_names = get_display_names(num_classes)
+    return [display_names.get(i, f"Class {i}") for i in range(num_classes)]
+
+
+def _write_matrix_body(
+    writer: Callable[[str], Any],
+    matrix: NDArray[Any],
+    class_names: list[str],
+    indent: str = "",
+    separator: bool = False,
+) -> None:
+    """
+    Write the column header and one row per class of a confusion matrix.
+
+    The single source of the matrix column geometry, shared by the pooled matrix
+    (:func:`_format_confusion_matrix`) and the per-dataset ones
+    (:func:`_write_per_dataset_confusion_matrices`). ``helpers-print/dataset_prior_baseline.py``
+    parses both layouts, so a change here must be matched there.
+
+    :param Callable[[str], Any] writer: Function to write output.
+    :param NDArray matrix: Square confusion matrix, rows = actual, columns = predicted.
+    :param list[str] class_names: Display name of every class index.
+    :param str indent: Prefix written before every line.
+    :param bool separator: Whether to write a dashed rule between header and rows.
+    :return: None
+    :rtype: None
+    """
+    # Use ASCII arrows to avoid 2-wide Unicode rendering in editors/fonts
+    header = "ACTUAL v/PRED ->".ljust(16) + "".join(f"{name:>15} " for name in class_names)
+    writer(indent + header + "\n")
+    if separator:
+        # Width matches header + data rows (16 label + 16 per column)
+        writer("-" * (16 + 16 * len(class_names)) + "\n")
+    for i, row_name in enumerate(class_names):
+        row = "".join(f"{int(matrix[i, j]):>15} " for j in range(len(class_names)))
+        writer(f"{indent}{row_name:>15} {row}\n")
+
+
 def _format_confusion_matrix(
     confusion_matrices: list[np.ndarray],
     num_classes: int,
@@ -294,25 +340,8 @@ def _format_confusion_matrix(
     # Sum confusion matrices across folds
     aggregated_cm = np.sum(confusion_matrices, axis=0)
 
-    display_names = get_display_names(num_classes)
-    class_names = [display_names.get(i, f"Class {i}") for i in range(num_classes)]
-
     writer("\nAggregated Chunk Confusion Matrix (across folds; TN, FP, FN, TP):\n\n")
-
-    # Top-left corner label + column headers
-    # Use ASCII arrows to avoid 2-wide Unicode rendering in editors/fonts
-    header = "ACTUAL v/PRED ->".ljust(16)
-    header += "".join(f"{name:>15} " for name in class_names)
-    writer(header + "\n")
-
-    # Separator — width matches header + data rows (16 label + 16 per column)
-    writer("-" * (16 + 16 * num_classes) + "\n")
-
-    # Data rows
-    for i, row_name in enumerate(class_names):
-        row = f"{row_name:>15} "
-        row += "".join(f"{int(aggregated_cm[i, j]):>15} " for j in range(num_classes))
-        writer(row + "\n")
+    _write_matrix_body(writer, aggregated_cm, _class_names(num_classes), separator=True)
 
     # Additional statistics
     writer("\n")
@@ -356,57 +385,43 @@ def compute_per_dataset_metrics(
     :rtype: PerDatasetMetrics
     :raises ValueError: If a true or predicted label is outside ``[0, num_classes)``.
     """
-    dataset_correct: dict[str, int] = {}
-    dataset_total: dict[str, int] = {}
-    dataset_tp: dict[str, int] = {}
-    dataset_tn: dict[str, int] = {}
-    dataset_fp: dict[str, int] = {}
-    dataset_fn: dict[str, int] = {}
-    dataset_cm: dict[str, NDArray[np.int64]] = {}
+    # The range is a property of the whole array, so check it once rather than per chunk.
+    if len(y_true) and not (
+        0 <= min(y_true.min(), y_pred.min()) and max(y_true.max(), y_pred.max()) < num_classes
+    ):
+        raise ValueError(
+            f"Label out of range for num_classes={num_classes}: "
+            f"true in [{y_true.min()}, {y_true.max()}], pred in [{y_pred.min()}, {y_pred.max()}]"
+        )
 
+    # The confusion matrix is the only accumulator: every other metric below is derived from it,
+    # so the counts cannot drift apart from the matrix.
+    dataset_cm: dict[str, NDArray[np.int64]] = {}
     for true, pred, subj in zip(y_true, y_pred, subjects):
-        if not (0 <= int(true) < num_classes and 0 <= int(pred) < num_classes):
-            raise ValueError(
-                f"Label out of range for num_classes={num_classes}: true={true}, pred={pred}"
-            )
         ds = subject_dataset_map.get(subj, "unknown")
-        dataset_total[ds] = dataset_total.get(ds, 0) + 1
-        if true == pred:
-            dataset_correct[ds] = dataset_correct.get(ds, 0) + 1
         if ds not in dataset_cm:
             dataset_cm[ds] = np.zeros((num_classes, num_classes), dtype=np.int64)
         dataset_cm[ds][int(true), int(pred)] += 1
-        # Binary confusion matrix components (label 1 = positive/pathological)
-        if int(true) == 1 and int(pred) == 1:
-            dataset_tp[ds] = dataset_tp.get(ds, 0) + 1
-        elif int(true) == 0 and int(pred) == 0:
-            dataset_tn[ds] = dataset_tn.get(ds, 0) + 1
-        elif int(true) == 0 and int(pred) == 1:
-            dataset_fp[ds] = dataset_fp.get(ds, 0) + 1
-        elif int(true) == 1 and int(pred) == 0:
-            dataset_fn[ds] = dataset_fn.get(ds, 0) + 1
 
     result: PerDatasetMetrics = {}
-    for ds in sorted(dataset_total.keys()):
-        total = dataset_total[ds]
-        correct = dataset_correct.get(ds, 0)
-        tp = dataset_tp.get(ds, 0)
-        tn = dataset_tn.get(ds, 0)
-        fp = dataset_fp.get(ds, 0)
-        fn = dataset_fn.get(ds, 0)
-        sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+    for ds in sorted(dataset_cm):
+        cm = dataset_cm[ds]
+        total = int(cm.sum())
+        correct = int(np.trace(cm))
+        # Binary components (label 1 = positive/pathological); for a multi-class run these cover
+        # only the chunks whose true and predicted label are both 0 or 1 (see the docstring).
+        tn, fp, fn, tp = int(cm[0, 0]), int(cm[0, 1]), int(cm[1, 0]), int(cm[1, 1])
         result[ds] = {
             "accuracy": correct / total if total > 0 else 0.0,
-            "sensitivity": sensitivity,
-            "specificity": specificity,
+            "sensitivity": tp / (tp + fn) if (tp + fn) > 0 else 0.0,
+            "specificity": tn / (tn + fp) if (tn + fp) > 0 else 0.0,
             "tp": tp,
             "tn": tn,
             "fp": fp,
             "fn": fn,
             "correct": correct,
             "total": total,
-            "confusion_matrix": dataset_cm[ds],
+            "confusion_matrix": cm,
         }
     return result
 
@@ -520,14 +535,12 @@ def _write_per_dataset_confusion_matrices(
             cm = metrics.get("confusion_matrix")
             if cm is None:
                 continue
-            aggregated[ds] = aggregated.get(ds, 0) + np.asarray(cm, dtype=np.int64)
+            matrix = np.asarray(cm, dtype=np.int64)
+            aggregated[ds] = aggregated[ds] + matrix if ds in aggregated else matrix
     if not aggregated:
         return
 
-    num_classes = next(iter(aggregated.values())).shape[0]
-    display_names = get_display_names(num_classes)
-    class_names = [display_names.get(i, f"Class {i}") for i in range(num_classes)]
-
+    class_names = _class_names(next(iter(aggregated.values())).shape[0])
     writer(
         f"\n{PER_DATASET_CM_HEADER} (aggregated across folds; "
         "rows = actual, columns = predicted):\n"
@@ -535,12 +548,7 @@ def _write_per_dataset_confusion_matrices(
     for ds in sorted(aggregated):
         cm = aggregated[ds]
         writer(f"\n  {ds.upper()} ({int(cm.sum())} chunks)\n")
-        writer(
-            "  " + "ACTUAL v/PRED ->".ljust(16) + "".join(f"{n:>15} " for n in class_names) + "\n"
-        )
-        for i, row_name in enumerate(class_names):
-            row = "".join(f"{int(cm[i, j]):>15} " for j in range(num_classes))
-            writer(f"  {row_name:>15} {row}\n")
+        _write_matrix_body(writer, cm, class_names, indent="  ")
 
 
 def write_results(writer: Callable[[str], Any], cv_results: dict[str, list]) -> None:
