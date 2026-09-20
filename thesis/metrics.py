@@ -15,6 +15,29 @@ PerDatasetMetrics = dict[str, dict[str, Any]]
 PER_DATASET_CM_HEADER = "Per-Dataset Chunk Confusion Matrices"
 
 
+#: Checkpoint-selection / early-stopping metrics accepted by ``--select-metric``.
+SELECT_METRICS = ("accuracy", "balanced")
+
+
+def selection_score(chunk_metrics: dict[str, Any], select_metric: str = "accuracy") -> float:
+    """
+    Score a validation epoch for best-checkpoint selection and early stopping.
+
+    :param dict chunk_metrics: Chunk-level metrics of one evaluation, as returned by
+        :func:`classification_metrics` (binary runs need ``recall`` and ``specificity``).
+    :param str select_metric: ``"accuracy"`` (default, the historical criterion) or
+        ``"balanced"`` (mean of sensitivity and specificity).
+    :return: Score to maximise.
+    :rtype: float
+    :raises ValueError: If ``select_metric`` is unknown.
+    """
+    if select_metric == "accuracy":
+        return float(chunk_metrics["accuracy"])
+    if select_metric == "balanced":
+        return (float(chunk_metrics["recall"]) + float(chunk_metrics["specificity"])) / 2.0
+    raise ValueError(f"Unknown select_metric {select_metric!r}; expected one of {SELECT_METRICS}")
+
+
 def classification_metrics(
     y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 2
 ) -> dict[str, float | int | np.floating[Any] | NDArray[Any] | None]:

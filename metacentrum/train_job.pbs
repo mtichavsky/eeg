@@ -32,7 +32,10 @@ set -uo pipefail
 
 # ---- Matches the real layout confirmed on skirit.ics.muni.cz ------------
 STORAGE_HOME="/storage/brno2/home/${PBS_O_LOGNAME}"
-REPO_DIR="$STORAGE_HOME/eeg"              # git clone target, see setup steps
+REPO_DIR="$STORAGE_HOME/eeg"              # git clone target (holds the shared .venv), see setup steps
+# CODE_DIR: where main.py is run from. Defaults to REPO_DIR; override with `qsub -v CODE_DIR=...`
+# to run an experiment branch from a separate git worktree without switching the shared clone.
+CODE_DIR="${CODE_DIR:-$REPO_DIR}"
 DATA_DIR="$STORAGE_HOME"                  # CANE/ MDD/ SAD/ IDUN_IN_EAR/ live directly here
 PYTHON_MODULE="python"                    # confirmed working: ~/.bash_history has `module load python`
 # No CUDA module needed: torch is installed from the pytorch-cuda (cu126) wheel,
@@ -56,8 +59,8 @@ echo "Loading modules..."
 module add "$PYTHON_MODULE"
 
 echo "Activating shared venv at $REPO_DIR/.venv ..."
-cd "$REPO_DIR" || { echo "REPO_DIR $REPO_DIR not found - run the one-time setup first"; exit 2; }
-source .venv/bin/activate
+cd "$CODE_DIR" || { echo "CODE_DIR $CODE_DIR not found - run the one-time setup first"; exit 2; }
+source "$REPO_DIR/.venv/bin/activate"
 
 OUT_DIR="$STORAGE_HOME/experiments/$EXP_NAME"
 mkdir -p "$OUT_DIR"
