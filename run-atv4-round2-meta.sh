@@ -14,6 +14,7 @@
 #   batch 1: schedule-length / regularization / lr / loss / selection-metric probes (6 runs)
 #   batch 2: higher lr + lighter regularization at the full 200-epoch schedule (5 runs)
 #   batch 3: one-factor moves around the batch-2 winner 051b (4 runs)
+#   batch 4: last 2 runs of the 16-run budget, around 052c (2 runs)
 
 set -uo pipefail
 
@@ -66,10 +67,21 @@ batch3() {
     submit all_052d_all_ec+eo $BASE --dropout 0.0 --weight-decay 1e-2 --focal-gamma 2
 }
 
+batch4() {
+    # Batch 3: gamma 3/4 and dropout 0 were worse; wd 3e-2 (052c, 78.96%) ~ 051b (78.75%): a
+    # plateau. Untested levers: batch size (more updates/epoch, consistent with lr 3e-4 helping
+    # over 1e-4) and a stronger decoupled weight decay. Note --batch-size is set in COMMON_ARGS
+    # (64); the later flag wins in argparse.
+    local BASE="--optimizer adamw --lr 3e-4 --epochs 200 --patience 50 --dropout 0.1 --focal-gamma 2.0"
+    submit all_053a_all_ec+eo $BASE --weight-decay 3e-2 --batch-size 32
+    submit all_053b_all_ec+eo $BASE --weight-decay 1e-1
+}
+
 case "${1:-}" in
+    4) batch4 ;;
     3) batch3 ;;
     2) batch2 ;;
     1) batch1 ;;
-    *) echo "usage: $0 <batch: 1|2|3>"; exit 1 ;;
+    *) echo "usage: $0 <batch: 1|2|3|4>"; exit 1 ;;
 esac
 echo "[submit] queued - check with: qstat -u \$USER"
