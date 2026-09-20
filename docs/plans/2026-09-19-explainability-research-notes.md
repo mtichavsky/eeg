@@ -121,6 +121,11 @@ subjects in total) and are descriptive only.
 **Nothing is significant** (smallest BH-adjusted p = 0.50). Fold SDs are 5–10 pp with about
 17 validation subjects per fold, so differences under about 5 pp cannot be resolved.
 
+The paper (thesis-text PR #4, subsection "Does the electrode pair matter?") reports only the paired
+Wilcoxon signed-rank test, not the Nadeau–Bengio or BH numbers above. Its smallest of the six
+per-fold p-values is 0.084 (EO, C4−C3 vs T8−T7), uncorrected. The tables here remain the fuller
+analysis.
+
 ### 3.3 Findings
 
 1. **T7/T8 is not shown to be special, and neither is any other pair.** T8−T7 is nominally best
@@ -239,7 +244,7 @@ Reading:
    test. Conclusion: a **weak anxiety/comorbid signal is present** and is not created or destroyed
    by pooling with MDD. The earlier hypothesis "signal exists and the combined model fails to use
    it" is not supported. The strength (about 65–68 %) is far below MDD's.
-3. **SAD alone is 5–8 pp better than SAD inside the pooled run** (70.5 / 65.7 vs 61.6 / 60.1
+3. **SAD alone is 6–9 pp better than SAD inside the pooled run** (70.5 / 65.7 vs 61.6 / 60.1
    balanced). Different folds, so descriptive only. Consistent with pooled training costing SAD
    something, but not tested.
 4. **Caveats.** Folds are small (SAD: 4 to 6 validation subjects), so per-fold values are
