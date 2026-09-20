@@ -98,7 +98,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal, NamedTuple, Optional
 
 import numpy as np
 import torch
@@ -110,8 +110,35 @@ DATASET_ORDER = ["mdd", "cane", "sad"]
 # One initial per class index, matching thesis.labels (binary: Healthy/Pathological; 4-class:
 # Healthy/Anxiety/Depression/Comorbid). Duplicated here so the script needs no thesis import.
 CLASS_INITIALS = {2: "HP", 4: "HADC"}
+# Class display names as thesis.labels writes them into results.txt matrix rows. Spelled once
+# here so CM_ROW_RE and MULTICLASS_CM_ROW_RE below cannot drift apart.
+BINARY_CLASS_NAMES = ("Healthy", "Pathological")
+MULTICLASS_ONLY_NAMES = ("Anxiety", "Depression", "Comorbid")
+CLASS_NAME_ALT = "|".join((*BINARY_CLASS_NAMES, *MULTICLASS_ONLY_NAMES))
 
 Orientation = Literal["unswapped", "swapped", "ambiguous"]
+
+
+class FoldCheckpoint(NamedTuple):
+    """The parts of one ``fold_N_best.pth`` this script reads."""
+
+    fold: int
+    per_dataset: dict
+    chunk_matrix: np.ndarray
+
+
+def _has_per_dataset_matrices(loaded: list[FoldCheckpoint]) -> bool:
+    """Whether every dataset of every fold stored a per-dataset confusion matrix.
+
+    All-or-nothing on purpose: a run is produced by one code version, so a mix means the
+    checkpoints were tampered with, and pooling only the folds that have matrices would
+    silently misreport the run's totals.
+
+    :param list loaded: Fold checkpoints of one run.
+    :return: True when every fold's every dataset has a ``confusion_matrix``.
+    :rtype: bool
+    """
+    return all("confusion_matrix" in m for f in loaded for m in f.per_dataset.values())
 
 
 class PlainFormatter(logging.Formatter):
@@ -236,8 +263,8 @@ class RunCounts:
     :param list folds: Per-fold records (empty when reconstructed from results.txt).
     :param str note: Human-readable description of the orientation handling.
     :param dict matrices: Pooled ``K x K`` confusion matrices per dataset (rows = actual) of a
-        multi-class run that stored them; empty for binary runs (their ``counts`` hold the same
-        information) and for runs that stored none.
+        run that stored them, for any K; empty for runs that stored none. A binary run also has
+        the equivalent ``counts``.
     """
 
     path: Path
@@ -270,8 +297,14 @@ def _class_initials(num_classes: int) -> str:
     :param int num_classes: Number of classes of the run.
     :return: One initial per class index.
     :rtype: str
+    :raises SkipRunError: If the class count is neither 2 nor 4.
     """
-    return CLASS_INITIALS.get(num_classes, "".join(str(i) for i in range(num_classes)))
+    if num_classes not in CLASS_INITIALS:
+        # Digit placeholders would silently mislabel the Maj column and the share headers.
+        raise SkipRunError(
+            f"unsupported class count {num_classes} (known: {sorted(CLASS_INITIALS)})"
+        )
+    return CLASS_INITIALS[num_classes]
 
 
 def _run_from_matrices(
@@ -283,38 +316,34 @@ def _run_from_matrices(
 ) -> RunCounts:
     """Build a ``RunCounts`` from exact pooled per-dataset confusion matrices.
 
-    A 2 x 2 matrix ``[[TN, FP], [FN, TP]]`` is converted to :class:`Counts`, so binary runs go
-    through the ordinary binary report (with sensitivity and specificity); larger matrices are
-    kept as ``matrices`` for the multi-class report.
+    ``matrices`` always holds the matrices themselves. A binary run additionally gets the
+    equivalent :class:`Counts` (``[[TN, FP], [FN, TP]]``), because the orientation machinery and
+    several callers are written against those; they are a view of the same numbers, not a second
+    source of truth.
 
     :param Path path: Run directory or results.txt path.
     :param str source: ``"checkpoints"`` or ``"results.txt"``.
     :param dict pooled: Pooled confusion matrix per dataset.
     :param list folds: Per-fold records (empty for results.txt).
     :param str note: Description of where the matrices came from.
-    :return: Run counts with ``counts`` (binary) or ``matrices`` (multi-class) populated.
+    :return: Run counts with ``matrices`` populated, plus ``counts`` for a binary run.
     :rtype: RunCounts
     """
-    correct = {d: int(np.trace(m)) for d, m in pooled.items()}
-    total = {d: int(m.sum()) for d, m in pooled.items()}
     counts: dict[str, Counts] = {}
-    matrices: dict[str, np.ndarray] = {}
     if all(m.shape == (2, 2) for m in pooled.values()):
         counts = {
             d: Counts(tp=int(m[1, 1]), tn=int(m[0, 0]), fp=int(m[0, 1]), fn=int(m[1, 0]))
             for d, m in pooled.items()
         }
-    else:
-        matrices = dict(pooled)
     return RunCounts(
         path=path,
         source=source,
-        correct=correct,
-        total=total,
+        correct={d: int(np.trace(m)) for d, m in pooled.items()},
+        total={d: int(m.sum()) for d, m in pooled.items()},
         counts=counts,
         folds=folds,
         note=note,
-        matrices=matrices,
+        matrices=dict(pooled),
     )
 
 
@@ -384,16 +413,23 @@ def load_run(run_dir: Path, assume: str = "auto", expect_folds: int = 10) -> Run
             f"(missing folds {missing}); the pooled numbers below cover a partial run"
         )
 
-    loaded: list[tuple[int, dict, np.ndarray]] = []
+    loaded: list[FoldCheckpoint] = []
     for fold, path in checkpoints:
         ckpt = torch.load(path, map_location="cpu", weights_only=False)
         val_metrics = ckpt.get("val_metrics", {})
         per_dataset = val_metrics.get("per_dataset")
         if not per_dataset:
             raise SkipRunError(f"{path.name} has no val_metrics['per_dataset']")
-        loaded.append((fold, per_dataset, np.asarray(val_metrics["chunk"]["confusion_matrix"])))
+        loaded.append(
+            FoldCheckpoint(fold, per_dataset, np.asarray(val_metrics["chunk"]["confusion_matrix"]))
+        )
 
-    if all("confusion_matrix" in m for _, per_dataset, _ in loaded for m in per_dataset.values()):
+    if _has_per_dataset_matrices(loaded):
+        if assume != "auto":
+            logger.info(
+                f"{run_dir.name}: --assume {assume} ignored, the stored per-dataset confusion "
+                "matrices are exact and need no orientation correction"
+            )
         return _load_run_from_matrices(run_dir, loaded)
 
     binary: Optional[bool] = None
@@ -444,7 +480,7 @@ def load_run(run_dir: Path, assume: str = "auto", expect_folds: int = 10) -> Run
     )
 
 
-def _load_run_from_matrices(run_dir: Path, loaded: list[tuple[int, dict, np.ndarray]]) -> RunCounts:
+def _load_run_from_matrices(run_dir: Path, loaded: list[FoldCheckpoint]) -> RunCounts:
     """Pool the stored per-dataset confusion matrices of every fold of a run.
 
     The matrices are exact and correctly oriented (rows = actual), so unlike the per-dataset
@@ -452,30 +488,26 @@ def _load_run_from_matrices(run_dir: Path, loaded: list[tuple[int, dict, np.ndar
     are checked against its pooled chunk confusion matrix.
 
     :param Path run_dir: Run directory, for messages and the result.
-    :param list loaded: ``(fold, per_dataset, chunk confusion matrix)`` per fold checkpoint.
+    :param list loaded: Fold checkpoints of the run.
     :return: Pooled run counts.
     :rtype: RunCounts
     :raises CountMismatchError: If a fold's per-dataset matrices don't sum to its chunk matrix.
     """
     folds: list[FoldRecord] = []
     pooled: dict[str, np.ndarray] = {}
-    for fold, per_dataset, chunk_matrix in loaded:
+    for checkpoint in loaded:
         matrices = {
-            d: np.asarray(m["confusion_matrix"], dtype=np.int64) for d, m in per_dataset.items()
+            d: np.asarray(m["confusion_matrix"], dtype=np.int64)
+            for d, m in checkpoint.per_dataset.items()
         }
-        if not np.array_equal(np.sum(list(matrices.values()), axis=0), chunk_matrix):
+        if not np.array_equal(np.sum(list(matrices.values()), axis=0), checkpoint.chunk_matrix):
             raise CountMismatchError(
-                f"{run_dir.name} fold {fold}: per-dataset confusion matrices summed over datasets "
-                "differ from the chunk confusion matrix (corrupted checkpoint?)."
+                f"{run_dir.name} fold {checkpoint.fold}: per-dataset confusion matrices summed "
+                "over datasets differ from the chunk confusion matrix (corrupted checkpoint?)."
             )
-        folds.append(
-            FoldRecord(
-                fold=fold,
-                correct={d: int(np.trace(m)) for d, m in matrices.items()},
-                total={d: int(m.sum()) for d, m in matrices.items()},
-                orientation="n/a",
-            )
-        )
+        # Only the number of these records is used (the pooled numbers come from the matrices
+        # below), but a fold count is what report_run prints.
+        folds.append(FoldRecord(fold=checkpoint.fold, correct={}, total={}))
         for d, m in matrices.items():
             pooled[d] = pooled[d] + m if d in pooled else m
     note = "exact per-dataset confusion matrices stored in the checkpoints"
@@ -543,10 +575,10 @@ CM_PATHOLOGICAL_RE = re.compile(r"^\s*Pathological\s+(\d+)\s+(\d+)\s*$")
 # Parses the per-dataset confusion matrices written by
 # thesis.metrics._write_per_dataset_confusion_matrices; keep the two in sync.
 PER_DATASET_CM_HEADER = "Per-Dataset Chunk Confusion Matrices"
+# The column-header line of every matrix block ("ACTUAL v/PRED ->  Healthy  ...").
+CM_COLUMN_HEADER = "ACTUAL v/PRED"
 CM_DATASET_RE = re.compile(r"^\s*(?P<ds>[A-Za-z0-9_]+) \((?P<n>\d+) chunks\)\s*$")
-CM_ROW_RE = re.compile(
-    r"^\s*(?:Healthy|Anxiety|Depression|Comorbid|Pathological)\s+(?P<counts>\d+(?:\s+\d+)*)\s*$"
-)
+CM_ROW_RE = re.compile(rf"^\s*(?:{CLASS_NAME_ALT})\s+(?P<counts>\d+(?:\s+\d+)*)\s*$")
 
 
 def reconstruct_counts(
@@ -628,7 +660,7 @@ def reconstruct_counts(
 # row of the aggregated confusion matrix that only a >2-class run can have (see
 # thesis.labels.CANONICAL_DISPLAY_NAMES / thesis.metrics._format_confusion_matrix).
 CLASS_MODE_RE = re.compile(r"^\s*class_mode:\s*(\S+)\s*$")
-MULTICLASS_CM_ROW_RE = re.compile(r"^\s*(Anxiety|Depression|Comorbid)\s+\d+(?:\s+\d+)*\s*$")
+MULTICLASS_CM_ROW_RE = re.compile(rf"^\s*({'|'.join(MULTICLASS_ONLY_NAMES)})\s+\d+(?:\s+\d+)*\s*$")
 
 
 def _detect_multiclass(lines: list[str]) -> bool:
@@ -697,26 +729,30 @@ def _parse_matrix_section(lines: list[str]) -> dict[str, np.ndarray]:
     :raises SkipRunError: If the section is malformed (a matrix is not square or its entries
         don't add up to the stated chunk count).
     """
-    rows: dict[str, list[list[int]]] = {}
-    stated: dict[str, int] = {}
+    # dataset -> (chunk count stated in its header, matrix rows parsed so far)
+    parsed: dict[str, tuple[int, list[list[int]]]] = {}
     current: Optional[str] = None
     in_section = False
     for line in lines:
-        if PER_DATASET_CM_HEADER in line:
-            in_section = True
-            continue
         if not in_section:
+            in_section = PER_DATASET_CM_HEADER in line
+            continue
+        if not line.strip() or CM_COLUMN_HEADER in line:
             continue
         if match := CM_DATASET_RE.match(line):
             current = match["ds"].lower()
-            rows[current] = []
-            stated[current] = int(match["n"])
+            parsed[current] = (int(match["n"]), [])
         elif current is not None and (match := CM_ROW_RE.match(line)):
-            rows[current].append([int(v) for v in match["counts"].split()])
+            parsed[current][1].append([int(v) for v in match["counts"].split()])
+        else:
+            # The section ends at the first line that is neither a dataset header nor a matrix
+            # row. Without this, anything appended to results.txt after the section (it has
+            # gained trailing sections twice already) would be absorbed into the last matrix.
+            break
     matrices: dict[str, np.ndarray] = {}
-    for ds, matrix_rows in rows.items():
+    for ds, (stated, matrix_rows) in parsed.items():
         matrix = np.array(matrix_rows, dtype=np.int64)
-        if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1] or matrix.sum() != stated[ds]:
+        if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1] or matrix.sum() != stated:
             raise SkipRunError(f"malformed confusion matrix for {ds!r} in results.txt")
         matrices[ds] = matrix
     return matrices
@@ -848,6 +884,11 @@ def load_from_results_txt(path: Path, orientation: str = "auto") -> RunCounts:
     lines = path.read_text().splitlines()
     matrices = _parse_matrix_section(lines)
     if matrices:
+        if orientation != "auto":
+            logger.info(
+                f"{path.name}: --results-orientation {orientation} ignored, the stored "
+                "per-dataset confusion matrices are exact and need no orientation correction"
+            )
         note = "exact per-dataset confusion matrices from results.txt"
         return _run_from_matrices(path, "results.txt", matrices, [], note)
     if _detect_multiclass(lines):
@@ -886,7 +927,7 @@ class PriorRow:
     :param str majority: ``"P"`` if the majority class is pathological, else ``"H"``.
     :param float sensitivity: True sensitivity (oriented counts); NaN for multi-class runs.
     :param float specificity: True specificity (oriented counts); NaN for multi-class runs.
-    :param tuple class_shares: Fraction of chunks of each true class (multi-class runs only).
+    :param tuple class_shares: Fraction of chunks of each true class.
     """
 
     dataset: str
@@ -902,48 +943,32 @@ class PriorRow:
     class_shares: tuple[float, ...] = ()
 
 
+def counts_to_matrix(c: Counts) -> np.ndarray:
+    """Return the 2 x 2 confusion matrix ``[[TN, FP], [FN, TP]]`` of binary counts.
+
+    The inverse of the 2 x 2 unpacking in :func:`_run_from_matrices`; the single place the
+    ``[[tn, fp], [fn, tp]]`` layout is spelled out.
+
+    :param Counts c: Oriented binary counts.
+    :return: Confusion matrix with rows = actual, columns = predicted.
+    :rtype: np.ndarray
+    """
+    return np.array([[c.tn, c.fp], [c.fn, c.tp]], dtype=np.int64)
+
+
 def prior_baseline(counts: dict[str, Counts]) -> tuple[list[PriorRow], PriorRow]:
-    """Compute per-dataset and overall dataset-prior baselines.
+    """Compute per-dataset and overall dataset-prior baselines from binary counts.
+
+    A thin adapter over :func:`prior_baseline_from_matrices`, which handles the binary case as
+    ``K = 2``; kept so callers holding :class:`Counts` (the legacy, orientation-corrected paths)
+    need not build matrices themselves.
 
     :param dict counts: Pooled oriented counts per dataset.
     :return: ``(per-dataset rows, overall row)``. The per-dataset ``contribution_pp`` values sum
         to the overall ``gain_pp``.
     :rtype: tuple[list[PriorRow], PriorRow]
     """
-    grand_total = sum(c.total for c in counts.values())
-    rows = []
-    for dataset in ordered_datasets(list(counts)):
-        c = counts[dataset]
-        rows.append(
-            PriorRow(
-                dataset=dataset,
-                chunks=c.total,
-                pathological=c.positives / c.total,
-                accuracy=c.accuracy,
-                baseline=c.baseline,
-                gain_pp=(c.correct - c.majority_correct) / c.total * 100,
-                contribution_pp=(c.correct - c.majority_correct) / grand_total * 100,
-                majority="P" if c.positives >= c.negatives else "H",
-                sensitivity=c.sensitivity,
-                specificity=c.specificity,
-            )
-        )
-    overall = sum(counts.values(), Counts())
-    majority_total = sum(c.majority_correct for c in counts.values())
-    gain_pp = (overall.correct - majority_total) / grand_total * 100
-    overall_row = PriorRow(
-        dataset="overall",
-        chunks=grand_total,
-        pathological=overall.positives / grand_total,
-        accuracy=overall.accuracy,
-        baseline=majority_total / grand_total,
-        gain_pp=gain_pp,
-        contribution_pp=gain_pp,
-        majority="-",
-        sensitivity=overall.sensitivity,
-        specificity=overall.specificity,
-    )
-    return rows, overall_row
+    return prior_baseline_from_matrices({d: counts_to_matrix(c) for d, c in counts.items()})
 
 
 def prior_baseline_from_matrices(
@@ -952,9 +977,10 @@ def prior_baseline_from_matrices(
     """Compute per-dataset and overall dataset-prior baselines from ``K x K`` confusion matrices.
 
     The dataset prior always predicts the dataset's most frequent true class (the largest row
-    sum), so its accuracy is ``max(row sums) / total``. The multi-class counterpart of
-    :func:`prior_baseline`; ``pathological`` is the share of not-Healthy (class 0) chunks and
-    sensitivity/specificity are NaN (no single positive class).
+    sum), so its accuracy is ``max(row sums) / total``. ``pathological`` is the share of
+    not-Healthy (class 0) chunks. For ``K = 2`` this is exactly the binary decomposition and
+    sensitivity/specificity are filled in; for more classes there is no single positive class,
+    so both are NaN.
 
     :param dict matrices: Pooled confusion matrix per dataset (rows = actual, columns = predicted).
     :return: ``(per-dataset rows, overall row)``. The per-dataset ``contribution_pp`` values sum
@@ -965,7 +991,22 @@ def prior_baseline_from_matrices(
     initials = _class_initials(num_classes)
     grand = np.sum(list(matrices.values()), axis=0)
     grand_total = int(grand.sum())
-    nan = float("nan")
+
+    def sens_spec(matrix: np.ndarray, support: np.ndarray) -> tuple[float, float]:
+        """Sensitivity and specificity of a 2 x 2 matrix; NaN when there is no positive class."""
+        if num_classes != 2:
+            return float("nan"), float("nan")
+        return (
+            int(matrix[1, 1]) / int(support[1]) if support[1] else float("nan"),
+            int(matrix[0, 0]) / int(support[0]) if support[0] else float("nan"),
+        )
+
+    def majority_index(support: np.ndarray) -> int:
+        """Index of the most frequent true class; a binary tie goes to pathological."""
+        if num_classes == 2 and support[1] >= support[0]:
+            return 1
+        return int(support.argmax())
+
     rows = []
     for dataset in ordered_datasets(list(matrices)):
         matrix = matrices[dataset]
@@ -973,35 +1014,38 @@ def prior_baseline_from_matrices(
         total = int(matrix.sum())
         correct = int(np.trace(matrix))
         majority_correct = int(support.max())
+        sensitivity, specificity = sens_spec(matrix, support)
         rows.append(
             PriorRow(
                 dataset=dataset,
                 chunks=total,
-                pathological=1 - int(support[0]) / total,
+                pathological=(total - int(support[0])) / total,
                 accuracy=correct / total,
                 baseline=majority_correct / total,
                 gain_pp=(correct - majority_correct) / total * 100,
                 contribution_pp=(correct - majority_correct) / grand_total * 100,
-                majority=initials[int(support.argmax())],
-                sensitivity=nan,
-                specificity=nan,
+                majority=initials[majority_index(support)],
+                sensitivity=sensitivity,
+                specificity=specificity,
                 class_shares=tuple(float(v) / total for v in support),
             )
         )
     majority_total = sum(int(m.sum(axis=1).max()) for m in matrices.values())
-    gain_pp = (int(np.trace(grand)) - majority_total) / grand_total * 100
+    grand_correct = int(np.trace(grand))
+    gain_pp = (grand_correct - majority_total) / grand_total * 100
     grand_support = grand.sum(axis=1)
+    grand_sensitivity, grand_specificity = sens_spec(grand, grand_support)
     overall_row = PriorRow(
         dataset="overall",
         chunks=grand_total,
-        pathological=1 - int(grand_support[0]) / grand_total,
-        accuracy=int(np.trace(grand)) / grand_total,
+        pathological=(grand_total - int(grand_support[0])) / grand_total,
+        accuracy=grand_correct / grand_total,
         baseline=majority_total / grand_total,
         gain_pp=gain_pp,
         contribution_pp=gain_pp,
         majority="-",
-        sensitivity=nan,
-        specificity=nan,
+        sensitivity=grand_sensitivity,
+        specificity=grand_specificity,
         class_shares=tuple(float(v) / grand_total for v in grand_support),
     )
     return rows, overall_row
@@ -1011,48 +1055,73 @@ def _pct(value: float) -> str:
     return "  n/a" if np.isnan(value) else f"{value * 100:5.1f}"
 
 
-def _log_matrices(matrices: dict[str, np.ndarray]) -> None:
+def _log_matrices(matrices: dict[str, np.ndarray], exact: bool = True) -> None:
     """Log each dataset's confusion matrix (rows = actual, columns = predicted).
 
     :param dict matrices: Pooled confusion matrix per dataset.
+    :param bool exact: Whether the counts are exact. Matrices rebuilt by
+        :func:`reconstruct_counts` from the rounded percentages of a results.txt are off by a
+        chunk or two, so they are labelled as approximate rather than quoted as counts.
     """
     initials = _class_initials(next(iter(matrices.values())).shape[0])
     corner = "actual\\pred"
+    qualifier = "" if exact else ", APPROXIMATE: reconstructed from rounded percentages"
     for dataset in ordered_datasets(list(matrices)):
         matrix = matrices[dataset]
-        logger.info(f"  {dataset.upper()} confusion matrix (rows = actual, columns = predicted)")
+        logger.info(
+            f"  {dataset.upper()} confusion matrix (rows = actual, columns = predicted{qualifier})"
+        )
         logger.info(f"    {corner:<12}" + "".join(f"{c:>8}" for c in initials))
         for i, initial in enumerate(initials):
             logger.info(f"    {initial:<12}" + "".join(f"{int(v):>8}" for v in matrix[i]))
 
 
-def _log_multiclass_table(rows: list[PriorRow], overall: PriorRow) -> None:
-    """Log the baseline table of a multi-class run (class shares instead of sens/spec).
+def _log_baseline_table(rows: list[PriorRow], overall: PriorRow, num_classes: int) -> None:
+    """Log the per-dataset baseline table.
+
+    The leading columns are the same for every run; a binary run ends in sensitivity and
+    specificity, a multi-class one in the share of each true class (no single positive class
+    exists, so sens/spec are NaN there).
 
     :param list rows: Per-dataset rows from :func:`prior_baseline_from_matrices`.
     :param PriorRow overall: Overall row from :func:`prior_baseline_from_matrices`.
+    :param int num_classes: Number of classes of the run.
     """
-    initials = _class_initials(len(overall.class_shares))
-    shares_header = " ".join(f"{c + '%':>6}" for c in initials)
+    if num_classes == 2:
+        tail_header = f"{'Sens%':>6} {'Spec%':>6}"
+        legend = (
+            "  Path% = pathological fraction P; Base% = max(P, 1-P); Maj = majority class "
+            "(P/H); Contrib = (correct - majority correct) / all chunks."
+        )
+
+        def tail(row: PriorRow) -> str:
+            return f"{_pct(row.sensitivity):>6} {_pct(row.specificity):>6}"
+    else:
+        initials = _class_initials(num_classes)
+        tail_header = " ".join(f"{c + '%':>6}" for c in initials)
+        legend = (
+            "  Path% = share of not-Healthy chunks; Base% = share of the majority true class; "
+            "Maj = majority class (H/A/D/C = Healthy/Anxiety/Depression/Comorbid); "
+            "Contrib = (correct - majority correct) / all chunks; "
+            "H%/A%/D%/C% = share of true chunks of each class."
+        )
+
+        def tail(row: PriorRow) -> str:
+            return " ".join(f"{_pct(s):>6}" for s in row.class_shares)
+
     header = (
         f"  {'Dataset':<8} {'Chunks':>7} {'Path%':>6} {'Acc%':>6} {'Base%':>6} {'Maj':>3} "
-        f"{'Gain pp':>8} {'Contrib pp':>10} {shares_header}"
+        f"{'Gain pp':>8} {'Contrib pp':>10} {tail_header}"
     )
     logger.info(header)
     logger.info("  " + "-" * (len(header) - 2))
     for row in [*rows, overall]:
-        shares = " ".join(f"{_pct(s):>6}" for s in row.class_shares)
         logger.info(
             f"  {row.dataset.upper():<8} {row.chunks:>7} {_pct(row.pathological):>6} "
             f"{_pct(row.accuracy):>6} {_pct(row.baseline):>6} {row.majority:>3} "
-            f"{row.gain_pp:>+8.1f} {row.contribution_pp:>+10.1f} {shares}"
+            f"{row.gain_pp:>+8.1f} {row.contribution_pp:>+10.1f} {tail(row)}"
         )
-    logger.info(
-        "  Path% = share of not-Healthy chunks; Base% = share of the majority true class; "
-        "Maj = majority class (H/A/D/C = Healthy/Anxiety/Depression/Comorbid); "
-        "Contrib = (correct - majority correct) / all chunks; "
-        "H%/A%/D%/C% = share of true chunks of each class."
-    )
+    logger.info(legend)
 
 
 def report_run(
@@ -1064,20 +1133,18 @@ def report_run(
     :param bool show_matrices: Also log each dataset's confusion matrix (available for every
         binary run, and for multi-class runs that stored them).
     :return: The computed rows for binary runs and multi-class runs with stored per-dataset
-        confusion matrices, ``None`` for other multi-class runs.
+        confusion matrices, ``None`` for other multi-class runs (accuracy only).
     :rtype: Optional[tuple[list[PriorRow], PriorRow]]
     """
     n_folds = len(run.folds)
     folds_str = f"{n_folds} folds" if n_folds else "folds unknown"
     logger.info(f"\n=== {run.name} ({run.source}, {folds_str}) ===")
     logger.info(f"    {run.note}")
-    if run.matrices:
-        matrix_rows, matrix_overall = prior_baseline_from_matrices(run.matrices)
-        _log_multiclass_table(matrix_rows, matrix_overall)
-        if show_matrices:
-            _log_matrices(run.matrices)
-        return matrix_rows, matrix_overall
-    if not run.binary:
+    # One matrix per dataset, whichever source the run came from: exact ones when they were
+    # stored, otherwise the orientation-corrected binary counts (approximate under
+    # --from-results-txt, see _log_matrices).
+    matrices = run.matrices or {d: counts_to_matrix(c) for d, c in run.counts.items()}
+    if not matrices:
         logger.info(f"  {'Dataset':<8} {'Chunks':>7} {'Acc%':>6}")
         for dataset in ordered_datasets(list(run.total)):
             acc = run.correct[dataset] / run.total[dataset]
@@ -1085,26 +1152,10 @@ def report_run(
         logger.info("  (baseline not computed: class balance per dataset is not stored)")
         return None
 
-    rows, overall = prior_baseline(run.counts)
-    header = (
-        f"  {'Dataset':<8} {'Chunks':>7} {'Path%':>6} {'Acc%':>6} {'Base%':>6} {'Maj':>3} "
-        f"{'Gain pp':>8} {'Contrib pp':>10} {'Sens%':>6} {'Spec%':>6}"
-    )
-    logger.info(header)
-    logger.info("  " + "-" * (len(header) - 2))
-    for row in [*rows, overall]:
-        logger.info(
-            f"  {row.dataset.upper():<8} {row.chunks:>7} {_pct(row.pathological):>6} "
-            f"{_pct(row.accuracy):>6} {_pct(row.baseline):>6} {row.majority:>3} "
-            f"{row.gain_pp:>+8.1f} {row.contribution_pp:>+10.1f} "
-            f"{_pct(row.sensitivity):>6} {_pct(row.specificity):>6}"
-        )
-    logger.info(
-        "  Path% = pathological fraction P; Base% = max(P, 1-P); Maj = majority class "
-        "(P/H); Contrib = (correct - majority correct) / all chunks."
-    )
+    rows, overall = prior_baseline_from_matrices(matrices)
+    _log_baseline_table(rows, overall, next(iter(matrices.values())).shape[0])
     if show_matrices:
-        _log_matrices({d: np.array([[c.tn, c.fp], [c.fn, c.tp]]) for d, c in run.counts.items()})
+        _log_matrices(matrices, exact=bool(run.matrices) or run.source != "results.txt")
     return rows, overall
 
 
@@ -1207,7 +1258,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--confusion-matrices",
         action="store_true",
         help="Also print each dataset's confusion matrix (rows = actual, columns = predicted). "
-        "Binary runs use their oriented counts; multi-class runs need stored per-dataset matrices.",
+        "Exact for runs that stored per-dataset matrices; a binary run without them falls back "
+        "to its oriented counts, which under --from-results-txt are reconstructed from rounded "
+        "percentages and printed with an APPROXIMATE label.",
     )
     return parser
 

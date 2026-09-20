@@ -16,6 +16,7 @@ import torch
 from tests.helper_scripts import (
     load_helper_script,
     metrics_from_matrices,
+    write_fold_checkpoint,
     write_matrix_fold_checkpoint,
 )
 from thesis.metrics import _format_confusion_matrix, write_per_dataset_table
@@ -48,10 +49,12 @@ def _write_run(run_dir: Path, folds: list[dict[str, np.ndarray]]) -> None:
 def _results_txt(path: Path, folds: list[dict[str, np.ndarray]], class_mode: int) -> None:
     """Write a results.txt tail with the pooled matrix and the per-dataset sections."""
     num_classes = folds[0]["mdd"].shape[0]
-    chunk_matrices = [metrics_from_matrices(fold)[0]["confusion_matrix"] for fold in folds]
+    computed = [metrics_from_matrices(fold) for fold in folds]
     lines: list[str] = ["Configuration:\n", f"  class_mode: {class_mode}\n", "\n"]
-    _format_confusion_matrix(chunk_matrices, num_classes, lines.append)
-    write_per_dataset_table(lines.append, [metrics_from_matrices(fold)[1] for fold in folds])
+    _format_confusion_matrix(
+        [chunk["confusion_matrix"] for chunk, _ in computed], num_classes, lines.append
+    )
+    write_per_dataset_table(lines.append, [per_dataset for _, per_dataset in computed])
     path.write_text("".join(lines))
 
 
@@ -193,7 +196,6 @@ class TestReporting:
     def test_confusion_matrices_flag_works_for_runs_without_stored_matrices(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        from tests.helper_scripts import write_fold_checkpoint
 
         write_fold_checkpoint(
             tmp_path / "all_bin" / "fold_1_best.pth",
@@ -215,7 +217,6 @@ class TestReporting:
     def test_without_the_flag_binary_output_has_no_matrices(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        from tests.helper_scripts import write_fold_checkpoint
 
         write_fold_checkpoint(
             tmp_path / "all_bin" / "fold_1_best.pth", {"mdd": (60, 30, 7, 3)}, swapped=True

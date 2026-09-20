@@ -71,26 +71,46 @@ def write_fold_checkpoint(
             "correct": d_tp + d_tn,
             "total": d_total,
         }
+    chunk = {
+        "accuracy": (tp + tn) / total,
+        "precision": tp / (tp + fp) if tp + fp else 0.0,
+        "recall": tp / (tp + fn) if tp + fn else 0.0,
+        "specificity": tn / (tn + fp) if tn + fp else 0.0,
+        "confusion_matrix": cm,
+    }
+    _save_fold_checkpoint(path, chunk, per_dataset if with_per_dataset else None, subject_acc)
+    return cm
+
+
+def _save_fold_checkpoint(
+    path: Path,
+    chunk: dict[str, Any],
+    per_dataset: Optional[dict[str, dict[str, Any]]],
+    subject_acc: float = 0.5,
+) -> None:
+    """Write a ``fold_N_best.pth`` with the ``val_metrics`` skeleton consumers expect.
+
+    The single place the checkpoint layout is spelled out, so checkpoints written by the
+    different helpers here stay interchangeable.
+
+    :param Path path: Checkpoint file to create.
+    :param dict chunk: Chunk-level metrics, including ``confusion_matrix``.
+    :param dict per_dataset: Per-dataset metrics, or None to omit the key entirely.
+    :param float subject_acc: Value stored as subject accuracy.
+    """
     val_metrics: dict[str, object] = {
-        "chunk": {
-            "accuracy": (tp + tn) / total,
-            "precision": tp / (tp + fp) if tp + fp else 0.0,
-            "recall": tp / (tp + fn) if tp + fn else 0.0,
-            "specificity": tn / (tn + fp) if tn + fp else 0.0,
-            "confusion_matrix": cm,
-        },
-        # recall/specificity are not derived from real subject-level counts (this helper only
-        # tracks a single synthetic accuracy per fold); they default to the accuracy so that
+        "chunk": chunk,
+        # recall/specificity are not derived from real subject-level counts (these helpers only
+        # track a single synthetic accuracy per fold); they default to the accuracy so that
         # consumers reading all three keys (e.g. bipolar_ablation_summary.load_run) don't KeyError.
         "subject": {"accuracy": subject_acc, "recall": subject_acc, "specificity": subject_acc},
         "condition": {},
         "loss": 0.1,
     }
-    if with_per_dataset:
+    if per_dataset is not None:
         val_metrics["per_dataset"] = per_dataset
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"epoch": 1, "chunk_acc": (tp + tn) / total, "val_metrics": val_metrics}, path)
-    return cm
+    torch.save({"epoch": 1, "chunk_acc": chunk["accuracy"], "val_metrics": val_metrics}, path)
 
 
 def write_run(
@@ -161,6 +181,4 @@ def write_matrix_fold_checkpoint(path: Path, matrices: dict[str, np.ndarray]) ->
     :param dict matrices: ``{dataset: K x K confusion matrix}``, see :func:`metrics_from_matrices`.
     """
     chunk, per_dataset = metrics_from_matrices(matrices)
-    val_metrics = {"chunk": chunk, "subject": {"accuracy": 0.5}, "per_dataset": per_dataset}
-    path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"epoch": 1, "chunk_acc": chunk["accuracy"], "val_metrics": val_metrics}, path)
+    _save_fold_checkpoint(path, chunk, per_dataset)
