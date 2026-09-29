@@ -3,29 +3,19 @@
 import matplotlib.pyplot as plt
 
 # ── Data ──────────────────────────────────────────────────────────────────────
-# Aggregate per-dataset chunk accuracy from results.txt (6 models × 3 datasets)
-
-architectures = [
-    "AllTransformerV4",
-    "CNN-Attn-All",
-    "CNN-Cat-LSTM",
-    "DeformerS",
-    "LGGNetS",
-    "TSceptionS\n(4 s)",
-]
-categories = ["Spectrogram"] * 3 + ["Raw-EEG"] * 3
-
-# [model_idx] for each dataset
+# Per-dataset chunk accuracy of the binary models (see paper/NEW_NUMBERS.md).
+# Order: ATV4, DeformerS (8ch), LGGNetS, TSceptionS, CNN-AttnS, CNN-Attn, DeformerS (in-ear)
 acc = {
-    "CANE\n(Anxiety+Depression)": [74.62, 72.75, 71.83, 67.73, 66.96, 62.81],
-    "MDD\n(Depression)": [90.44, 88.44, 85.51, 87.42, 88.41, 84.84],
-    "SAD\n(Anxiety)": [71.60, 70.90, 69.14, 65.61, 57.58, 57.19],
+    "CANE\n(Anxiety+Depression)": [72.24, 66.68, 63.29, 60.66, 66.72, 66.29, 59.90],
+    "MDD\n(Depression)": [88.96, 88.10, 86.47, 84.19, 88.97, 88.24, 88.06],
+    "SAD\n(Anxiety)": [71.40, 65.58, 62.22, 58.65, 64.64, 61.74, 61.83],
 }
+
+FONT_SIZE = 17
 
 
 dataset_keys = list(acc.keys())
 n_datasets = len(dataset_keys)
-n_arch = len(architectures)
 
 fig, ax = plt.subplots(figsize=(9, 5.5))
 
@@ -48,15 +38,11 @@ for patch, color in zip(bp["boxes"], box_colors):
 
 # ── Axes formatting ───────────────────────────────────────────────────────────
 ax.set_xticks(range(n_datasets))
-ax.set_xticklabels(dataset_keys, fontsize=11)
-ax.set_ylabel("Chunk Accuracy (%)", fontsize=11)
-ax.set_title(
-    "Per-Dataset Chunk Accuracy across 8-channel Binary Classification",
-    fontsize=12,
-    fontweight="bold",
-    pad=10,
-)
+ax.set_xticklabels(dataset_keys, fontsize=FONT_SIZE)
+ax.set_ylabel("Chunk Accuracy (%)", fontsize=FONT_SIZE)
+ax.tick_params(axis="y", labelsize=FONT_SIZE)
 ax.set_ylim(55, 95)
+ax.set_yticks(range(55, 96, 5))
 ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
 ax.grid(axis="y", alpha=0.3, linewidth=0.5)
 ax.spines["top"].set_visible(False)
@@ -66,4 +52,3 @@ plt.tight_layout()
 out = "docs/per_dataset_comparison.png"
 plt.savefig(out, dpi=450, bbox_inches="tight")
 print(f"Saved → {out}")
-plt.show()
