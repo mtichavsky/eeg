@@ -1,126 +1,80 @@
-# Explainability: which channels and bands drive the predictions?
+# Explainability: grouped SHAP for the spectrogram models
 
-Methodology record for Section VII of the paper. Implemented in `thesis/explain/`, driven by
-`python main.py explain <run-dir>`, tested in `tests/test_explainability.py`.
+Methodology record for the SHAP section of the paper. Plan:
+`docs/plans/2026-09-26-shap-explainability.md`. Code in `thesis/explain/`, driven by
+`python main.py explain <run-dir> --experiment {shap-bands,shap-channels,shap-grid,shap-all}`,
+tested in `tests/test_shap.py` and `tests/test_explainability.py`. `shap` is pinned to
+`0.52.0` in `pyproject.toml`.
 
-## Geometry (verify before trusting any result)
+## What is computed
 
-An earlier draft of this note had two facts wrong. Both would corrupt every result silently,
-so they are stated here with their source of truth:
+For each fold, the fold's best checkpoint explains that fold's validation chunks (out-of-fold,
+same 10-fold subject-independent folds as training). Per chunk, grouped Shapley values of the
+**logit margin** `logit_1 - logit_0` (log-odds of pathological) for one of three games:
 
-| Fact | Value | Source |
+| Game | Players | Estimator |
 |---|---|---|
-| Spectrogram shape | `(72, 41)` — **not** `(129, 41)` | `EXPECTED_SPECTROGRAM_SHAPE`, `thesis/stft.py:72` |
-| Channel order | `Fp1, Fp2, C3, Cz, C4, T7, T8, O2/Oz` | `CANONICAL_CHANNEL_ORDER`, `thesis/dataset.py:39` |
+| bands | `sub_delta, delta, theta, alpha, beta, gamma` (all channels, all frames) | exact, 64 coalitions |
+| channels | 8 electrodes (whole `(F, T)` plane) | exact, 256 coalitions |
+| grid | 8 electrodes x 6 bands = 48 cells | antithetic permutations |
 
-So **channel index → electrode is `0=Fp1, 1=Fp2, 2=C3, 3=Cz, 4=C4, 5=T7, 6=T8, 7=O2/Oz`**.
-The temporal pair that the in-ear surrogate derives from is indices **5 and 6**.
+Players partition the input (`sub_delta` = bins 0-1, below delta), so efficiency
+`sum(phi) = f(x) - E f(b)` accounts for the whole prediction. It is checked for every chunk
+independently of the library; exact games raise above 1e-4.
 
-Frequency: bin `i` is centred at `i × 0.9766 Hz` (`FREQ_BIN_WIDTH_HZ`). Bands are computed, never
-hardcoded — `band_bins()` derives them from the STFT constants. They come out as delta 2–4
-(3 bins), theta 5–8 (4), alpha 9–13 (5), beta 14–30 (17), gamma 31–71 (41).
+**Value function** (interventional): absent players are filled from a background chunk,
+present ones from the explained chunk, and the output is averaged over the K background
+chunks. `shap` explains the on/off vector (explained point = ones, masker background = zeros).
 
-## How AllTransformerV4 handles channels
+**Background**: K = 32 training-fold chunks **of the explained chunk's own dataset**,
+label-stratified, one chunk per person where possible. Validation data is never used. The
+`--baseline mean` robustness variant uses the dataset's mean training spectrogram (K = 1).
 
-Input `(B, 8, 72, 41)`. A weight-shared CNN runs per channel, producing **80 tokens = 8 channels
-× 10 time frames**; each gets a `chan_embedding[c]` and `time_embedding[t]`; a 2-layer,
-4-head transformer attends over all 80; the model **mean-pools every token** and classifies
-(`thesis/model.py:744-816`). Token index is **`channel * 10 + time_frame`**.
+## Geometry
 
-Two consequences:
+Channel order `Fp1, Fp2, C3, Cz, C4, T7, T8, O2/Oz` (`CANONICAL_CHANNEL_ORDER`). Spectrogram
+`(72, 41)` at 70 Hz; bin `i` is centred at `i x 0.9766 Hz`. Bands in bins: sub-delta 0-1, delta
+2-4, theta 5-8, alpha 9-13, beta 14-30, gamma 31-71. Band widths differ (3 vs 41 bins), so
+`per_bin` importance is reported alongside the totals.
 
-- Channels are explicit, separable units, so they can be ablated cleanly.
-- The readout is a mean-pool, **not** a CLS token, so there is no single "decision token" whose
-  attention can be read off. Attention answers must be aggregated (see rollout below).
+For the in-ear model, the `cane` slot holds **IDUN** (real in-ear) data; results name it `idun`,
+and MDD/SAD are labelled as synthetic T8-T7 derivations.
 
-## Checkpoint compatibility
+## Gate
 
-`models/*.pth` and everything under `../experiments/` predate the Jul-30 frequency-axis fix:
-their `proj.weight` is `(64, 864)` where current code needs `(64, 416)`. **They are unusable.**
-`create_model()` loads with `strict=False`, so a mismatch is dropped silently and left randomly
-initialised — `load_fold_model()` therefore re-checks and refuses. Valid checkpoints live in
-`thesis-text/paper/experiments/`.
+`harness.verify_baseline` re-evaluates each rebuilt fold and compares chunk accuracy with the
+metrics stored in the checkpoint. It allows a difference of up to 1.5 chunks, so one borderline
+prediction flipped by CPU/GPU numerics is tolerated. A larger mismatch means the folds were
+rebuilt wrongly (the fold then holds different subjects), and that fold is skipped with an
+error. Fold building is shared with training (`build_cv_folds` in
+`thesis/data_preparation.py`), so the rebuild uses the same code path.
 
-One gap: the paper's headline 8-channel binary row comes from the `atv4-lowlr_oex` re-run whose
-checkpoints were not kept. Either retrain that config or report ablations against
-`binary/8channel/alltransformer-binary` (the earlier `lr=5e-4` run) and say so.
+## Outputs
 
-## The experiments
+`<run>/explain/shap_<game>[_mean][_random][_partial].json` holds (`_partial` marks runs
+restricted with `--folds`; they never overwrite, or get compared with, full runs), per player, `mean_abs_phi` (importance)
+and `mean_phi` (direction), each per fold plus mean and std over folds. The subject is the unit:
+chunks are averaged per person, then over persons in the fold, then over folds. It also has
+splits by dataset, by true class and by correct/incorrect, per-dataset paired tests (Wilcoxon and
+Nadeau-Bengio corrected t, BH within the game), the max efficiency residual, and background
+provenance. The grid also stores the Monte Carlo SE from repeated seeds. The matching
+`_chunks.npz` holds the per-chunk rows (phi, band log-power, f(x), E f(b), labels, predictions).
 
-### Channel ablation (primary)
+Derived runs compare themselves with their reference run, when it has already been written:
+`--baseline mean` gives `baseline_agreement` (Spearman against the sample baseline), and
+`--random-init` gives `randomisation_check`. The randomisation check (Adebayo et al. 2018)
+passes if the random model's mean |f(x) - E f(b)| is below 10% of the trained model's (rho is
+reported only: it stays high because profile order follows input spectral power).
 
-Most defensible for review because it answers "contribution" in the metric the paper already
-reports. For each channel, **drop its 10 tokens from the sequence entirely**: the transformer
-handles variable-length input and the mean pool renormalises, so the channel genuinely does not
-participate. This beats zeroing the spectrogram, which leaves `chan_embedding[c]` and a "this
-channel is silent" cue in place. Zeroing is run separately as a robustness check —
-`--experiment channel-occlusion`.
+## Checkpoints explained
 
-Run **per fold** and report mean ± std, not a single checkpoint. That turns "channel X cost 4%"
-into a claim with error bars.
+`experiments/all_041_inear_ec+eo_f70` (CNN-AttnS) and `experiments/all_041_all_ec+eo_f70`
+(AllTransformerV4). These are the f70 reruns from the cutoff study, **not** the Table II runs,
+which kept no checkpoints. Launch on MetaCentrum with `./run-shap-meta.sh`, and draw the figures
+with `helpers-print/plot_shap.py`.
 
-**State the redundancy caveat.** EEG channels are spatially correlated: if Fp1 and Fp2 carry
-overlapping signal, ablating one alone shows little drop even when the pair is jointly critical.
-**Small drop ≠ unimportant.** Grouped region ablation (frontal / central / temporal / occipital)
-and leave-one-**in** both run alongside for exactly this reason.
+## Caveats for the paper
 
-Retraining on reduced montages answers the complementary question — what the channels *carry*,
-rather than what this trained model *uses*. Use `--channel T7,T8` and friends.
-
-### Frequency-band occlusion
-
-Occlusion replaces a band with the **per-bin mean of the training folds' spectrograms**, never
-with zero: inputs are `log1p|STFT|`, so zero means "no power at all", far outside the data
-distribution, and would conflate "this band matters" with "this input is out of distribution".
-
-**Bands differ enormously in width** — gamma is 41 bins, delta 3 — so raw drops are not
-comparable. Each band is therefore also compared against width-matched control windows placed
-elsewhere in the spectrum. Gamma is a special case: no disjoint 41-bin window fits in a 72-bin
-spectrum, so its control list is empty by construction and its drop must be read per-bin.
-
-The channel × band grid doubles as the artifact audit: ocular artifact lives in Fp1/Fp2 at low
-frequency, so a frontal × delta hotspot would mean the model reads blinks rather than pathology.
-
-### Hemispheric mirror
-
-Swap Fp1↔Fp2, C3↔C4, T7↔T8; leave Cz and O2/Oz. The montage's pooled power spectrum is
-unchanged, so only lateralisation is destroyed — the family frontal alpha asymmetry belongs to.
-A drop is evidence of asymmetry use; no drop is evidence of bilateral power use, and both are
-reportable.
-
-### Attention rollout
-
-`nn.TransformerEncoderLayer.forward` hardcodes `need_weights=False`, so the weights are never
-computed on the normal path and a plain forward hook captures nothing. `capture_attention()`
-re-runs attention from a forward-pre-hook, reproducing `layer.norm1(x)` because the model uses
-`norm_first=True` (so weights are over LayerNorm'd tokens, not raw features).
-
-With 2 layers, `R = (0.5·A₂ + 0.5·I)(0.5·A₁ + 0.5·I)`. Because the readout is a mean-pool with no
-CLS row, per-token influence on the decision is the **column mean of R**, collapsed 80 → 8.
-
-### Integrated Gradients
-
-Hand-rolled (`captum` is not a dependency and the model takes a single tensor input), midpoint
-rule, same training-mean baseline as the occlusion reference so the two share a notion of
-"absent". The **completeness axiom** — attributions sum to `f(x) − f(baseline)` — is checked
-every run; a large residual means too few steps and invalidates the map.
-
-### Caveats to state in the paper
-
-- **Attention is not explanation** (Jain & Wallace 2019). Ablation stays primary; rollout
-  corroborates.
-- Averaging over heads can hide head specialisation.
-- CV folds share training data and are **not independent**, so the naive paired t-test
-  over-rejects. Wilcoxon signed-rank is primary; the Nadeau-Bengio corrected t is reported as
-  the conservative alternative; Benjamini-Hochberg FDR is applied within each family (channels,
-  bands) separately.
-- The convincing story is **agreement**: if rollout, integrated gradients, and leave-one-out
-  rank the same channels at the top, that is a strong three-method result.
-
-## Verification gate
-
-For every fold, the *unablated* re-evaluation must reproduce the metrics stored inside the
-checkpoint (`val_metrics`, written by `train_one_fold`). Fold membership depends on a single
-stateful `RandomState` replayed across dataset-preparation calls in a fixed order; if the replay
-diverges, the validation set is a different set of subjects and every ablation number is void.
-The `explain` command checks this automatically and logs an error per mismatched fold.
+These values explain the model, not the brain. Grouped features are correlated, and composite
+inputs can be off-manifold. The values depend on the background, which is why the same-dataset
+background and the mean-baseline check are used. Folds vary, so std over folds is reported.

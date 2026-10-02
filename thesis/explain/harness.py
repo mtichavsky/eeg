@@ -1,18 +1,17 @@
 """
-Post-hoc evaluation harness for ablation experiments.
+Post-hoc harness for explaining trained cross-validation runs.
 
-Reconstructs the exact cross-validation folds a training run used, reloads each fold's best
-checkpoint, and re-scores the validation set under an ablation. Scoring goes through the same
-:func:`main.eval_epoch` the training loop uses, so an ablated accuracy is directly comparable
-with the numbers reported in the paper.
+Reconstructs the exact cross-validation folds a training run used and reloads each fold's
+best checkpoint, so every fold's model is explained on the subjects it never saw in training.
 
 Two safeguards matter enough to be non-optional:
 
 * **Fold reconstruction is verified, not assumed.** A single ``RandomState`` is threaded
   through every dataset-preparation call in a fixed order, so fold membership depends on which
   datasets are loaded and in what order. :func:`verify_baseline` re-runs the *unablated*
-  evaluation and checks it against the metrics stored inside the checkpoint. If those disagree,
-  the folds were rebuilt wrongly and every downstream number is meaningless.
+  evaluation (through the same :func:`thesis.evaluation.eval_epoch` the training loop uses)
+  and checks it against the metrics stored inside the checkpoint. If those disagree, the folds
+  were rebuilt wrongly and every downstream number is meaningless.
 * **Checkpoints are loaded strictly.** ``model.load_state_dict(..., strict=False)`` still
   raises a ``RuntimeError`` immediately if a parameter with a matching name has the wrong
   *shape* — PyTorch does this unconditionally, regardless of ``strict``. What ``strict=False``
@@ -26,24 +25,22 @@ Two safeguards matter enough to be non-optional:
 import json
 import logging
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, cast
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import ConcatDataset, DataLoader, Dataset, Subset
 
 from thesis.data_preparation import CVFolds, build_cv_folds
 from thesis.dataset import collate_spectrograms, num_model_channels
+from thesis.evaluation import eval_epoch
 from thesis.model_factory import create_model
-from thesis.stft import EXPECTED_SPECTROGRAM_SHAPE
+from thesis.stft import FREQ_CUTOFF_HZ, spectrogram_shape
 
 logger = logging.getLogger(__name__)
-
-#: Metrics whose fold-wise values an ablation study compares against baseline.
-TRACKED_METRICS = ("accuracy", "sensitivity", "specificity")
 
 
 @dataclass
@@ -61,6 +58,7 @@ class RunConfig:
     chunk_duration: float
     skip_artifact_removal: bool
     checkpoint_dir: Path
+    test_mode: bool = False
     raw: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -82,6 +80,36 @@ class RunConfig:
         :rtype: list[str]
         """
         return self.condition.upper().split("+")
+
+    @property
+    def freq_cutoff_hz(self) -> float:
+        """
+        Spectrogram frequency cutoff the run was trained with.
+
+        :return: The recorded ``freq_cutoff``; runs predating the flag used 70 Hz.
+        :rtype: float
+        """
+        return float(self.raw.get("freq_cutoff", FREQ_CUTOFF_HZ))
+
+    @property
+    def spec_shape(self) -> tuple[int, int]:
+        """
+        Spectrogram ``(F, T)`` shape the run's models expect.
+
+        :return: e.g. ``(72, 41)`` at 70 Hz, ``(31, 41)`` at 30 Hz.
+        :rtype: tuple[int, int]
+        """
+        return spectrogram_shape(self.freq_cutoff_hz)
+
+    @property
+    def in_channels(self) -> int:
+        """
+        Number of model input channels.
+
+        :return: 8 for ``--channel all``, else 1.
+        :rtype: int
+        """
+        return num_model_channels(self.channel)
 
 
 def _coerce(value: str) -> str | bool | None:
@@ -146,49 +174,9 @@ def read_run_config(checkpoint_dir: Path) -> RunConfig:
         chunk_duration=float(cfg.get("chunk_duration", 10.0)),
         skip_artifact_removal=bool(_coerce(cfg.get("skip_artifact_removal", "False"))),
         checkpoint_dir=checkpoint_dir,
+        test_mode=bool(_coerce(cfg.get("test_mode", "False"))),
         raw=cfg,
     )
-
-
-class AblatedModel(nn.Module):
-    """
-    Wraps a model so an ablation applies inside its forward pass.
-
-    Keeping the ablation here rather than in the evaluation loop means
-    :func:`main.eval_epoch` runs unmodified, so ablated and baseline numbers are produced by
-    exactly the same code.
-
-    :param torch.nn.Module model: The trained model to wrap.
-    :param input_transform: Optional callable applied to each input batch, e.g. band occlusion
-        or the hemisphere mirror.
-    :param torch.Tensor channel_mask: Optional boolean channel mask forwarded to the wrapped
-        model, which drops those channels' tokens. Only ``AllTransformerV4`` accepts one.
-    """
-
-    def __init__(
-        self,
-        model: nn.Module,
-        input_transform: Callable[[torch.Tensor], torch.Tensor] | None = None,
-        channel_mask: torch.Tensor | None = None,
-    ) -> None:
-        super().__init__()
-        self.model = model
-        self.input_transform = input_transform
-        self.channel_mask = channel_mask
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Apply the ablation, then delegate.
-
-        :param torch.Tensor x: Input batch.
-        :return: Class logits.
-        :rtype: torch.Tensor
-        """
-        if self.input_transform is not None:
-            x = self.input_transform(x)
-        if self.channel_mask is not None:
-            return cast(torch.Tensor, self.model(x, channel_mask=self.channel_mask))
-        return cast(torch.Tensor, self.model(x))
 
 
 def load_fold_model(
@@ -220,14 +208,20 @@ def load_fold_model(
 
     model = create_model(
         model_name=config.model,
-        spec_shape=EXPECTED_SPECTROGRAM_SHAPE,
+        spec_shape=config.spec_shape,
         dropout=config.dropout,
         num_classes=config.num_classes,
         device=device,
-        in_channels=num_model_channels(config.channel),
+        in_channels=config.in_channels,
     )
 
     checkpoint = torch.load(path, weights_only=False, map_location=device)
+    recorded_cutoff = float(checkpoint.get("freq_cutoff_hz", FREQ_CUTOFF_HZ))
+    if recorded_cutoff != config.freq_cutoff_hz:
+        raise RuntimeError(
+            f"{path} was trained with freq_cutoff={recorded_cutoff}, but results.txt says "
+            f"{config.freq_cutoff_hz}"
+        )
     # A shape mismatch on a matching key (e.g. a differently-sized proj layer) raises here
     # directly from load_state_dict regardless of strict; only a genuine key-name mismatch
     # reaches the check below.
@@ -246,14 +240,23 @@ def load_fold_model(
 
 @dataclass
 class FoldContext:
-    """One fold's validation data plus the model trained without it."""
+    """
+    One fold's validation data plus the model trained without it.
+
+    ``val_datasets`` and ``train_datasets`` give the dataset key (``mdd``/``cane``/``sad``) of
+    every index of the validation and training sets. They are derived from the fold's dataset
+    structure, not from subject IDs, which are not unique across datasets (``"H S1 EC"`` exists
+    in several).
+    """
 
     fold: int
     model: nn.Module
     loader: DataLoader
     subject_dataset_map: dict[str, str]
     checkpoint: dict[str, Any]
-    train_loader: DataLoader
+    train_dataset: Dataset
+    val_datasets: list[str]
+    train_datasets: list[str]
 
     @property
     def stored_metrics(self) -> dict[str, Any] | None:
@@ -264,6 +267,41 @@ class FoldContext:
         :rtype: dict | None
         """
         return cast(dict[str, Any] | None, self.checkpoint.get("val_metrics"))
+
+
+def index_datasets(dataset: Dataset, folds: CVFolds) -> list[str]:
+    """
+    Dataset key of every index of a fold's train or validation set.
+
+    For ``--dataset all`` the fold set is a ``ConcatDataset`` of one ``Subset`` per source
+    dataset, and each subset's backing dataset identifies its source. Single-dataset runs are
+    all one key.
+
+    :param torch.utils.data.Dataset dataset: A train or validation set from
+        :meth:`CVFolds.datasets_for_fold`.
+    :param CVFolds folds: The folds it came from.
+    :return: One key per index.
+    :rtype: list[str]
+    :raises ValueError: If a part of a combined set cannot be matched to a source dataset.
+    """
+    size = len(dataset)  # type: ignore[arg-type]
+    if folds.dataset_type != "all":
+        return [folds.dataset_type] * size
+
+    sources = {
+        id(folds.mdd_flat_dataset): "mdd",
+        id(folds.cane_flat_dataset): "cane",
+        id(folds.sad_flat_dataset): "sad",
+    }
+    if not isinstance(dataset, ConcatDataset):
+        raise ValueError(f"Expected a ConcatDataset for --dataset all, got {type(dataset)}")
+    keys: list[str] = []
+    for part in dataset.datasets:
+        backing = part.dataset if isinstance(part, Subset) else part
+        if id(backing) not in sources:
+            raise ValueError("Cannot match a fold subset to MDD, CANE or SAD")
+        keys.extend([sources[id(backing)]] * len(part))  # type: ignore[arg-type]
+    return keys
 
 
 def iter_folds(
@@ -278,7 +316,7 @@ def iter_folds(
     :param RunConfig config: The run to reproduce.
     :param torch.device device: Device to evaluate on.
     :param CVFolds folds: Prebuilt folds from :func:`build_folds`; built here when omitted.
-        Pass it in when iterating more than once — dataset preparation is the slow step.
+        Pass it in when iterating more than once, since dataset preparation is the slow step.
     :param fold_numbers: Zero-indexed folds to visit; all of them when omitted. Folds whose
         checkpoint is missing are skipped with a warning rather than aborting the study.
     :yield: One :class:`FoldContext` per fold.
@@ -293,9 +331,7 @@ def iter_folds(
             logger.warning(f"Skipping fold {fold + 1}: {exc}")
             continue
 
-        train_dataset, val_dataset, subject_dataset_map = folds.datasets_for_fold(
-            fold, config.dataset
-        )
+        train_dataset, val_dataset, subject_dataset_map = folds.datasets_for_fold(fold)
         collate = None if folds.use_raw_eeg else collate_spectrograms
         loader = DataLoader(
             val_dataset,
@@ -304,41 +340,16 @@ def iter_folds(
             collate_fn=collate,
             pin_memory=device.type == "cuda",
         )
-        # Shuffled so that a truncated pass over it still gives an unbiased occlusion
-        # reference; see reference_spectrogram.
-        train_loader = DataLoader(
-            train_dataset,
-            batch_size=config.batch_size,
-            shuffle=True,
-            collate_fn=collate,
+        yield FoldContext(
+            fold=fold,
+            model=model,
+            loader=loader,
+            subject_dataset_map=subject_dataset_map,
+            checkpoint=checkpoint,
+            train_dataset=train_dataset,
+            val_datasets=index_datasets(val_dataset, folds),
+            train_datasets=index_datasets(train_dataset, folds),
         )
-        yield FoldContext(fold, model, loader, subject_dataset_map, checkpoint, train_loader)
-
-
-def reference_spectrogram(context: FoldContext, max_samples: int = 2048) -> torch.Tensor:
-    """
-    Mean spectrogram over this fold's *training* data, for use as the occlusion baseline.
-
-    Training-fold only: computing it over the validation set would leak the evaluation data
-    into the ablation's reference value.
-
-    :param FoldContext context: The fold whose training data to average.
-    :param int max_samples: Stop after this many chunks. The mean of a few thousand
-        spectrograms is stable well below the differences ablation measures, and the loader is
-        shuffled so a truncated pass stays unbiased.
-    :return: Mean spectrogram of shape ``(C, F, T)``.
-    :rtype: torch.Tensor
-    """
-    from thesis.explain.masks import spectrogram_reference
-
-    batches: list[torch.Tensor] = []
-    seen = 0
-    for inputs, _, _ in context.train_loader:
-        batches.append(inputs)
-        seen += inputs.shape[0]
-        if seen >= max_samples:
-            break
-    return spectrogram_reference(batches)
 
 
 def build_folds(config: RunConfig) -> CVFolds:
@@ -358,42 +369,26 @@ def build_folds(config: RunConfig) -> CVFolds:
         config.model,
         skip_artifact_removal=config.skip_artifact_removal,
         augmentation=None,  # never augment during evaluation
-        test_mode=False,
+        test_mode=config.test_mode,
         chunk_duration=config.chunk_duration,
+        freq_cutoff_hz=config.freq_cutoff_hz,
     )
 
 
-def evaluate(
-    context: FoldContext,
-    config: RunConfig,
-    device: torch.device,
-    input_transform: Callable[[torch.Tensor], torch.Tensor] | None = None,
-    channel_mask: torch.Tensor | None = None,
-) -> dict[str, Any]:
+def evaluate(context: FoldContext, config: RunConfig, device: torch.device) -> dict[str, Any]:
     """
-    Score one fold under an ablation, using the training loop's own evaluation function.
+    Score one fold with the training loop's own evaluation function.
 
     :param FoldContext context: The fold to score.
     :param RunConfig config: The run's configuration.
     :param torch.device device: Device to evaluate on.
-    :param input_transform: Optional input ablation.
-    :param torch.Tensor channel_mask: Optional channel mask.
-    :return: The :func:`main.eval_epoch` result dict.
+    :return: The :func:`thesis.evaluation.eval_epoch` result dict.
     :rtype: dict
     """
-    # Imported here: main imports this package's siblings, so a module-level import would
-    # create a cycle.
-    from main import eval_epoch
-
-    model: nn.Module = context.model
-    if input_transform is not None or channel_mask is not None:
-        model = AblatedModel(context.model, input_transform, channel_mask).to(device)
-        model.eval()
-
     criterion = nn.CrossEntropyLoss()
     with torch.no_grad():
         return eval_epoch(
-            model,
+            context.model,
             context.loader,
             criterion,
             device,
@@ -403,20 +398,23 @@ def evaluate(
 
 
 def verify_baseline(
-    context: FoldContext, config: RunConfig, device: torch.device, tolerance: float = 1e-4
+    context: FoldContext, config: RunConfig, device: torch.device, max_flips: float = 1.5
 ) -> tuple[bool, float]:
     """
     Check that the reconstructed fold reproduces the checkpoint's own stored metrics.
 
     This is the gate for the whole analysis. Fold membership depends on a shared, stateful
     random generator replayed across dataset-preparation calls; if the replay diverges, the
-    validation set is simply a different set of subjects and every ablation number computed
-    from it is void. Run this before trusting any result.
+    validation set is simply a different set of subjects and every number computed from it is
+    void. Run this before trusting any result.
 
     :param FoldContext context: The fold to check.
     :param RunConfig config: The run's configuration.
     :param torch.device device: Device to evaluate on.
-    :param float tolerance: Allowed absolute difference in chunk accuracy.
+    :param float max_flips: Allowed difference in chunk accuracy, in chunks. The default of
+        1.5 tolerates one borderline chunk whose prediction flips because of hardware numerics
+        (CPU versus GPU, TF32). A wrongly rebuilt fold holds different subjects and differs by
+        far more.
     :return: ``(matched, absolute_difference)``. ``matched`` is ``False`` with a difference of
         ``nan`` when the checkpoint stores no metrics to compare against.
     :rtype: tuple[bool, float]
@@ -430,7 +428,8 @@ def verify_baseline(
     expected = float(stored["chunk"]["accuracy"])
     actual = float(recomputed["chunk"]["accuracy"])
     difference = abs(expected - actual)
-    matched = difference <= tolerance
+    n_chunks = len(context.loader.dataset)  # type: ignore[arg-type]
+    matched = difference <= max_flips / n_chunks
 
     level = logger.info if matched else logger.error
     level(
@@ -440,28 +439,7 @@ def verify_baseline(
     return matched, difference
 
 
-def extract(metrics: dict[str, Any]) -> dict[str, float]:
-    """
-    Flatten an :func:`main.eval_epoch` result into the scalars ablation studies compare.
-
-    :param dict metrics: An ``eval_epoch`` result.
-    :return: ``chunk_*`` and ``subject_*`` scalars, plus ``loss``. Keys absent for the current
-        class count (sensitivity and specificity are binary-only) are omitted.
-    :rtype: dict[str, float]
-    """
-    flat: dict[str, float] = {"loss": float(metrics["loss"])}
-    for level in ("chunk", "subject"):
-        for name in TRACKED_METRICS:
-            value = metrics[level].get(name)
-            if value is not None:
-                flat[f"{level}_{name}"] = float(value)
-    for key, value in metrics["chunk"].items():
-        if key.startswith("recall_"):
-            flat[f"chunk_{key}"] = float(value)
-    return flat
-
-
-def write_results(payload: dict[str, Any], destination: Path) -> Path:
+def write_explain_results(payload: dict[str, Any], destination: Path) -> Path:
     """
     Write an experiment's results as JSON.
 

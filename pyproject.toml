@@ -25,6 +25,9 @@ librosa = "*"
 einops = "*"
 pip-tools = "^7.5.3"
 structlog = "^25.5.0"
+# SHAP attributions (python main.py explain). Pinned: Exact/Permutation signatures change
+# between releases.
+shap = "0.52.0"
 
 [tool.poetry.group.api]
 optional = true
@@ -81,6 +84,7 @@ module = [
     "librosa.*",
     "slowapi.*",
     "structlog.*",
+    "shap.*",
 ]
 ignore_missing_imports = true
 

@@ -39,6 +39,19 @@ IDUN_DIR = BASE_DIR / "IDUN_IN_EAR"
 # T7/T8 are new nomenclature, equivalent to T3/T4 in older systems
 CANONICAL_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2/Oz"]
 
+
+def num_model_channels(channel: str | None) -> int:
+    """
+    Number of input channels a model sees for a ``--channel`` spec.
+
+    :param channel: ``"all"`` for the 8-channel montage; any single electrode, ``in-ear`` or
+        bipolar montage gives one channel.
+    :return: 8 or 1.
+    :rtype: int
+    """
+    return len(CANONICAL_CHANNEL_ORDER) if channel == "all" else 1
+
+
 # Dataset-specific channel mappings to canonical order
 MDD_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "O2"]  # T3→T7, T4→T8
 CANE_CHANNEL_ORDER = ["Fp1", "Fp2", "C3", "Cz", "C4", "T7", "T8", "Oz"]

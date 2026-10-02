@@ -20,6 +20,7 @@ from thesis.dataset import (
     bipolar_pair,
 )
 from thesis.labels import LabelMapping
+from thesis.model import RAW_EEG_MODELS
 
 # Canonical sampling rate and spectrogram geometry live in thesis.stft, the single source of
 # truth shared by the training and inference paths. EXPECTED_SPECTROGRAM_SHAPE is re-exported
@@ -31,6 +32,10 @@ from thesis.stft import (
 from thesis.stft import FREQ_CUTOFF_HZ, MODEL_FS, spectrogram_shape
 
 logger = logging.getLogger(__name__)
+
+#: Seed of the RandomState threaded through dataset preparation. Fold membership depends on it,
+#: so training and the explainability harness must share this one value.
+CV_SEED = 42
 
 SubjectList = list[tuple[str, str]]  # Single dataset: (dataset_label, subject_id) tuples
 MultiDatasetSubjectList = list[SubjectList]  # Multiple datasets: list of subject lists
@@ -752,3 +757,317 @@ def get_datasets_for_fold(
         val_dataset = Subset(flat_dataset, val_indices)
 
     return train_dataset, val_dataset, val_subject_dataset_map
+
+
+#: Any of the flattened dataset types the fold helpers accept.
+FlatDataset = ConcatDataset | FlattenedSpectrogramDataset | FlattenedRawEEGDataset
+
+
+class CVFolds(NamedTuple):
+    """Everything the cross-validation loop needs before it starts iterating folds."""
+
+    normal_folds: list[SubjectList]
+    anxiety_folds: list[SubjectList]
+    depression_folds: list[SubjectList]
+    anxiety_depression_folds: list[SubjectList]
+    mdd_flat_dataset: FlatDataset | None
+    cane_flat_dataset: FlatDataset | None
+    sad_flat_dataset: FlatDataset | None
+    flat_dataset: FlatDataset | None
+    num_classes: int
+    use_raw_eeg: bool
+    dataset_type: str
+
+    def datasets_for_fold(
+        self, fold: int
+    ) -> tuple[ConcatDataset | Subset, ConcatDataset | Subset, dict[str, str]]:
+        """
+        Train and validation datasets for one fold.
+
+        :param int fold: Zero-indexed fold number.
+        :return: ``(train_dataset, val_dataset, val_subject_dataset_map)``.
+        :rtype: tuple
+        """
+        return get_datasets_for_fold(
+            fold,
+            self.normal_folds,
+            self.anxiety_folds,
+            self.depression_folds,
+            self.anxiety_depression_folds,
+            self.dataset_type,
+            self.mdd_flat_dataset,
+            self.cane_flat_dataset,
+            self.sad_flat_dataset,
+            self.flat_dataset,
+        )
+
+
+def build_cv_folds(
+    dataset_type: Literal["mdd", "cane", "sad", "all"],
+    conditions: list[str],
+    class_mode: str,
+    n_folds: int,
+    channel: str | None,
+    model_name: str,
+    *,
+    skip_artifact_removal: bool = False,
+    augmentation: Callable | None = None,
+    test_mode: bool = False,
+    chunk_duration: float = CHUNK_DURATION_SEC,
+    freq_cutoff_hz: float = FREQ_CUTOFF_HZ,
+    seed: int = CV_SEED,
+) -> CVFolds:
+    """
+    Load the requested datasets and split their subjects into stratified folds.
+
+    Shared by training (``main.train_cross_validation``) and the post-hoc explainability
+    harness, so the harness reproduces exactly the folds a training run used. That matters
+    because a single ``RandomState`` is threaded through every ``prepare_*`` call in a fixed
+    order: the fold assignment depends on which datasets are loaded and in what order.
+
+    :param dataset_type: Which dataset(s) to load.
+    :param list[str] conditions: Upper-case conditions, e.g. ``["EC", "EO"]``.
+    :param str class_mode: ``"2"`` or ``"4"``.
+    :param int n_folds: Number of cross-validation folds.
+    :param str channel: Channel spec (``all``, ``in-ear``, an electrode name, or a montage).
+    :param str model_name: Architecture name; decides raw-EEG versus spectrogram pipeline.
+    :param bool skip_artifact_removal: Skip CANE artifact interpolation/clipping.
+    :param augmentation: Optional augmentation applied to training chunks.
+    :param bool test_mode: Load a single file per class, for debugging.
+    :param float chunk_duration: Chunk length in seconds.
+    :param float freq_cutoff_hz: Highest spectrogram frequency kept, in Hz.
+    :param int seed: Seed for the fold-assignment RandomState.
+    :return: Fold lists and the backing datasets.
+    :rtype: CVFolds
+    :raises ValueError: If condition ``TASK`` is requested for the CANE dataset.
+    """
+    rng = np.random.RandomState(seed)
+    if "TASK" in conditions and dataset_type == "cane":
+        raise ValueError("condition TASK not possible for CANE dataset")
+
+    # Determine num_classes and label_mapping based on class_mode
+    num_classes, label_mapping = determine_num_classes(class_mode)
+    logger.info(f"Classification mode: {num_classes}-class")
+    if label_mapping:
+        logger.info(f"Label mapping: {label_mapping} (collapsing to binary)")
+
+    # Detect whether model needs raw EEG (Deformer) or spectrograms (CNN-LSTM family)
+    use_raw_eeg = model_name in RAW_EEG_MODELS
+    if use_raw_eeg:
+        logger.info(f"Model {model_name} uses raw EEG pipeline (no STFT)")
+
+    mdd_flat_dataset, cane_flat_dataset, sad_flat_dataset, flat_dataset = (
+        None,
+        None,
+        None,
+        None,
+    )
+    if dataset_type == "mdd":
+        flat_dataset, subject_classes = prepare_mdd_dataset(
+            conditions,
+            channel,
+            rng,
+            augmentation=augmentation,
+            test_mode=test_mode,
+            num_classes=num_classes,
+            label_mapping=label_mapping,
+            use_raw_eeg=use_raw_eeg,
+            chunk_duration=chunk_duration,
+            freq_cutoff_hz=freq_cutoff_hz,
+        )
+        normal, anxiety, depression, anxiety_depression = (
+            subject_classes.normal,
+            subject_classes.anxiety,
+            subject_classes.depression,
+            subject_classes.anxiety_depression,
+        )
+        logger.info(f"MDD dataset: {len(normal)} normal, {len(depression)} depression subjects")
+    elif dataset_type == "cane":
+        # Convert to lowercase for CANE/IDUN
+        cane_conditions = [c.lower() for c in conditions]
+        if channel == "in-ear":
+            logger.info("Using IDUN real in-ear dataset instead of CANE synthetic derivation")
+            flat_dataset, subject_classes = prepare_idun_dataset(
+                cane_conditions,
+                channel,
+                rng,
+                label_mapping=label_mapping,
+                augmentation=augmentation,
+                test_mode=test_mode,
+                use_raw_eeg=use_raw_eeg,
+                chunk_duration=chunk_duration,
+                freq_cutoff_hz=freq_cutoff_hz,
+            )
+        else:
+            if bipolar_pair(channel) is not None:
+                logger.info(
+                    f"Bipolar channel '{channel}' with CANE: loading from the 8-channel "
+                    "headset, not IDUN"
+                )
+            flat_dataset, subject_classes = prepare_cane_dataset(
+                cane_conditions,
+                channel,
+                rng,
+                label_mapping=label_mapping,
+                skip_artifact_removal=skip_artifact_removal,
+                augmentation=augmentation,
+                test_mode=test_mode,
+                use_raw_eeg=use_raw_eeg,
+                chunk_duration=chunk_duration,
+                freq_cutoff_hz=freq_cutoff_hz,
+            )
+        normal, anxiety, depression, anxiety_depression = (
+            subject_classes.normal,
+            subject_classes.anxiety,
+            subject_classes.depression,
+            subject_classes.anxiety_depression,
+        )
+        dataset_name = "IDUN" if channel == "in-ear" else "CANE"
+        logger.info(
+            f"{dataset_name} dataset: {len(normal)} normal, {len(anxiety)} anxiety, "
+            f"{len(depression)} depression, {len(anxiety_depression)} anxiety+depression subjects"
+        )
+    elif dataset_type == "sad":
+        flat_dataset, subject_classes = prepare_sad_dataset(
+            conditions,
+            channel,
+            rng,
+            augmentation=augmentation,
+            test_mode=test_mode,
+            num_classes=num_classes,
+            label_mapping=label_mapping,
+            use_raw_eeg=use_raw_eeg,
+            chunk_duration=chunk_duration,
+            freq_cutoff_hz=freq_cutoff_hz,
+        )
+        normal, anxiety, depression, anxiety_depression = (
+            subject_classes.normal,
+            subject_classes.anxiety,
+            subject_classes.depression,
+            subject_classes.anxiety_depression,
+        )
+        logger.info(f"SAD dataset: {len(normal)} normal, {len(anxiety)} anxiety subjects")
+    elif dataset_type == "all":
+        # Load MDD dataset
+        # T3=T7 and T4=T8 for these purposes, otherwise I couldn't combine the datasets
+        if channel in ["T7", "T8"]:
+            channel = {"T7": "T3", "T8": "T4"}[channel]
+        mdd_flat_dataset, mdd_subject_classes = prepare_mdd_dataset(
+            conditions,
+            channel,
+            rng,
+            augmentation=augmentation,
+            test_mode=test_mode,
+            num_classes=num_classes,
+            label_mapping=label_mapping,
+            use_raw_eeg=use_raw_eeg,
+            chunk_duration=chunk_duration,
+            freq_cutoff_hz=freq_cutoff_hz,
+        )
+        mdd_normal, mdd_anxiety, mdd_depression, mdd_anxiety_depression = (
+            mdd_subject_classes.normal,
+            mdd_subject_classes.anxiety,
+            mdd_subject_classes.depression,
+            mdd_subject_classes.anxiety_depression,
+        )
+        if channel in ["T3", "T4"]:
+            channel = {"T3": "T7", "T4": "T8"}[channel]
+
+        # Load CANE dataset (or IDUN real in-ear when channel == "in-ear")
+        cane_conditions = [c.lower() for c in conditions]
+        if channel == "in-ear":
+            logger.info("Using IDUN real in-ear dataset instead of CANE synthetic derivation")
+            cane_flat_dataset, cane_subject_classes = prepare_idun_dataset(
+                cane_conditions,
+                channel,
+                rng,
+                label_mapping=label_mapping,
+                augmentation=augmentation,
+                test_mode=test_mode,
+                use_raw_eeg=use_raw_eeg,
+                chunk_duration=chunk_duration,
+                freq_cutoff_hz=freq_cutoff_hz,
+            )
+        else:
+            if bipolar_pair(channel) is not None:
+                logger.info(
+                    f"Bipolar channel '{channel}' with CANE: loading from the 8-channel "
+                    "headset, not IDUN"
+                )
+            cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
+                cane_conditions,
+                channel,
+                rng,
+                label_mapping=label_mapping,
+                skip_artifact_removal=skip_artifact_removal,
+                augmentation=augmentation,
+                test_mode=test_mode,
+                use_raw_eeg=use_raw_eeg,
+                chunk_duration=chunk_duration,
+                freq_cutoff_hz=freq_cutoff_hz,
+            )
+        cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
+            cane_subject_classes.normal,
+            cane_subject_classes.anxiety,
+            cane_subject_classes.depression,
+            cane_subject_classes.anxiety_depression,
+        )
+
+        # Load SAD dataset
+        sad_flat_dataset, sad_subject_classes = prepare_sad_dataset(
+            conditions,
+            channel,
+            rng,
+            augmentation=augmentation,
+            test_mode=test_mode,
+            num_classes=num_classes,
+            label_mapping=label_mapping,
+            use_raw_eeg=use_raw_eeg,
+            chunk_duration=chunk_duration,
+            freq_cutoff_hz=freq_cutoff_hz,
+        )
+        sad_normal, sad_anxiety, sad_depression, sad_anxiety_depression = (
+            sad_subject_classes.normal,
+            sad_subject_classes.anxiety,
+            sad_subject_classes.depression,
+            sad_subject_classes.anxiety_depression,
+        )
+
+    # Create folds for each class separately (stratified)
+    if dataset_type == "all":
+        # For combined dataset, stratify each dataset separately then merge corresponding folds
+        normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds = (
+            create_balanced_folds(
+                [mdd_normal, cane_normal, sad_normal],
+                [mdd_anxiety, cane_anxiety, sad_anxiety],
+                [mdd_depression, cane_depression, sad_depression],
+                [mdd_anxiety_depression, cane_anxiety_depression, sad_anxiety_depression],
+                n_folds,
+            )
+        )
+        logger.info(
+            f"Created {n_folds} balanced folds with subjects from MDD, CANE, and SAD datasets"
+        )
+    else:
+        # Single dataset: some classes may be empty
+        empty_folds: list[SubjectList] = [[] for _ in range(n_folds)]
+        normal_folds = split_into_folds(normal, n_folds)
+        anxiety_folds = split_into_folds(anxiety, n_folds) if anxiety else empty_folds
+        depression_folds = split_into_folds(depression, n_folds) if depression else empty_folds
+        anxiety_depression_folds = (
+            split_into_folds(anxiety_depression, n_folds) if anxiety_depression else empty_folds
+        )
+
+    return CVFolds(
+        normal_folds=normal_folds,
+        anxiety_folds=anxiety_folds,
+        depression_folds=depression_folds,
+        anxiety_depression_folds=anxiety_depression_folds,
+        mdd_flat_dataset=mdd_flat_dataset,
+        cane_flat_dataset=cane_flat_dataset,
+        sad_flat_dataset=sad_flat_dataset,
+        flat_dataset=flat_dataset,
+        num_classes=num_classes,
+        use_raw_eeg=use_raw_eeg,
+        dataset_type=dataset_type,
+    )
