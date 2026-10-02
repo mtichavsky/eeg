@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-from main import eval_epoch
+from thesis.evaluation import eval_epoch
 from thesis.metrics import compute_per_dataset_metrics
 
 

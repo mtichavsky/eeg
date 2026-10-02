@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+#
+# PBS job template for one `main.py explain` (grouped SHAP) run on Metacentrum. Same node
+# selection and venv as train_job.pbs (see the exclusion comments there), but it reads an
+# existing run's checkpoints instead of training. Outputs land in $RUN_DIR/explain/.
+#
+# Usage (do not qsub this file directly; RUN_DIR/LABEL/MAIN_ARGS are required):
+#   qsub -N "$name" -v "RUN_DIR=$dir,LABEL=$label,MAIN_ARGS=$args" metacentrum/explain_job.pbs
+#
+#PBS -N eeg_explain
+#PBS -q gpu
+#PBS -l select=1:ncpus=2:ngpus=1:gpu_mem=20gb:mem=24gb:scratch_local=10gb:cl_fobos=False:cl_grogu=False:cl_luna=False
+#PBS -l walltime=05:00:00
+#PBS -j oe
+#PBS -m ae
+
+set -uo pipefail
+
+STORAGE_HOME="/storage/brno2/home/${PBS_O_LOGNAME}"
+REPO_DIR="$STORAGE_HOME/eeg"
+CODE_DIR="${CODE_DIR:-$REPO_DIR}"
+DATA_DIR="$STORAGE_HOME"
+
+: "${RUN_DIR:?set via qsub -v RUN_DIR=...}"
+: "${LABEL:?set via qsub -v LABEL=...}"
+: "${MAIN_ARGS:?set via qsub -v MAIN_ARGS=\"...\"}"
+
+trap 'clean_scratch' TERM EXIT
+cd "$SCRATCHDIR" || exit 2
+clean_scratch
+
+printf "JOB ID:    %s\nNODE:      %s\nRUN:       %s\nARGS:      %s\n" \
+    "$PBS_JOBID" "$HOSTNAME" "$RUN_DIR" "$MAIN_ARGS"
+
+module add python
+cd "$CODE_DIR" || { echo "CODE_DIR $CODE_DIR not found"; exit 2; }
+source "$REPO_DIR/.venv/bin/activate"
+
+mkdir -p "$RUN_DIR/explain"
+# shellcheck disable=SC2086
+EEG_DATA_DIR="$DATA_DIR" python main.py explain "$RUN_DIR" $MAIN_ARGS \
+    2>&1 | tee "$RUN_DIR/explain/$LABEL.log"
+status=${PIPESTATUS[0]}
+
+echo "Done ($status). Results in $RUN_DIR/explain"
+clean_scratch
+exit "$status"

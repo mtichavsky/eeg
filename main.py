@@ -2,7 +2,6 @@ import argparse
 import logging
 import random
 import string
-import subprocess
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -19,30 +18,27 @@ from plot_training_curves import (
 )
 from thesis.augmentation import EEGAugmentation
 from thesis.cli import get_arg_parser
-from thesis.data_preparation import (
-    SubjectList,
-    create_balanced_folds,
-    determine_num_classes,
-    get_datasets_for_fold,
-    prepare_cane_dataset,
-    prepare_idun_dataset,
-    prepare_mdd_dataset,
-    prepare_sad_dataset,
-    split_into_folds,
-)
+from thesis.data_preparation import build_cv_folds
 from thesis.dataset import (
-    bipolar_pair,
     collate_spectrograms,
+    num_model_channels,
 )
 from thesis.early_stopping import EarlyStopping
+from thesis.evaluation import eval_epoch
+from thesis.explain.experiments import (
+    EXPERIMENT_GAMES,
+    ShapOptions,
+    attach_comparisons,
+    check_explainable,
+    run_shap,
+)
+from thesis.explain.harness import build_folds, read_run_config, write_explain_results
 from thesis.inference import preprocess_and_infer
 from thesis.json_logging import log_metrics_json
 from thesis.loss import FocalLoss
 from thesis.metrics import (
     PerDatasetMetrics,
-    aggregate_subject_predictions,
     classification_metrics,
-    compute_per_dataset_metrics,
     extract_classification_metrics,
     selection_score,
     write_results,
@@ -60,8 +56,8 @@ from thesis.model_factory import (
     create_optimizer,
 )
 from thesis.stft import FREQ_CUTOFF_HZ, spectrogram_shape
+from thesis.version import get_git_commit
 
-RANDOM_SEED = 42
 LOG_FORMAT = "[%(asctime)s %(levelname)s %(module)s.%(funcName)s] %(message)s"
 LOG_LEVEL = "INFO"
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
@@ -200,94 +196,6 @@ def train_epoch(
     avg_loss = running_loss / len(cast(Sized, dataloader.dataset))
     metrics["loss"] = avg_loss
     return metrics
-
-
-def eval_epoch(
-    model: nn.Module,
-    dataloader: DataLoader,
-    criterion: nn.Module,
-    device: torch.device,
-    num_classes: int = 2,
-    subject_dataset_map: dict[str, str] | None = None,
-) -> dict[str, Any]:
-    """
-    Evaluate model for one epoch, computing both chunk-level and subject-level metrics.
-
-    :param nn.Module model: Model to evaluate.
-    :param DataLoader dataloader: Validation data loader (expects Subset of SpectrogramDataset).
-    :param nn.Module criterion: Loss function.
-    :param torch.device device: Device to evaluate on.
-    :param int num_classes: Number of classes (2 or 3).
-    :param dict[str, str] | None subject_dataset_map: Optional mapping from subject ID to dataset
-        label. When provided, per-dataset chunk accuracy is computed.
-    :return: Dictionary containing chunk-level and subject-level metrics.
-    :rtype: dict
-    """
-    model.eval()
-    running_loss = 0.0
-    all_preds: list[np.ndarray] = []
-    all_labels: list[np.ndarray] = []
-    all_subjects: list[str] = []
-
-    with torch.no_grad():
-        for batch in dataloader:
-            # Unpack batch: SpectrogramDataset returns (spectrogram, label, subject)
-            xb, yb, subjects = batch
-            xb = xb.to(device)
-            yb = yb.to(device)
-
-            logits = model(xb)
-            loss = criterion(logits, yb)
-            running_loss += float(loss.item()) * xb.size(0)
-            preds = logits.argmax(dim=1).detach().cpu().numpy()
-
-            all_preds.extend(preds)
-            all_labels.extend(yb.detach().cpu().numpy())
-            all_subjects.extend(subjects)  # subjects is a list of strings from the batch
-
-    preds_arr = np.array(all_preds)
-    labels_arr = np.array(all_labels)
-
-    # Chunk-level metrics
-    chunk_metrics = classification_metrics(labels_arr, preds_arr, num_classes=num_classes)
-    avg_loss = running_loss / len(cast(Sized, dataloader.dataset))
-
-    # Subject-level metrics (majority voting)
-    subject_preds, subject_labels, subject_ids = aggregate_subject_predictions(
-        preds_arr, labels_arr, all_subjects
-    )
-    subject_metrics = classification_metrics(subject_labels, subject_preds, num_classes=num_classes)
-
-    # Separate metrics by condition (EC vs EO)
-    condition_metrics = {}
-    for condition in ["EC", "EO"]:
-        # Filter subjects by condition
-        condition_mask = [condition in subj_id for subj_id in subject_ids]
-        if any(condition_mask):
-            cond_preds = subject_preds[condition_mask]
-            cond_labels = subject_labels[condition_mask]
-            condition_metrics[condition] = classification_metrics(
-                cond_labels, cond_preds, num_classes=num_classes
-            )
-
-    # Per-dataset metrics (when mapping is available)
-    per_dataset: PerDatasetMetrics | None = None
-    if subject_dataset_map is not None:
-        per_dataset = compute_per_dataset_metrics(
-            y_true=labels_arr,
-            y_pred=preds_arr,
-            subjects=all_subjects,
-            subject_dataset_map=subject_dataset_map,
-            num_classes=num_classes,
-        )
-
-    return {
-        "chunk": chunk_metrics,
-        "subject": subject_metrics,
-        "condition": condition_metrics,
-        "loss": avg_loss,
-        "per_dataset": per_dataset,
-    }
 
 
 def train_one_fold(
@@ -635,222 +543,20 @@ def train_cross_validation(
         "fold_per_dataset_metrics": [],
     }
 
-    rng = np.random.RandomState(RANDOM_SEED)
-    if "TASK" in conditions and dataset_type == "cane":
-        raise ValueError("condition TASK not possible for CANE dataset")
-
-    # Determine num_classes and label_mapping based on class_mode
-    num_classes, label_mapping = determine_num_classes(class_mode)
-    logger.info(f"Classification mode: {num_classes}-class")
-    if label_mapping:
-        logger.info(f"Label mapping: {label_mapping} (collapsing to binary)")
-
-    # Detect whether model needs raw EEG (Deformer) or spectrograms (CNN-LSTM family)
-    use_raw_eeg = model_name in RAW_EEG_MODELS
-    if use_raw_eeg:
-        logger.info(f"Model {model_name} uses raw EEG pipeline (no STFT)")
-
-    mdd_flat_dataset, cane_flat_dataset, sad_flat_dataset, flat_dataset = (
-        None,
-        None,
-        None,
-        None,
+    folds = build_cv_folds(
+        dataset_type,
+        conditions,
+        class_mode,
+        n_folds,
+        channel,
+        model_name,
+        skip_artifact_removal=skip_artifact_removal,
+        augmentation=augmentation,
+        test_mode=test_mode,
+        chunk_duration=chunk_duration,
+        freq_cutoff_hz=freq_cutoff_hz,
     )
-    if dataset_type == "mdd":
-        flat_dataset, subject_classes = prepare_mdd_dataset(
-            conditions,
-            channel,
-            rng,
-            augmentation=augmentation,
-            test_mode=test_mode,
-            num_classes=num_classes,
-            label_mapping=label_mapping,
-            use_raw_eeg=use_raw_eeg,
-            chunk_duration=chunk_duration,
-            freq_cutoff_hz=freq_cutoff_hz,
-        )
-        normal, anxiety, depression, anxiety_depression = (
-            subject_classes.normal,
-            subject_classes.anxiety,
-            subject_classes.depression,
-            subject_classes.anxiety_depression,
-        )
-        logger.info(f"MDD dataset: {len(normal)} normal, {len(depression)} depression subjects")
-    elif dataset_type == "cane":
-        # Convert to lowercase for CANE/IDUN
-        cane_conditions = [c.lower() for c in conditions]
-        if channel == "in-ear":
-            logger.info("Using IDUN real in-ear dataset instead of CANE synthetic derivation")
-            flat_dataset, subject_classes = prepare_idun_dataset(
-                cane_conditions,
-                channel,
-                rng,
-                label_mapping=label_mapping,
-                augmentation=augmentation,
-                test_mode=test_mode,
-                use_raw_eeg=use_raw_eeg,
-                chunk_duration=chunk_duration,
-                freq_cutoff_hz=freq_cutoff_hz,
-            )
-        else:
-            if bipolar_pair(channel) is not None:
-                logger.info(
-                    f"Bipolar channel '{channel}' with CANE: loading from the 8-channel "
-                    "headset, not IDUN"
-                )
-            flat_dataset, subject_classes = prepare_cane_dataset(
-                cane_conditions,
-                channel,
-                rng,
-                label_mapping=label_mapping,
-                skip_artifact_removal=skip_artifact_removal,
-                augmentation=augmentation,
-                test_mode=test_mode,
-                use_raw_eeg=use_raw_eeg,
-                chunk_duration=chunk_duration,
-                freq_cutoff_hz=freq_cutoff_hz,
-            )
-        normal, anxiety, depression, anxiety_depression = (
-            subject_classes.normal,
-            subject_classes.anxiety,
-            subject_classes.depression,
-            subject_classes.anxiety_depression,
-        )
-        dataset_name = "IDUN" if channel == "in-ear" else "CANE"
-        logger.info(
-            f"{dataset_name} dataset: {len(normal)} normal, {len(anxiety)} anxiety, "
-            f"{len(depression)} depression, {len(anxiety_depression)} anxiety+depression subjects"
-        )
-    elif dataset_type == "sad":
-        flat_dataset, subject_classes = prepare_sad_dataset(
-            conditions,
-            channel,
-            rng,
-            augmentation=augmentation,
-            test_mode=test_mode,
-            num_classes=num_classes,
-            label_mapping=label_mapping,
-            use_raw_eeg=use_raw_eeg,
-            chunk_duration=chunk_duration,
-            freq_cutoff_hz=freq_cutoff_hz,
-        )
-        normal, anxiety, depression, anxiety_depression = (
-            subject_classes.normal,
-            subject_classes.anxiety,
-            subject_classes.depression,
-            subject_classes.anxiety_depression,
-        )
-        logger.info(f"SAD dataset: {len(normal)} normal, {len(anxiety)} anxiety subjects")
-    elif dataset_type == "all":
-        # Load MDD dataset
-        # T3=T7 and T4=T8 for these purposes, otherwise I couldn't combine the datasets
-        if channel in ["T7", "T8"]:
-            channel = {"T7": "T3", "T8": "T4"}[channel]
-        mdd_flat_dataset, mdd_subject_classes = prepare_mdd_dataset(
-            conditions,
-            channel,
-            rng,
-            augmentation=augmentation,
-            test_mode=test_mode,
-            num_classes=num_classes,
-            label_mapping=label_mapping,
-            use_raw_eeg=use_raw_eeg,
-            chunk_duration=chunk_duration,
-            freq_cutoff_hz=freq_cutoff_hz,
-        )
-        mdd_normal, mdd_anxiety, mdd_depression, mdd_anxiety_depression = (
-            mdd_subject_classes.normal,
-            mdd_subject_classes.anxiety,
-            mdd_subject_classes.depression,
-            mdd_subject_classes.anxiety_depression,
-        )
-        if channel in ["T3", "T4"]:
-            channel = {"T3": "T7", "T4": "T8"}[channel]
-
-        # Load CANE dataset (or IDUN real in-ear when channel == "in-ear")
-        cane_conditions = [c.lower() for c in conditions]
-        if channel == "in-ear":
-            logger.info("Using IDUN real in-ear dataset instead of CANE synthetic derivation")
-            cane_flat_dataset, cane_subject_classes = prepare_idun_dataset(
-                cane_conditions,
-                channel,
-                rng,
-                label_mapping=label_mapping,
-                augmentation=augmentation,
-                test_mode=test_mode,
-                use_raw_eeg=use_raw_eeg,
-                chunk_duration=chunk_duration,
-                freq_cutoff_hz=freq_cutoff_hz,
-            )
-        else:
-            if bipolar_pair(channel) is not None:
-                logger.info(
-                    f"Bipolar channel '{channel}' with CANE: loading from the 8-channel "
-                    "headset, not IDUN"
-                )
-            cane_flat_dataset, cane_subject_classes = prepare_cane_dataset(
-                cane_conditions,
-                channel,
-                rng,
-                label_mapping=label_mapping,
-                skip_artifact_removal=skip_artifact_removal,
-                augmentation=augmentation,
-                test_mode=test_mode,
-                use_raw_eeg=use_raw_eeg,
-                chunk_duration=chunk_duration,
-                freq_cutoff_hz=freq_cutoff_hz,
-            )
-        cane_normal, cane_anxiety, cane_depression, cane_anxiety_depression = (
-            cane_subject_classes.normal,
-            cane_subject_classes.anxiety,
-            cane_subject_classes.depression,
-            cane_subject_classes.anxiety_depression,
-        )
-
-        # Load SAD dataset
-        sad_flat_dataset, sad_subject_classes = prepare_sad_dataset(
-            conditions,
-            channel,
-            rng,
-            augmentation=augmentation,
-            test_mode=test_mode,
-            num_classes=num_classes,
-            label_mapping=label_mapping,
-            use_raw_eeg=use_raw_eeg,
-            chunk_duration=chunk_duration,
-            freq_cutoff_hz=freq_cutoff_hz,
-        )
-        sad_normal, sad_anxiety, sad_depression, sad_anxiety_depression = (
-            sad_subject_classes.normal,
-            sad_subject_classes.anxiety,
-            sad_subject_classes.depression,
-            sad_subject_classes.anxiety_depression,
-        )
-
-    # Create folds for each class separately (stratified)
-    if dataset_type == "all":
-        # For combined dataset, stratify each dataset separately then merge corresponding folds
-        normal_folds, anxiety_folds, depression_folds, anxiety_depression_folds = (
-            create_balanced_folds(
-                [mdd_normal, cane_normal, sad_normal],
-                [mdd_anxiety, cane_anxiety, sad_anxiety],
-                [mdd_depression, cane_depression, sad_depression],
-                [mdd_anxiety_depression, cane_anxiety_depression, sad_anxiety_depression],
-                n_folds,
-            )
-        )
-        logger.info(
-            f"Created {n_folds} balanced folds with subjects from MDD, CANE, and SAD datasets"
-        )
-    else:
-        # Single dataset: some classes may be empty
-        empty_folds: list[SubjectList] = [[] for _ in range(n_folds)]
-        normal_folds = split_into_folds(normal, n_folds)
-        anxiety_folds = split_into_folds(anxiety, n_folds) if anxiety else empty_folds
-        depression_folds = split_into_folds(depression, n_folds) if depression else empty_folds
-        anxiety_depression_folds = (
-            split_into_folds(anxiety_depression, n_folds) if anxiety_depression else empty_folds
-        )
+    num_classes, use_raw_eeg = folds.num_classes, folds.use_raw_eeg
 
     spec_shape = spectrogram_shape(freq_cutoff_hz)
     for fold in range(n_folds):
@@ -858,18 +564,7 @@ def train_cross_validation(
         logger.info(f"FOLD {fold + 1}/{n_folds}")
         logger.info(f"{'=' * 80}")
 
-        train_dataset, val_dataset, val_subject_dataset_map = get_datasets_for_fold(
-            fold,
-            normal_folds,
-            anxiety_folds,
-            depression_folds,
-            anxiety_depression_folds,
-            dataset_type,
-            mdd_flat_dataset,
-            cane_flat_dataset,
-            sad_flat_dataset,
-            flat_dataset,
-        )
+        train_dataset, val_dataset, val_subject_dataset_map = folds.datasets_for_fold(fold)
 
         # Compute class weights for balanced loss (CPU only; `device` is for model/tensors)
         class_weights = compute_class_weights(train_dataset, num_classes, device="cpu")
@@ -917,7 +612,7 @@ def train_cross_validation(
             dropout=dropout,
             num_classes=num_classes,
             device=device,
-            in_channels=8 if channel == "all" else 1,
+            in_channels=num_model_channels(channel),
             pretrained_checkpoint=pretrained_checkpoint,
             freeze_cnn=freeze_cnn,
             freeze_lstm=freeze_lstm,
@@ -992,26 +687,23 @@ def train_cross_validation(
     return cv_results
 
 
-def _get_git_commit() -> str:
-    try:
-        hash_ = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
-        ).stdout.strip()
-        dirty = subprocess.run(
-            ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
-        ).stdout.strip()
-        return f"{hash_}{'-dirty' if dirty else ''}"
-    except Exception:
-        return "unknown"
+def resolve_device(name: str) -> torch.device:
+    """
+    Turn a ``--device`` value into a torch device.
+
+    :param str name: ``auto``, ``cuda`` or ``cpu``; ``auto`` picks CUDA when available.
+    :return: The device.
+    :rtype: torch.device
+    """
+    if name == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return torch.device(name)
 
 
 def train(args: argparse.Namespace) -> None:
     _validate_freq_cutoff(args.freq_cutoff)
 
-    if args.device == "auto":
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        device = torch.device(args.device)
+    device = resolve_device(args.device)
 
     checkpoint_dir = get_unique_checkpoint_dir(Path(args.checkpoint_dir))
 
@@ -1030,7 +722,7 @@ def train(args: argparse.Namespace) -> None:
     cfg["device"] = device
     cfg["checkpoint_dir"] = checkpoint_dir
     cfg["log_file"] = log_path
-    cfg["git_commit"] = _get_git_commit()
+    cfg["git_commit"] = get_git_commit()
     if args.model in RAW_EEG_MODELS:
         # The cutoff only ever affects spectrogram geometry; raw-EEG models never build one,
         # so printing it here would suggest it did something.
@@ -1146,10 +838,7 @@ def run(args: argparse.Namespace) -> None:
     """
     _validate_freq_cutoff(args.freq_cutoff)
 
-    if args.device == "auto":
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        device = torch.device(args.device)
+    device = resolve_device(args.device)
 
     model_path = Path(args.model_path)
     input_file = Path(args.file)
@@ -1179,7 +868,7 @@ def run(args: argparse.Namespace) -> None:
             )
 
     num_classes = int(args.class_mode)
-    in_channels = 8 if args.channel == "all" else 1
+    in_channels = num_model_channels(args.channel)
 
     logger.info("Running Inference")
     logger.info(f"{'=' * 80}")
@@ -1239,6 +928,63 @@ def run(args: argparse.Namespace) -> None:
     logger.info(f"Final Prediction: {result.final_class_name} (Class {result.final_prediction})")
 
 
+def explain(args: argparse.Namespace) -> None:
+    """
+    Compute grouped SHAP attributions for a trained run's folds.
+
+    Writes ``<run_dir>/explain/shap_<game>[_mean][_random][_partial].json`` (aggregates) and a
+    matching ``_chunks.npz`` (per-chunk values) for each game of the chosen experiment.
+    ``_partial`` marks runs restricted with ``--folds``, so a quick check never overwrites (or
+    is compared against) a full run.
+
+    :param argparse.Namespace args: Command-line arguments.
+    :raises ValueError: If the run cannot be explained or no game applies to it.
+    """
+    device = resolve_device(args.device)
+    # cuDNN runs convolutions in TF32 by default, which perturbs outputs by ~1e-3 relative and
+    # trips the efficiency check on GPU. Shapley values difference many forward passes, so use
+    # full float32.
+    torch.backends.cudnn.allow_tf32 = False
+    torch.backends.cuda.matmul.allow_tf32 = False
+    config = read_run_config(Path(args.run_dir))
+    # Checked before dataset preparation, which is the slow step.
+    check_explainable(config)
+    if args.folds is not None and max(args.folds) >= config.n_folds:
+        raise ValueError(f"--folds goes up to {max(args.folds) + 1}, the run has {config.n_folds}")
+    games = [
+        g
+        for g in EXPERIMENT_GAMES[args.experiment]
+        if g in ("bands", "gamma") or config.in_channels > 1
+    ]
+    if not games:
+        raise ValueError(f"{args.experiment} does not apply to single-channel {config.channel}")
+    for skipped in set(EXPERIMENT_GAMES[args.experiment]) - set(games):
+        logger.warning(f"Skipping the {skipped} game: {config.channel} is a single channel")
+
+    output_dir = Path(args.run_dir) / "explain"
+    logger.info(f"Explaining {config.model} ({config.channel}) from {args.run_dir} on {device}")
+    folds = build_folds(config)
+    for game in games:
+        options = ShapOptions(
+            game=game,
+            background_size=args.background_size,
+            max_chunks_per_fold=args.max_chunks_per_fold,
+            baseline=args.baseline,
+            grid_permutations=args.grid_permutations,
+            grid_se_seeds=args.grid_se_seeds,
+            grid_se_chunks=args.grid_se_chunks,
+            seed=args.seed,
+            random_init=args.random_init,
+            max_batch=args.max_batch,
+            folds=args.folds,
+        )
+        payload, arrays = run_shap(config, device, options, folds)
+        attach_comparisons(payload, output_dir, options)
+        write_explain_results(payload, output_dir / f"{options.stem}.json")
+        np.savez_compressed(output_dir / f"{options.stem}_chunks.npz", **arrays)  # type: ignore[arg-type]
+        logger.info(f"Wrote {output_dir / f'{options.stem}_chunks.npz'}")
+
+
 def main() -> None:
     parser = get_arg_parser()
     args = parser.parse_args()
@@ -1253,6 +999,8 @@ def main() -> None:
         train(args)
     elif args.command == "run":
         run(args)
+    elif args.command == "explain":
+        explain(args)
     else:
         parser.print_help()
 

@@ -186,6 +186,29 @@ poetry run python main.py train --skip-ica \
   --checkpoint-dir=experiments/mdd_022_all_ec
 ```
 
+### Explainability (grouped SHAP)
+```bash
+poetry install --with dev,explain   # adds shap==0.52.0
+
+# Band game on the in-ear f70 rerun; writes <run>/explain/shap_bands.json + _chunks.npz
+poetry run python main.py explain experiments/all_041_inear_ec+eo_f70 --experiment shap-bands
+
+# Quick end-to-end check (fold 1, 8 chunks; writes shap_bands_partial.*); the log must show
+# "Fold 1 baseline: ... OK". Full runs go to MetaCentrum, not the laptop
+poetry run python main.py explain experiments/all_041_inear_ec+eo_f70 \
+  --experiment shap-bands --folds 1 --max-chunks-per-fold 8
+
+# Robustness and sanity runs (compare themselves with shap_bands.json if it exists)
+poetry run python main.py explain <run> --experiment shap-bands --baseline mean
+poetry run python main.py explain <run> --experiment shap-bands --random-init
+
+# MetaCentrum: all first-phase runs (8 jobs, dependent runs chained with afterok)
+./run-shap-meta.sh
+# Figures -> ../thesis-text/obrazky-figures/
+poetry run python helpers-print/plot_shap.py
+```
+Binary spectrogram runs only (4-class raises `NotImplementedError`; raw-EEG models are rejected).
+
 ### Transfer Learning
 ```bash
 # Fine-tune a pretrained MDD model on CANE dataset
@@ -325,7 +348,14 @@ Run with: `poetry run jupyter notebook`
    - `ChunkResult` / `InferenceResult`: Dataclasses for structured results
    - Used by both CLI (`main.py run`) and API (`api/app.py /predict`)
 
-5. **`thesis/version.py`** - Version management
+5. **`thesis/explain/`** - Grouped SHAP explanations (see `EXPLAINABILITY.md`)
+   - `harness.py`: rebuilds a run's folds from `results.txt` (via `build_cv_folds`), loads each `fold_N_best.pth` strictly, and gates every fold on `verify_baseline()` (recomputed vs stored chunk accuracy)
+   - `groups.py`: `EEG_BANDS`, `band_bins()`, `PlayerSet` and the band / channel / channel x band player builders (masks must partition the input; `sub_delta` covers bins 0-1)
+   - `shap_values.py`: value-function wrapper for the `shap` library (Exact for <= 10 players, Permutation above), efficiency check, same-dataset label-stratified background sampler
+   - `experiments.py`: `run_shap()` over folds, subject-weighted aggregation, per-dataset stats, mean-baseline / random-init comparisons
+   - `shap` is a regular dependency, pinned to an exact version (Exact/Permutation signatures change between releases); the API container does not install it and never imports `thesis.explain`
+
+6. **`thesis/version.py`** - Version management
    - Reads version from `pyproject.toml` (single source of truth)
    - Used by API (`api/app.py`, `api/__init__.py`)
 
@@ -535,12 +565,16 @@ EEG data has temporal dependencies. Splitting at chunk level would leak informat
 ## Code Evolution Notes
 
 **Recent Major Changes:**
+- **Grouped SHAP explainability** (Sep 2026): `python main.py explain` replaces the earlier ablation/IG/attention-rollout code (`thesis/explain/masks.py`, `attribution.py`, `run-explainability.sh`, `helpers-print/plot_explainability.py` were removed; none of it was reachable, since no `explain` subcommand existed and the harness imported functions that exist only on another branch)
+  - Fold construction moved from `train_cross_validation()` into `build_cv_folds()` / `CVFolds` in `thesis/data_preparation.py`, shared by training and the harness, so the harness rebuilds folds with the same code path
+  - The harness honours `freq_cutoff` from `results.txt` (`RunConfig.spec_shape`) and refuses checkpoints whose recorded cutoff differs
+  - Plan: `docs/plans/2026-09-26-shap-explainability.md`. Only phase one is implemented: pixel-level Expected Gradients, 4-class SHAP and the Phase 8 robustness add-ons are not
 - **Per-dataset confusion matrices** (Sep 2026): `compute_per_dataset_metrics()` takes `num_classes` (default 2) and adds a `confusion_matrix` (K x K, rows = true class, columns = predicted, same orientation as the pooled chunk matrix) to every dataset's entry, alongside all existing keys
   - Motivation: the 4-class results may be a dataset-identity shortcut (depression labels come almost only from MDD, comorbid only from CANE/IDUN). The per-dataset `tp/tn/fp/fn` are binary-only and meaningless for 4 classes, and the per-dataset class balance was not stored, so the dataset-prior decomposition already done for binary runs was impossible. The row sums of the matrix are the per-dataset true class counts
   - `write_per_dataset_table()` appends a "Per-Dataset Chunk Confusion Matrices" section (summed over folds) after the unchanged accuracy table in `results.txt`; old parsers ignore it and results without stored matrices write nothing extra
   - `helpers-print/dataset_prior_baseline.py` uses stored matrices (checkpoints or the `results.txt` section) for exact decompositions of binary and 4-class runs, prints them with `--confusion-matrices`, and behaves exactly as before for runs without them
   - Existing checkpoints and `results.txt` files are unchanged and still parse; there is deliberately no post-hoc re-evaluation harness, runs are simply repeated (`run-fourclass-perdataset-meta.sh`)
-- **Fixed `compute_per_dataset_metrics()` argument order** (Sep 2026): `eval_epoch()` in `main.py` was calling `compute_per_dataset_metrics(preds_arr, labels_arr, all_subjects, subject_dataset_map)` against a `(y_true, y_pred, subjects, subject_dataset_map)` signature — predictions and labels were swapped. The call now passes all four arguments by keyword to make the order self-checking
+- **Fixed `compute_per_dataset_metrics()` argument order** (Sep 2026): `eval_epoch()` (then in `main.py`, now `thesis/evaluation.py`) was calling `compute_per_dataset_metrics(preds_arr, labels_arr, all_subjects, subject_dataset_map)` against a `(y_true, y_pred, subjects, subject_dataset_map)` signature — predictions and labels were swapped. The call now passes all four arguments by keyword to make the order self-checking
   - Chunk/subject-level metrics and per-dataset **accuracy** were unaffected (accuracy is symmetric in `y_true`/`y_pred`); only per-dataset sensitivity/specificity and the stored `fp`/`fn` counts were wrong — the printed "sensitivity"/"specificity" were actually PPV/NPV, and stored `fp`/`fn` were exchanged
   - Every checkpoint's `val_metrics["per_dataset"]` and every `results.txt` "Per-Dataset Chunk Metrics" section from a run trained before this fix carries the swapped values
   - `helpers-print/dataset_prior_baseline.py` already auto-detects both orientations (by comparing summed per-dataset counts against the chunk-level confusion matrix) and handles pre-fix and post-fix runs transparently — no changes needed there
@@ -694,6 +728,7 @@ The project's main license (MIT) is in `LICENSE`. All CBCR-licensed files are li
 - `thesis/deformer.py` - EEG-Deformer and DeformerS raw-EEG transformer implementations
 - `thesis/loss.py` - Custom loss functions (`FocalLoss` with alpha/gamma)
 - `thesis/cli.py` - CLI argument parser with all training options
+- `thesis/evaluation.py` - `eval_epoch()`: chunk/subject/condition/per-dataset validation metrics, shared by the training loop and the explain harness
 - `main.py` - Training orchestration, cross-validation logic, transfer learning support, and CANE/IDUN swap logic
 - `plot_training_curves.py` - Training curve visualization utility
 

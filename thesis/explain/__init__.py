@@ -1,50 +1,37 @@
 """
-Explainability analyses for the spectrogram models.
+Grouped SHAP explanations for the spectrogram models.
 
-The package answers three questions asked of the trained models:
+Answers which frequency bands, which electrodes, and which electrode x band cells drive a
+trained model's predictions, out-of-fold under the same 10-fold subject-independent protocol
+as every other number in the paper:
 
-* which electrodes carry the signal (channel ablation, :mod:`thesis.explain.masks`),
-* which frequency bands carry it (band occlusion, same module),
-* and whether the evidence is neurophysiological or an artifact of the data collection
-  (attribution in :mod:`thesis.explain.attribution`, site probing in
-  :mod:`thesis.explain.harness`).
+* :mod:`thesis.explain.harness` rebuilds a run's folds, reloads each fold's checkpoint and
+  verifies the rebuild against the metrics stored in the checkpoint,
+* :mod:`thesis.explain.groups` defines the players (bands, channels, channel x band),
+* :mod:`thesis.explain.shap_values` wraps the model as a coalition value function for the
+  ``shap`` library and samples same-dataset training-fold backgrounds,
+* :mod:`thesis.explain.experiments` runs the games over every fold and aggregates the results,
+* :mod:`thesis.explain.stats` holds the paired fold-level statistics.
 
-Every experiment is scored with the same :func:`main.eval_epoch` the training loop uses, so
-ablation results are directly comparable with the accuracies reported in the paper.
+Driven by ``python main.py explain <run-dir> --experiment shap-...``. The ``shap`` library is a
+regular dependency, pinned in ``pyproject.toml``.
 """
 
-from thesis.explain.masks import (
-    CHANNEL_REGIONS,
-    EEG_BANDS,
-    HEMISPHERE_MIRROR,
-    band_bins,
-    channel_mask,
-    matched_control_windows,
-    mirror_channels,
-    occlude,
-    spectrogram_reference,
-)
+from thesis.explain.groups import EEG_BANDS, PlayerSet, band_bins, build_players
 from thesis.explain.stats import (
     benjamini_hochberg,
-    bootstrap_ci,
     nadeau_bengio_corrected_t,
     paired_wilcoxon,
     spearman,
 )
 
 __all__ = [
-    "CHANNEL_REGIONS",
     "EEG_BANDS",
-    "HEMISPHERE_MIRROR",
+    "PlayerSet",
     "band_bins",
     "benjamini_hochberg",
-    "bootstrap_ci",
-    "channel_mask",
-    "matched_control_windows",
-    "mirror_channels",
+    "build_players",
     "nadeau_bengio_corrected_t",
-    "occlude",
     "paired_wilcoxon",
     "spearman",
-    "spectrogram_reference",
 ]

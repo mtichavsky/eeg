@@ -1,6 +1,7 @@
 """Command-line interface argument parsing for EEG classification training and inference."""
 
 import argparse
+from pathlib import Path
 
 from thesis.model import MODEL_REGISTRY
 
@@ -94,7 +95,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     """
     Create and configure the argument parser for the EEG classification CLI.
 
-    :return: Configured argument parser with train and run subcommands.
+    :return: Configured argument parser with train, run and explain subcommands.
     :rtype: argparse.ArgumentParser
     """
     parser = argparse.ArgumentParser(
@@ -397,4 +398,118 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Device to run inference on",
     )
 
+    # Explain subcommand
+    explain_parser = subparsers.add_parser(
+        "explain",
+        help="Grouped SHAP attributions for a trained cross-validation run",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    explain_parser.add_argument(
+        "run_dir", type=Path, help="Training run directory (results.txt + fold_N_best.pth)"
+    )
+    explain_parser.add_argument(
+        "--experiment",
+        required=True,
+        # Must match thesis.explain.experiments.EXPERIMENT_GAMES (checked by a test); not
+        # imported so that building the parser stays cheap.
+        choices=["shap-bands", "shap-channels", "shap-grid", "shap-gamma", "shap-all"],
+        help="Game(s) to play: frequency bands, electrodes, electrode x band cells, or bands "
+        "with gamma split at 45 Hz (shap-all runs the first three)",
+    )
+    explain_parser.add_argument(
+        "--background-size",
+        type=_positive_int,
+        default=32,
+        help="Background chunks per dataset (K) for the sample baseline",
+    )
+    explain_parser.add_argument(
+        "--max-chunks-per-fold",
+        type=_positive_int,
+        default=400,
+        help="Validation chunks explained per fold, spread evenly across subjects",
+    )
+    explain_parser.add_argument(
+        "--folds",
+        type=_fold_list,
+        default=None,
+        help="Comma-separated one-indexed folds to explain (default: all)",
+    )
+    explain_parser.add_argument(
+        "--baseline",
+        choices=["sample", "mean"],
+        default="sample",
+        help="Absent players from K same-dataset training chunks, or from the dataset's mean "
+        "training spectrogram (K=1, robustness check)",
+    )
+    explain_parser.add_argument(
+        "--grid-permutations",
+        type=_positive_int,
+        default=64,
+        help="Antithetic permutations per chunk for the 48-player grid",
+    )
+    explain_parser.add_argument(
+        "--grid-se-seeds",
+        type=_positive_int,
+        default=3,
+        help="Independent permutation runs for the grid's Monte Carlo standard error "
+        "(1 disables it)",
+    )
+    explain_parser.add_argument(
+        "--grid-se-chunks",
+        type=_positive_int,
+        default=50,
+        help="Chunks per fold re-run for the grid's standard error",
+    )
+    explain_parser.add_argument("--seed", type=int, default=42, help="Base random seed")
+    explain_parser.add_argument(
+        "--random-init",
+        action="store_true",
+        help="Explain randomly re-initialised models (model-randomisation sanity check)",
+    )
+    explain_parser.add_argument(
+        "--max-batch",
+        type=_positive_int,
+        default=1024,
+        help="Maximum composite spectrograms per forward pass (lower it on GPU OOM)",
+    )
+    explain_parser.add_argument(
+        "--device", type=str, default="auto", choices=["auto", "cuda", "cpu"], help="Device"
+    )
+
     return parser
+
+
+def _positive_int(value: str) -> int:
+    """
+    Parse a strictly positive integer argument.
+
+    :param str value: Command-line text.
+    :return: The integer.
+    :rtype: int
+    :raises argparse.ArgumentTypeError: If it is not an integer of at least 1.
+    """
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"Expected an integer, got {value!r}") from exc
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"Expected a positive integer, got {number}")
+    return number
+
+
+def _fold_list(value: str) -> list[int]:
+    """
+    Parse a comma-separated list of one-indexed fold numbers.
+
+    :param str value: e.g. ``"1,3"``.
+    :return: Zero-indexed folds, e.g. ``[0, 2]``.
+    :rtype: list[int]
+    :raises argparse.ArgumentTypeError: On a malformed or non-positive entry.
+    """
+    try:
+        folds = [int(part) for part in value.split(",") if part.strip()]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"Invalid fold list {value!r}") from exc
+    if not folds or min(folds) < 1:
+        raise argparse.ArgumentTypeError(f"Folds are one-indexed positive integers: {value!r}")
+    return [f - 1 for f in folds]
