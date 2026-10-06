@@ -54,6 +54,7 @@ EXPERIMENT_GAMES: dict[str, list[Game]] = {
     "shap-channels": ["channels"],
     "shap-grid": ["grid"],
     "shap-gamma": ["gamma"],
+    "shap-bins": ["bins"],
     "shap-all": ["bands", "channels", "grid"],
 }
 

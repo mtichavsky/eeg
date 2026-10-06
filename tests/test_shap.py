@@ -122,6 +122,12 @@ class TestPlayers:
         players = build_players("gamma", 8, F, T)
         assert bool((players.masks.sum(dim=0) == 1).all())
 
+    def test_bin_game_has_one_player_per_bin(self) -> None:
+        players = build_players("bins", 1, F, T)
+        assert len(players) == F
+        assert players.names[10] == "9.8Hz"
+        assert bool((players.masks.sum(dim=0) == 1).all())
+
     def test_grid_has_48_players_at_70_hz(self) -> None:
         players = grid_players(8, F, T)
         assert len(players) == 48

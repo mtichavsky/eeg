@@ -412,9 +412,9 @@ def get_arg_parser() -> argparse.ArgumentParser:
         required=True,
         # Must match thesis.explain.experiments.EXPERIMENT_GAMES (checked by a test); not
         # imported so that building the parser stays cheap.
-        choices=["shap-bands", "shap-channels", "shap-grid", "shap-gamma", "shap-all"],
-        help="Game(s) to play: frequency bands, electrodes, electrode x band cells, or bands "
-        "with gamma split at 45 Hz (shap-all runs the first three)",
+        choices=["shap-bands", "shap-channels", "shap-grid", "shap-gamma", "shap-bins", "shap-all"],
+        help="Game(s) to play: frequency bands, electrodes, electrode x band cells, bands "
+        "with gamma split at 45 Hz, or single frequency bins (shap-all runs the first three)",
     )
     explain_parser.add_argument(
         "--background-size",
