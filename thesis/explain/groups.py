@@ -2,13 +2,14 @@
 Player groups for grouped SHAP on spectrogram inputs.
 
 A *player* is a set of input pixels that is switched on (taken from the explained chunk) or
-off (taken from a background chunk) as one unit. Four games are defined over a
+off (taken from a background chunk) as one unit. Five games are defined over a
 ``(C, F, T)`` spectrogram:
 
 * **bands**: one player per EEG frequency band, spanning every channel and time frame,
 * **channels**: one player per electrode, spanning its whole ``(F, T)`` plane,
 * **grid**: one player per (channel, band) cell,
-* **gamma**: the band game with gamma split into 30-45 and 45-70 Hz.
+* **gamma**: the band game with gamma split into 30-45 and 45-70 Hz,
+* **bins**: one player per frequency bin, spanning every channel and time frame.
 
 The players of every game **partition** the input: each pixel belongs to exactly one player.
 Shapley efficiency (``sum(phi) == f(x) - E f(b)``) only accounts for the whole prediction when
@@ -42,7 +43,7 @@ SUB_DELTA = "sub_delta"
 #: contains it, and EMG dominates both, so the split separates "low" from "notch-affected" gamma.
 GAMMA_SPLIT_HZ = 45.0
 
-Game = Literal["bands", "channels", "grid", "gamma"]
+Game = Literal["bands", "channels", "grid", "gamma", "bins"]
 
 
 def band_bins(band: str, num_freq_bins: int = NUM_FREQ_BINS) -> list[int]:
@@ -223,11 +224,31 @@ def grid_players(n_channels: int, freq_bins: int, time_frames: int) -> PlayerSet
     return PlayerSet(names, masks, n_bins)
 
 
+def bin_players(n_channels: int, freq_bins: int, time_frames: int) -> PlayerSet:
+    """
+    One player per frequency bin, across all channels and time frames.
+
+    Tests whether attribution is spread evenly within bands, which the per-bin normalisation
+    of the band game only assumes.
+
+    :param int n_channels: Number of input channels.
+    :param int freq_bins: Number of frequency bins.
+    :param int time_frames: Number of STFT time frames.
+    :return: Players named by bin centre in Hz, e.g. ``"9.8Hz"``, 72 at 70 Hz.
+    :rtype: PlayerSet
+    """
+    masks = torch.zeros(freq_bins, n_channels, freq_bins, time_frames, dtype=torch.bool)
+    for i in range(freq_bins):
+        masks[i, :, i, :] = True
+    names = [f"{i * FREQ_BIN_WIDTH_HZ:.1f}Hz" for i in range(freq_bins)]
+    return PlayerSet(names, masks, [1] * freq_bins)
+
+
 def build_players(game: Game, n_channels: int, freq_bins: int, time_frames: int) -> PlayerSet:
     """
     Build the players of a named game.
 
-    :param str game: ``bands``, ``channels``, ``grid`` or ``gamma``.
+    :param str game: ``bands``, ``channels``, ``grid``, ``gamma`` or ``bins``.
     :param int n_channels: Number of input channels.
     :param int freq_bins: Number of frequency bins.
     :param int time_frames: Number of STFT time frames.
@@ -240,6 +261,7 @@ def build_players(game: Game, n_channels: int, freq_bins: int, time_frames: int)
         "channels": channel_players,
         "grid": grid_players,
         "gamma": partial(band_players, split_gamma=True),
+        "bins": bin_players,
     }
     if game not in builders:
         raise ValueError(f"Unknown game {game!r}")

@@ -954,7 +954,7 @@ def explain(args: argparse.Namespace) -> None:
     games = [
         g
         for g in EXPERIMENT_GAMES[args.experiment]
-        if g in ("bands", "gamma") or config.in_channels > 1
+        if g in ("bands", "gamma", "bins") or config.in_channels > 1
     ]
     if not games:
         raise ValueError(f"{args.experiment} does not apply to single-channel {config.channel}")
